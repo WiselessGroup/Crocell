@@ -38,7 +38,7 @@ assets/brand/ логотип и иконки
 
 ```bash
 cd core
-go test ./...
+make test
 go run ./cmd/crocell nodes 'https://example.com/sub/…'
 go run ./cmd/crocell up 'https://example.com/sub/…' --node 'nlWISELESS'
 ```
@@ -46,12 +46,11 @@ go run ./cmd/crocell up 'https://example.com/sub/…' --node 'nlWISELESS'
 `crocell up` поднимает mixed-прокси на `127.0.0.1:7890` через выбранную ноду: удобно проверять ядро без клиента и без прав. С `-sysproxy` он сам пропишет системный прокси и вернёт старые настройки при выходе, с `-tun` пустит через ноду всю систему:
 
 ```bash
-go build -o bin/crocell ./cmd/crocell
-sudo setcap cap_net_admin,cap_net_bind_service+ep bin/crocell   # один раз после сборки
-bin/crocell up 'https://example.com/sub/…' -node 'nlWISELESS' -tun
+make build    # с тегом with_gvisor: без него стек TUN mixed не поднимется
+sudo bin/crocell up 'https://example.com/sub/…' -node 'nlWISELESS' -tun
 ```
 
-Не держите одновременно два TUN-клиента: их маршруты подерутся.
+Через `make setcap` можно обойтись без sudo, но тогда `resolvectl` попросит пароль у polkit: три раза при старте и раз при выходе. В приложении туннель держит служба, которая получает права один раз при установке. Не держите одновременно два TUN-клиента: их маршруты подерутся.
 
 ```bash
 cd app

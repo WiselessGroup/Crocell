@@ -15,6 +15,7 @@ import (
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub"
 	"github.com/metacubex/mihomo/hub/executor"
+	"github.com/metacubex/mihomo/listener"
 	"github.com/metacubex/mihomo/tunnel"
 	"go.yaml.in/yaml/v3"
 
@@ -68,6 +69,10 @@ func Start(opts Options) error {
 		return fmt.Errorf("engine: %w", err)
 	}
 
+	if opts.Tun != nil && opts.Tun.Stack != "system" && !withGvisor {
+		return errors.New("engine: this build has no gVisor for the TUN stack, rebuild with -tags with_gvisor (make build) or use the system stack")
+	}
+
 	cfg, err := buildConfig(opts)
 	if err != nil {
 		return err
@@ -81,6 +86,14 @@ func Start(opts Options) error {
 		return fmt.Errorf("engine: %w", err)
 	}
 	running = true
+
+	// mihomo keeps going when TUN fails to start: it logs the reason and
+	// flips Enable off. Saying "connected" then would be a lie.
+	if opts.Tun != nil && !listener.GetTunConf().Enable {
+		executor.Shutdown()
+		running = false
+		return errors.New("engine: TUN did not start, the reason is in the log above")
+	}
 
 	if opts.Selected != "" {
 		return selectLocked(opts.Selected)
