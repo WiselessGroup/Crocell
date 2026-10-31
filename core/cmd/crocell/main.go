@@ -19,11 +19,15 @@ import (
 	"git.wiseless.net/fureunoir/crocell/core/engine"
 	"git.wiseless.net/fureunoir/crocell/core/probe"
 	"git.wiseless.net/fureunoir/crocell/core/subscription"
+	"git.wiseless.net/fureunoir/crocell/core/sysproxy"
 )
 
 const usage = `usage:
   crocell nodes <subscription-url> [-probe]
-  crocell up <subscription-url> [-node NAME] [-port 7890]
+  crocell up <subscription-url> [-node NAME] [-port 7890] [-sysproxy] [-tun]
+
+  -sysproxy  point the desktop proxy settings at us, restore them on exit
+  -tun       capture the whole system (needs root or CAP_NET_ADMIN)
 `
 
 func main() {
@@ -134,23 +138,42 @@ func cmdNodes(ctx context.Context, args []string) error {
 			entry = n.Server
 		}
 		if r.Err != nil {
-			fmt.Fprintf(w, "%s\t%s\t%s\t✗ %v\t\n", n.Name, typ, entry, shortErr(r.Err))
+			fmt.Fprintf(w, "%s\t%s\t%s\t✗ failed, see below\t\n", n.Name, typ, entry)
 			continue
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s %s (%s)\t%s\n", n.Name, typ, entry,
 			r.ExitCountry, r.ExitIP, r.ExitColo, r.Latency.Round(time.Millisecond))
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return err
+	}
+
+	for i, r := range results {
+		if r.Err != nil {
+			fmt.Printf("\n%s:\n  %v\n", sub.Nodes[i].Name, r.Err)
+		}
+	}
+	return nil
 }
 
 func cmdUp(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("up", flag.ExitOnError)
 	node := fs.String("node", "", "node name (default: first)")
-	port := fs.Int("port", 7890, "mixed HTTP/SOCKS port on 127.0.0.1")
+	port := fs.Int("port", 7890, "mixed HTTP/SOCKS port on 127.0.0.1, 0 disables")
 	logLevel := fs.String("log", "warning", "mihomo log level")
+	useTun := fs.Bool("tun", false, "capture the whole system through a TUN device")
+	stack := fs.String("stack", "mixed", "TUN stack: mixed, system, gvisor")
+	useSysproxy := fs.Bool("sysproxy", false, "set the desktop proxy settings")
 	url, err := parseArgs(fs, args)
 	if err != nil {
 		return err
+	}
+
+	if *useSysproxy && *port == 0 {
+		return errors.New("-sysproxy needs a -port")
+	}
+	if *useTun && !privileged() {
+		return errors.New("-tun needs root: run with sudo, or once `sudo setcap cap_net_admin,cap_net_bind_service+ep` on the binary")
 	}
 
 	sub, err := fetch(ctx, url)
@@ -163,19 +186,42 @@ func cmdUp(ctx context.Context, args []string) error {
 		return err
 	}
 
-	err = engine.Start(engine.Options{
+	opts := engine.Options{
 		HomeDir:   filepath.Join(home, "crocell", "engine"),
 		MixedPort: *port,
 		LogLevel:  *logLevel,
 		Nodes:     sub.Nodes,
 		Selected:  *node,
-	})
-	if err != nil {
+	}
+	if *useTun {
+		opts.Tun = &engine.TunOptions{Stack: *stack}
+	}
+	if err := engine.Start(opts); err != nil {
 		return err
 	}
 	defer engine.Stop()
 
-	fmt.Printf("%s → 127.0.0.1:%d (http+socks), Ctrl+C to stop\n", engine.Selected(), *port)
+	var modes []string
+	if *port > 0 {
+		modes = append(modes, fmt.Sprintf("127.0.0.1:%d (http+socks)", *port))
+	}
+	if *useSysproxy {
+		restore, err := sysproxy.Set("127.0.0.1", *port)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := restore(); err != nil {
+				fmt.Fprintln(os.Stderr, "crocell: restore system proxy:", err)
+			}
+		}()
+		modes = append(modes, "system proxy")
+	}
+	if *useTun {
+		modes = append(modes, "TUN, whole system")
+	}
+
+	fmt.Printf("%s → %s. Ctrl+C to stop\n", engine.Selected(), strings.Join(modes, ", "))
 	<-ctx.Done()
 	return nil
 }
@@ -197,11 +243,3 @@ func printInfo(sub *subscription.Subscription) {
 }
 
 func gb(n int64) float64 { return float64(n) / (1 << 30) }
-
-func shortErr(err error) string {
-	s := err.Error()
-	if len(s) > 60 {
-		s = s[:57] + "..."
-	}
-	return s
-}

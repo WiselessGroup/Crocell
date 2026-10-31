@@ -19,9 +19,16 @@ import (
 	C "github.com/metacubex/mihomo/constant"
 )
 
-// traceURL returns ip=, loc= (country) and colo= (Cloudflare PoP, an IATA
-// airport code) in one plain-text response, no third-party GeoIP needed.
-const traceURL = "https://www.cloudflare.com/cdn-cgi/trace"
+// Cloudflare trace returns ip=, loc= (country) and colo= (Cloudflare PoP, an
+// IATA airport code) in one plain-text response, no third-party GeoIP needed.
+//
+// The IPv4 literal goes first: people know their exit by its IPv4 address, and
+// a dual-stack exit would otherwise answer from IPv6. The hostname is the
+// fallback for IPv6-only exits.
+var traceURLs = []string{
+	"https://1.1.1.1/cdn-cgi/trace",
+	"https://www.cloudflare.com/cdn-cgi/trace",
+}
 
 // Result is what one probe found. Exit fields are empty when Err is set.
 type Result struct {
@@ -66,14 +73,21 @@ func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
 		Timeout: 15 * time.Second,
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, traceURL, nil)
-	if err != nil {
-		res.Err = err
-		return res
+	var resp *http.Response
+	var err error
+	var start time.Time
+	for _, url := range traceURLs {
+		var req *http.Request
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			break
+		}
+		start = time.Now()
+		resp, err = client.Do(req)
+		if err == nil {
+			break
+		}
 	}
-
-	start := time.Now()
-	resp, err := client.Do(req)
 	if err != nil {
 		res.Err = fmt.Errorf("probe: %w", err)
 		return res

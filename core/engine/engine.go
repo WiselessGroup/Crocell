@@ -33,6 +33,22 @@ type Options struct {
 	LogLevel  string // silent, error, warning, info, debug
 	Nodes     []subscription.Node
 	Selected  string // node name, first node when empty
+
+	// Tun captures the whole system instead of waiting for apps to use the
+	// proxy. Needs root / CAP_NET_ADMIN on desktop, VpnService on Android.
+	Tun *TunOptions
+}
+
+// TunOptions configure the TUN device. Zero values are sane defaults.
+type TunOptions struct {
+	// Stack: "mixed" (system TCP, gVisor UDP), "system" or "gvisor".
+	Stack string
+	MTU   uint32
+	// FileDescriptor is the TUN fd handed over by Android's VpnService.
+	// When set, routes are the VpnService's business, not ours.
+	FileDescriptor int
+	// ExcludePackages bypass the tunnel completely (Android only).
+	ExcludePackages []string
 }
 
 var (
@@ -126,7 +142,7 @@ func buildConfig(opts Options) ([]byte, error) {
 	proxies := make([]map[string]any, 0, len(opts.Nodes))
 	names := make([]string, 0, len(opts.Nodes))
 	for _, n := range opts.Nodes {
-		proxies = append(proxies, n.Proxy)
+		proxies = append(proxies, withFingerprint(n.Proxy))
 		names = append(names, n.Name)
 	}
 
@@ -141,9 +157,6 @@ func buildConfig(opts Options) ([]byte, error) {
 		"allow-lan":    false,
 		"bind-address": "127.0.0.1",
 		"ipv6":         true,
-		// Without a fingerprint mihomo speaks Go's crypto/tls ClientHello,
-		// which DPI tells apart from a browser. Nodes may override it.
-		"global-client-fingerprint": "chrome",
 		"profile": map[string]any{
 			"store-selected": false,
 		},
@@ -158,10 +171,123 @@ func buildConfig(opts Options) ([]byte, error) {
 	if opts.MixedPort > 0 {
 		cfg["mixed-port"] = opts.MixedPort
 	}
+	if opts.Tun != nil {
+		cfg["tun"] = tunConfig(opts.Tun)
+		cfg["dns"] = dnsConfig()
+		cfg["sniffer"] = snifferConfig()
+	}
 
 	out, err := yaml.Marshal(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("engine: marshal config: %w", err)
 	}
 	return out, nil
+}
+
+// withFingerprint makes sure every TLS proxy has a client-fingerprint.
+// Without one mihomo speaks Go's crypto/tls ClientHello, which DPI tells
+// apart from a browser. mihomo used to have a global default for this, but
+// v1.19.33 removed it and only logs an error, so it is per proxy now.
+func withFingerprint(p map[string]any) map[string]any {
+	if _, ok := p["client-fingerprint"]; ok {
+		return p
+	}
+	tls, _ := p["tls"].(bool)
+	_, reality := p["reality-opts"]
+	typ, _ := p["type"].(string)
+	if !tls && !reality && typ != "trojan" && typ != "anytls" {
+		return p
+	}
+
+	out := make(map[string]any, len(p)+1)
+	for k, v := range p {
+		out[k] = v
+	}
+	out["client-fingerprint"] = "chrome"
+	return out
+}
+
+func tunConfig(t *TunOptions) map[string]any {
+	stack := t.Stack
+	if stack == "" {
+		stack = "mixed"
+	}
+	tun := map[string]any{
+		"enable": true,
+		"stack":  stack,
+		"dns-hijack": []string{
+			"any:53",
+			"tcp://any:53",
+		},
+		// strict-route cuts IPv6 off entirely and drags excluded apps into the
+		// tunnel anyway, which is exactly how Happ breaks games and P2P.
+		"strict-route": false,
+	}
+	if t.MTU > 0 {
+		tun["mtu"] = t.MTU
+	}
+	// mihomo defaults auto-route to true, so the Android case spells it out.
+	auto := t.FileDescriptor == 0
+	tun["auto-route"] = auto
+	tun["auto-detect-interface"] = auto
+	if t.FileDescriptor > 0 {
+		tun["file-descriptor"] = t.FileDescriptor
+	}
+	if len(t.ExcludePackages) > 0 {
+		tun["exclude-package"] = t.ExcludePackages
+	}
+	return tun
+}
+
+// dnsConfig: names resolve through the tunnel (no DNS leaks, no poisoned
+// answers from the local ISP), except node addresses and DIRECT traffic,
+// which use the system resolver so they never loop through the node.
+func dnsConfig() map[string]any {
+	return map[string]any{
+		"enable":        true,
+		"ipv6":          true,
+		"enhanced-mode": "fake-ip",
+		"fake-ip-range": "198.18.0.1/16",
+		// Things that break when they see a fake address: captive portal and
+		// connectivity checks, NTP, STUN for calls and games, console networks.
+		"fake-ip-filter": []string{
+			"*.lan",
+			"*.local",
+			"*.localdomain",
+			"localhost",
+			"+.msftconnecttest.com",
+			"+.msftncsi.com",
+			"+.ntp.org",
+			"time.*.com",
+			"time.*.gov",
+			"+.stun.*.*",
+			"+.stun.*.*.*",
+			"+.srv.nintendo.net",
+			"+.stun.playstation.net",
+			"xbox.*.microsoft.com",
+			"+.xboxlive.com",
+		},
+		"default-nameserver": []string{"system", "1.1.1.1", "77.88.8.8"},
+		"nameserver": []string{
+			"https://1.1.1.1/dns-query#" + GroupName,
+			"https://8.8.8.8/dns-query#" + GroupName,
+		},
+		"proxy-server-nameserver": []string{"system", "1.1.1.1", "77.88.8.8"},
+		"direct-nameserver":       []string{"system"},
+	}
+}
+
+// snifferConfig recovers domains from TLS SNI / HTTP Host / QUIC, so rules by
+// domain work even when an app connected to a bare IP.
+func snifferConfig() map[string]any {
+	return map[string]any{
+		"enable":               true,
+		"parse-pure-ip":        true,
+		"override-destination": false,
+		"sniff": map[string]any{
+			"TLS":  map[string]any{"ports": []int{443, 8443}},
+			"HTTP": map[string]any{"ports": []int{80, 8080}},
+			"QUIC": map[string]any{"ports": []int{443, 8443}},
+		},
+	}
 }
