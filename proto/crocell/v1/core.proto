@@ -1,0 +1,178 @@
+// Contract between the Crocell client (Flutter) and the core (Go).
+//
+// Desktop: gRPC over a unix socket / named pipe to crocelld.
+// Mobile: the same messages, serialized, over a platform channel to the VPN
+// service. The client must not care which one it talks to.
+//
+// Draft: nothing generates code from this yet.
+syntax = "proto3";
+
+package crocell.v1;
+
+option go_package = "git.wiseless.net/fureunoir/crocell/core/api/crocellv1";
+
+import "google/protobuf/timestamp.proto";
+
+service Core {
+  // State
+  rpc GetStatus(GetStatusRequest) returns (Status);
+  rpc WatchStatus(WatchStatusRequest) returns (stream Status);
+
+  // Connection
+  rpc Connect(ConnectRequest) returns (Status);
+  rpc Disconnect(DisconnectRequest) returns (Status);
+  rpc SelectNode(SelectNodeRequest) returns (Status);
+
+  // Subscriptions
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse);
+  rpc AddSubscription(AddSubscriptionRequest) returns (Subscription);
+  rpc RefreshSubscription(RefreshSubscriptionRequest) returns (Subscription);
+  rpc RemoveSubscription(RemoveSubscriptionRequest) returns (RemoveSubscriptionResponse);
+
+  // Node quality: entry, exit, latency. Streams results as they come.
+  rpc ProbeNodes(ProbeNodesRequest) returns (stream ProbeResult);
+
+  // Settings
+  rpc GetSettings(GetSettingsRequest) returns (Settings);
+  rpc UpdateSettings(Settings) returns (Settings);
+}
+
+// ---------- State ----------
+
+enum ConnectionState {
+  CONNECTION_STATE_UNSPECIFIED = 0;
+  CONNECTION_STATE_DISCONNECTED = 1;
+  CONNECTION_STATE_CONNECTING = 2;
+  CONNECTION_STATE_CONNECTED = 3;
+  CONNECTION_STATE_DISCONNECTING = 4;
+  CONNECTION_STATE_FAILED = 5;
+}
+
+message Status {
+  ConnectionState state = 1;
+  string subscription_id = 2;
+  string node_id = 3;
+  google.protobuf.Timestamp connected_since = 4;
+  Traffic traffic = 5;
+  // Human-readable reason when state is FAILED. Never contains secrets.
+  string error = 6;
+}
+
+message Traffic {
+  uint64 up_bytes = 1;
+  uint64 down_bytes = 2;
+  uint64 up_rate = 3;   // bytes per second, last sample
+  uint64 down_rate = 4;
+}
+
+message GetStatusRequest {}
+message WatchStatusRequest {}
+
+// ---------- Connection ----------
+
+message ConnectRequest {
+  string subscription_id = 1;
+  string node_id = 2; // empty: last used node
+}
+message DisconnectRequest {}
+message SelectNodeRequest {
+  string subscription_id = 1;
+  string node_id = 2;
+}
+
+// ---------- Subscriptions ----------
+
+message Subscription {
+  string id = 1;
+  string title = 2;
+  // The link itself is a secret: the core keeps it, the client gets a
+  // masked version for display.
+  string url_masked = 3;
+  string format = 4; // links, clash
+  uint64 upload_bytes = 5;
+  uint64 download_bytes = 6;
+  uint64 total_bytes = 7; // 0 = unlimited
+  google.protobuf.Timestamp expire = 8; // unset = never
+  uint32 update_interval_hours = 9;
+  string web_page = 10;
+  string support = 11;
+  string announce = 12;
+  google.protobuf.Timestamp fetched_at = 13;
+  repeated Node nodes = 14;
+}
+
+message Node {
+  string id = 1;     // stable across refreshes: hash of type+server+port+credentials
+  string name = 2;
+  string type = 3;   // vless, hysteria2, ...
+  string network = 4; // tcp, xhttp, ws, grpc, ...
+  string server = 5;
+  uint32 port = 6;
+  ProbeResult last_probe = 7;
+}
+
+message ListSubscriptionsRequest {}
+message ListSubscriptionsResponse {
+  repeated Subscription subscriptions = 1;
+}
+message AddSubscriptionRequest {
+  string url = 1;
+}
+message RefreshSubscriptionRequest {
+  string id = 1;
+}
+message RemoveSubscriptionRequest {
+  string id = 1;
+}
+message RemoveSubscriptionResponse {}
+
+// ---------- Probes ----------
+
+message ProbeNodesRequest {
+  string subscription_id = 1;
+  repeated string node_ids = 2; // empty: all nodes of the subscription
+}
+
+message ProbeResult {
+  string node_id = 1;
+  repeated string entry_ips = 2;
+  string entry_country = 3; // ISO 3166-1 alpha-2, from local GeoIP
+  string exit_ip = 4;
+  string exit_country = 5;
+  string exit_colo = 6;     // nearest Cloudflare PoP, e.g. FRA
+  uint32 latency_ms = 7;    // a real HTTPS request through the node
+  string error = 8;
+  google.protobuf.Timestamp probed_at = 9;
+}
+
+// ---------- Settings ----------
+
+enum TunnelMode {
+  TUNNEL_MODE_UNSPECIFIED = 0;
+  TUNNEL_MODE_SYSTEM_PROXY = 1; // no root, browsers and well-behaved apps
+  TUNNEL_MODE_TUN = 2;          // whole system
+}
+
+// What happens to one application's traffic while Crocell is on.
+enum AppMode {
+  APP_MODE_UNSPECIFIED = 0;
+  APP_MODE_PROXY = 1;  // through the selected node
+  APP_MODE_BYPASS = 2; // straight to the internet, ideally never enters the tunnel
+  APP_MODE_BLOCK = 3;  // no network while Crocell is connected
+}
+
+message AppRule {
+  // Android: package name. Desktop: executable name or full path.
+  string app = 1;
+  AppMode mode = 2;
+}
+
+message Settings {
+  TunnelMode tunnel_mode = 1;
+  repeated AppRule app_rules = 2;
+  // Russian and CIS destinations go direct, the rest through the node.
+  bool split_ru = 3;
+  bool ipv6 = 4;
+}
+
+message GetSettingsRequest {}

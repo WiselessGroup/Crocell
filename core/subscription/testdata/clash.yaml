@@ -1,0 +1,25 @@
+proxies:
+  - name: de
+    type: vless
+    server: de.example.com
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000005
+    network: tcp
+    tls: true
+    flow: xtls-rprx-vision
+    servername: www.example.org
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: dGVzdC1wdWJsaWMta2V5LXRlc3QtcHVibGljLWtleS0
+      short-id: abcd
+proxy-providers:
+  extra:
+    type: http
+    url: PROVIDER_URL
+    interval: 3600
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [de]
+rules:
+  - MATCH,PROXY

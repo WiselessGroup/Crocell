@@ -1,0 +1,7 @@
+#profile-title: base64:V0lTRUxFU1M=
+#profile-update-interval: 1
+#subscription-userinfo: upload=0; download=0; total=0; expire=0
+hysteria2://00000000-0000-4000-8000-000000000001@hy.example.com:443/?insecure=1&sni=hy.example.com&obfs=salamander&obfs-password=test-obfs#auto-2%20(HYSTERIA)
+vless://00000000-0000-4000-8000-000000000002@relay.example.com:443?type=tcp&security=reality&encryption=none&pbk=dGVzdC1wdWJsaWMta2V5LXRlc3QtcHVibGljLWtleS0&sid=abcd&sni=relay.example.com&fp=firefox&flow=xtls-rprx-vision&fm=%7B%22fragment%22%3A%7B%22length%22%3A%2250-100%22%2C%22packets%22%3A%22tlshello%22%2C%22interval%22%3A%2210-20%22%7D%7D#auto-2
+vless://00000000-0000-4000-8000-000000000003@dc.example.com:443?type=xhttp&security=reality&encryption=none&pbk=dGVzdC1wdWJsaWMta2V5LXRlc3QtcHVibGljLWtleS0&sid=abcd&sni=dc.example.com&fp=firefox&path=%2Fapi%2Fv2%2Fstream&mode=auto#auto-1
+vless://00000000-0000-4000-8000-000000000004@nl.example.com:443?type=xhttp&security=reality&encryption=none&pbk=dGVzdC1wdWJsaWMta2V5LXRlc3QtcHVibGljLWtleS0&sid=abcd&sni=www.mozilla.org&fp=firefox&path=%2Fv1%2Fmedia%2Fsegment&mode=auto#%F0%9F%87%B3%F0%9F%87%B1%20nl

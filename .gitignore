@@ -1,0 +1,33 @@
+# Go
+core/bin/
+core/dist/
+*.test
+*.out
+coverage.*
+
+# gomobile
+*.aar
+*.xcframework/
+
+# Flutter / Dart (app/ has its own .gitignore from flutter create)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+
+# Releases
+dist/
+*.AppImage
+*.dmg
+*.apk
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local secrets and dev data
+.env
+*.local.yaml
+core/testdata/private/
