@@ -313,6 +313,8 @@ class _AdvancedState extends ConsumerState<_Advanced> {
   late final _geoHours = TextEditingController(
       text: widget.settings.geo.updateHours == 0 ? '' : '${widget.settings.geo.updateHours}');
   bool _dirty = false;
+  bool _saving = false;
+  String? _error; // why the last save was refused, shown by the button
 
   @override
   void dispose() {
@@ -336,16 +338,37 @@ class _AdvancedState extends ConsumerState<_Advanced> {
   Future<void> _save() async {
     final port = int.tryParse(_port.text.trim());
     if (port == null) {
-      showError(context, 'Порт — это число от 1024 до 65535');
+      setState(() => _error = 'Порт — это число от 1024 до 65535');
       return;
     }
     final hours = int.tryParse(_geoHours.text.trim()) ?? 0;
-    await _edit((s) {
-      s.dns = DnsSettings(servers: _lines(_dns), directServers: _lines(_directDns), realIp: s.dns.realIp);
-      s.mixedPort = port;
-      s.geo = GeoSettings(geoipSource: _geoip.text.trim(), geositeSource: _geosite.text.trim(), updateHours: hours);
+    setState(() {
+      _saving = true;
+      _error = null;
     });
-    if (mounted) setState(() => _dirty = false);
+    try {
+      // A new geo source is downloaded and checked by the service before it
+      // is saved, so this can take a few seconds and can be refused.
+      await ref.read(settingsProvider.notifier).edit((s) {
+        s.dns = DnsSettings(servers: _lines(_dns), directServers: _lines(_directDns), realIp: s.dns.realIp);
+        s.mixedPort = port;
+        s.geo = GeoSettings(geoipSource: _geoip.text.trim(), geositeSource: _geosite.text.trim(), updateHours: hours);
+      });
+      ref.invalidate(geoInfoProvider);
+      final saved = ref.read(settingsProvider).value;
+      if (mounted && saved != null) {
+        setState(() {
+          _dirty = false;
+          // The service may have tidied a link (a GitHub page into the file).
+          _geoip.text = saved.geo.geoipSource;
+          _geosite.text = saved.geo.geositeSource;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -353,7 +376,10 @@ class _AdvancedState extends ConsumerState<_Advanced> {
     final s = widget.settings;
     final t = context.tokens;
     final theme = Theme.of(context);
-    void dirty(_) => setState(() => _dirty = true);
+    void dirty(_) => setState(() {
+          _dirty = true;
+          _error = null;
+        });
 
     Widget field(TextEditingController c, String label, {String? hint, String? helper, int lines = 1}) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -432,13 +458,25 @@ class _AdvancedState extends ConsumerState<_Advanced> {
               helper: 'По одному в строке, запросы идут через VPN. Пусто — Cloudflare и Google.',
               lines: 3),
           field(_directDns, 'DNS для прямых соединений',
-              hint: 'system', helper: 'Пусто — системный DNS.', lines: 2),
+              hint: '77.88.8.8',
+              helper: 'Для сайтов и программ из «Напрямую». Пусто — Яндекс и Cloudflare.',
+              lines: 2),
           field(_geoip, 'Источник geoip.dat', hint: 'Ссылка или путь к файлу', helper: 'Пусто — runetfreedom.'),
           field(_geosite, 'Источник geosite.dat', hint: 'Ссылка или путь к файлу', helper: 'Пусто — runetfreedom.'),
           SizedBox(width: 220, child: field(_geoHours, 'Обновлять базы, часов', hint: '24')),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(_error!, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error)),
+            ),
           Align(
             alignment: Alignment.centerRight,
-            child: FilledButton(onPressed: _dirty ? _save : null, child: const Text('Сохранить')),
+            child: FilledButton(
+              onPressed: _dirty && !_saving ? _save : null,
+              child: _saving
+                  ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Сохранить'),
+            ),
           ),
         ],
       ),

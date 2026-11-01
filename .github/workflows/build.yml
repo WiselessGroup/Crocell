@@ -151,6 +151,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/release-notes
       - uses: actions/download-artifact@v8
         with:
           name: appimage
@@ -158,8 +161,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Written notes when the tag has them, generated ones otherwise.
+          notes=".github/release-notes/$GITHUB_REF_NAME.md"
+          if [[ -f $notes ]]; then about=(--notes-file "$notes"); else about=(--generate-notes); fi
           gh release create "$GITHUB_REF_NAME" \
             Crocell-x86_64.AppImage Crocell-x86_64.AppImage.zsync \
             --repo "$GITHUB_REPOSITORY" \
             --title "Crocell ${GITHUB_REF_NAME#v}" \
-            --generate-notes
+            "${about[@]}"

@@ -15,6 +15,10 @@ class FakeCore implements CoreApi {
   Status current;
   Settings settings = Settings(tunnelMode: TunnelMode.TUNNEL_MODE_SYSTEM_PROXY, mixedPort: 7890);
   final calls = <String>[];
+
+  /// When set, updateSettings refuses with this message, as the service
+  /// does for a bad geo link.
+  String? refuseSettings;
   final _status = StreamController<Status>.broadcast();
 
   void push(Status s) {
@@ -106,6 +110,7 @@ class FakeCore implements CoreApi {
   @override
   Future<Settings> updateSettings(Settings s) async {
     calls.add('settings ${s.tunnelMode.name} ${s.rules.map((r) => '${r.value}=${r.action.name}').join(',')}');
+    if (refuseSettings != null) throw CoreError(refuseSettings!);
     settings = s;
     return s;
   }

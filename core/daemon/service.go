@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -58,9 +59,16 @@ type Config struct {
 	// HTTPS request: cheap, and it is how "it silently stopped working"
 	// turns into a notification. Default: DefaultCheckInterval.
 	CheckInterval time.Duration
+	// ReconnectDelay is how long settings must stay unchanged before a live
+	// connection picks them up. Adding three rules in a row restarts the
+	// tunnel once, not three times. Default: DefaultReconnectDelay.
+	ReconnectDelay time.Duration
 }
 
-const DefaultCheckInterval = 2 * time.Minute
+const (
+	DefaultCheckInterval  = 2 * time.Minute
+	DefaultReconnectDelay = 1500 * time.Millisecond
+)
 
 func realCheck(ctx context.Context, mode pb.TunnelMode, port int) probe.Result {
 	if mode == pb.TunnelMode_TUNNEL_MODE_TUN {
@@ -79,6 +87,7 @@ type Service struct {
 	probe   func(context.Context, map[string]any) probe.Result
 	check   func(context.Context, pb.TunnelMode, int) probe.Result
 	every   time.Duration // live check interval
+	settle  time.Duration // see Config.ReconnectDelay
 
 	// op serialises connect/disconnect/reconfigure, which can take seconds
 	// (TUN setup). mu guards the fields below and is never held across them.
@@ -91,6 +100,7 @@ type Service struct {
 	changed chan struct{}              // closed and replaced on every change
 
 	stopChecks context.CancelFunc // ends the running check loop, if any
+	reconnect  *time.Timer        // pending pick-up of new settings
 
 	geo      *geo.Manager
 	geoMu    sync.Mutex // one update at a time
@@ -143,6 +153,10 @@ func New(cfg Config) (*Service, error) {
 	if s.every <= 0 {
 		s.every = DefaultCheckInterval
 	}
+	s.settle = cfg.ReconnectDelay
+	if s.settle <= 0 {
+		s.settle = DefaultReconnectDelay
+	}
 
 	sealer, err := newSealer(cfg.StateDir)
 	if err != nil {
@@ -165,6 +179,9 @@ func (s *Service) Close() {
 	defer s.op.Unlock()
 	s.mu.Lock()
 	s.endChecksLocked()
+	if s.reconnect != nil {
+		s.reconnect.Stop()
+	}
 	s.mu.Unlock()
 	s.eng.Stop()
 }
@@ -199,8 +216,7 @@ func (s *Service) startChecksLocked() {
 	mode, port, nodeID := s.conn.mode, s.conn.port, s.conn.nodeID
 
 	go func() {
-		ticker := time.NewTicker(s.every)
-		defer ticker.Stop()
+		failed := 0
 		for {
 			s.mu.Lock()
 			if ctx.Err() != nil {
@@ -218,17 +234,51 @@ func (s *Service) startChecksLocked() {
 				s.mu.Unlock()
 				return
 			}
+			wait := s.every
+			switch {
+			case r.GetError() == "":
+				failed = 0
+			case failed == 0:
+				// Right after a (re)connect the tunnel may still be settling.
+				// Look again shortly before telling anyone it is down.
+				failed++
+				wait = min(recheckDelay, s.every)
+				s.mu.Unlock()
+				if !sleep(ctx, wait) {
+					return
+				}
+				continue
+			default:
+				// Down: keep looking often, so recovery shows up soon too.
+				failed++
+				wait = min(downCheckInterval, s.every)
+			}
 			s.conn.check, s.conn.checking = r, false
 			s.notifyLocked()
 			s.mu.Unlock()
 
-			select {
-			case <-ctx.Done():
+			if !sleep(ctx, wait) {
 				return
-			case <-ticker.C:
 			}
 		}
 	}()
+}
+
+const (
+	recheckDelay      = 3 * time.Second
+	downCheckInterval = 20 * time.Second
+)
+
+// sleep waits d, or reports false when ctx ends first.
+func sleep(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-t.C:
+		return true
+	}
 }
 
 // ---------- State ----------
@@ -614,21 +664,56 @@ func (s *Service) UpdateSettings(ctx context.Context, req *pb.Settings) (*pb.Set
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	// A new geo source is tried before it is saved, so a bad link is
+	// refused with a reason instead of failing later, quietly.
+	s.mu.Lock()
+	old := s.st.Settings.Geo
+	s.mu.Unlock()
+	downloads, err := s.tryGeoSources(ctx, old, set.Geo)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	s.mu.Lock()
 	s.st.Settings = set
 	err = s.store.save(s.st)
-	conn := s.conn
+	connected := s.conn.state == pb.ConnectionState_CONNECTION_STATE_CONNECTED
 	s.mu.Unlock()
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-
-	if conn.state == pb.ConnectionState_CONNECTION_STATE_CONNECTED {
-		if _, err := s.Connect(ctx, &pb.ConnectRequest{SubscriptionId: conn.subID, NodeId: conn.nodeID}); err != nil {
-			return nil, err
+	if len(downloads) > 0 {
+		if err := s.installGeo(downloads); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
+
+	if connected {
+		s.reconnectSoon()
+	}
 	return settingsToProto(set), nil
+}
+
+// reconnectSoon restarts a live connection with the current settings once
+// they stop changing. A failure shows up in the status, which the app
+// turns into a notification.
+func (s *Service) reconnectSoon() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.reconnect != nil {
+		s.reconnect.Stop()
+	}
+	s.reconnect = time.AfterFunc(s.settle, func() {
+		s.mu.Lock()
+		conn := s.conn
+		s.mu.Unlock()
+		if conn.state != pb.ConnectionState_CONNECTION_STATE_CONNECTED {
+			return // disconnected in the meantime
+		}
+		if _, err := s.Connect(context.Background(), &pb.ConnectRequest{SubscriptionId: conn.subID, NodeId: conn.nodeID}); err != nil {
+			log.Printf("crocelld: reconnect with new settings: %v", err)
+		}
+	})
 }
 
 // ---------- Conversions ----------

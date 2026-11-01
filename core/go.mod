@@ -143,3 +143,7 @@ require (
 	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240610135401-a8a62080eff3 // indirect
 )
+
+// Upstream mihomo plus Crocell's fixes, until the bleach fork takes over.
+// What differs and why: third_party/mihomo/CROCELL.md.
+replace github.com/metacubex/mihomo => ./third_party/mihomo

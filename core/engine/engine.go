@@ -351,9 +351,18 @@ func dnsConfig(o DNSOptions, ipv6 bool) map[string]any {
 		}
 		viaNode = append(viaNode, s)
 	}
-	direct := []string{"system"}
-	if len(o.DirectServers) > 0 {
-		direct = o.DirectServers
+	// Never "system" here. With TUN up, the system resolver (systemd-resolved
+	// on Linux, the VPN's DNS on Android) asks mihomo itself, gets a fake
+	// address back, and every DIRECT connection and every node given by
+	// name dials into nowhere. Plain servers by IP go out past the tunnel.
+	var direct []string
+	for _, s := range o.DirectServers {
+		if !isSystemDNS(s) {
+			direct = append(direct, s)
+		}
+	}
+	if len(direct) == 0 {
+		direct = defaultDirectDNS
 	}
 	mode := "fake-ip"
 	if o.RealIP {
@@ -384,11 +393,23 @@ func dnsConfig(o DNSOptions, ipv6 bool) map[string]any {
 			"xbox.*.microsoft.com",
 			"+.xboxlive.com",
 		},
-		"default-nameserver":      []string{"system", "1.1.1.1", "77.88.8.8"},
+		"default-nameserver":      defaultDirectDNS,
 		"nameserver":              viaNode,
 		"proxy-server-nameserver": append([]string{}, direct...),
 		"direct-nameserver":       direct,
 	}
+}
+
+// defaultDirectDNS answers for sites that go direct and for node addresses:
+// Yandex for local answers in Russia, Cloudflare everywhere else. mihomo
+// asks both and takes whichever replies first.
+var defaultDirectDNS = []string{"77.88.8.8", "1.1.1.1"}
+
+// isSystemDNS reports a server that means "whatever the OS uses", which
+// loops back into the tunnel while it is up.
+func isSystemDNS(s string) bool {
+	s = strings.ToLower(strings.TrimSpace(s))
+	return s == "system" || strings.HasPrefix(s, "system://")
 }
 
 // snifferConfig recovers domains from TLS SNI / HTTP Host / QUIC, so rules by

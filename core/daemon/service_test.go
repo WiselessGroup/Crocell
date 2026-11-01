@@ -48,6 +48,24 @@ func (f *fakeEngine) Select(name string) error {
 }
 func (f *fakeEngine) Traffic() engine.Traffic { return engine.Traffic{Up: 10, Down: 20} }
 
+func (f *fakeEngine) starts() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.started)
+}
+
+// waitFor polls cond for up to two seconds: for what the service does on
+// its own timers (reconnecting after a settings change).
+func waitFor(t *testing.T, what string, cond func() bool) {
+	t.Helper()
+	for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
+		if cond() {
+			return
+		}
+	}
+	t.Fatalf("timed out waiting for %s", what)
+}
+
 func (f *fakeEngine) last() engine.Options {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -102,6 +120,7 @@ func newHarness(t *testing.T, opts ...func(*Config)) *harness {
 			}
 			return probe.Result{ExitIP: "203.0.113.8", ExitCountry: "DE", ExitColo: "FRA", Latency: 90 * time.Millisecond}
 		},
+		ReconnectDelay: 20 * time.Millisecond,
 	}
 	for _, o := range opts {
 		o(&cfg)
@@ -245,6 +264,36 @@ func TestFailedStartIsReported(t *testing.T) {
 	}
 }
 
+// The person adds three rules in a row: the tunnel restarts once, after
+// the last one, and not while they are still typing.
+func TestSettingsChangesRestartOnce(t *testing.T) {
+	h := newHarness(t, func(c *Config) { c.ReconnectDelay = 150 * time.Millisecond })
+	sub := h.add(t)
+	ctx := context.Background()
+	if _, err := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.Id}); err != nil {
+		t.Fatal(err)
+	}
+	before := h.eng.starts()
+	var rules []*pb.RouteRule
+	for _, d := range []string{"a.example", "b.example", "c.example"} {
+		rules = append(rules, &pb.RouteRule{Kind: pb.RuleKind_RULE_KIND_DOMAIN, Value: d, Action: pb.RouteAction_ROUTE_ACTION_DIRECT})
+		if _, err := h.client.UpdateSettings(ctx, &pb.Settings{Rules: rules}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if h.eng.starts() != before {
+		t.Fatal("restarted while settings were still changing")
+	}
+	waitFor(t, "one restart", func() bool { return h.eng.starts() == before+1 })
+	time.Sleep(200 * time.Millisecond)
+	if n := h.eng.starts() - before; n != 1 || len(h.eng.last().Rules) != 3 {
+		t.Errorf("%d restarts, last with %d rules", n, len(h.eng.last().Rules))
+	}
+	if st, _ := h.client.GetStatus(ctx, &pb.GetStatusRequest{}); st.State != pb.ConnectionState_CONNECTION_STATE_CONNECTED {
+		t.Errorf("after restart: %v", st.State)
+	}
+}
+
 func TestSettingsReachTheEngine(t *testing.T) {
 	h := newHarness(t)
 	sub := h.add(t)
@@ -268,7 +317,8 @@ func TestSettingsReachTheEngine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Connected, so the new settings applied by reconnecting.
+	// Connected, so the new settings are applied by reconnecting, shortly.
+	waitFor(t, "reconnect with new settings", func() bool { return h.eng.last().Tun != nil })
 	last := h.eng.last()
 	if last.Tun == nil {
 		t.Error("TUN not applied")
@@ -437,4 +487,47 @@ func TestRecheckOnInterval(t *testing.T) {
 	// The node dies later: the next round must notice.
 	h.setCheckErr(errors.New("probe: connection reset"))
 	waitStatus(t, h, func(s *pb.Status) bool { return s.LiveCheck != nil && s.LiveCheck.Error != "" })
+}
+
+// Right after a restart the first check can land before the tunnel is
+// ready. One failure followed by success must never reach the screen as
+// "connected, no internet".
+func TestOneFailedCheckIsLookedAtAgain(t *testing.T) {
+	var mu sync.Mutex
+	calls := 0
+	h := newHarness(t, func(c *Config) {
+		c.CheckInterval = time.Hour // only the quick second look can run
+		c.Check = func(ctx context.Context, mode pb.TunnelMode, port int) probe.Result {
+			mu.Lock()
+			defer mu.Unlock()
+			calls++
+			if calls == 1 {
+				return probe.Result{Err: errors.New("network is unreachable")}
+			}
+			return probe.Result{ExitIP: "203.0.113.8", ExitCountry: "DE"}
+		}
+	})
+	sub := h.add(t)
+	ctx := context.Background()
+	stream, err := h.client.WatchStatus(ctx, &pb.WatchStatusRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.Id}); err != nil {
+		t.Fatal(err)
+	}
+	for {
+		st, err := stream.Recv()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if lc := st.GetLiveCheck(); lc != nil {
+			if lc.Error != "" {
+				t.Fatalf("a single failure was shown: %v", lc.Error)
+			}
+			if lc.ExitIp != "" {
+				return
+			}
+		}
+	}
 }

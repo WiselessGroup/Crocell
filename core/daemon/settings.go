@@ -1,11 +1,15 @@
 package daemon
 
 import (
+	"errors"
 	"fmt"
+	"net/url"
+	"path/filepath"
 	"strings"
 
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/engine"
+	"git.wiseless.net/fureunoir/crocell/core/geo"
 )
 
 var kindNames = map[string]pb.RuleKind{
@@ -61,6 +65,27 @@ func engineRules(rules []rule) ([]engine.Rule, error) {
 		out = append(out, engine.Rule{Kind: kind, Value: r.Value, Action: action})
 	}
 	return out, nil
+}
+
+// checkGeoSource accepts an http(s) link or an absolute path to a file.
+// Whether there is a database behind it is checked by downloading it.
+func checkGeoSource(src string) error {
+	switch {
+	case src == "":
+		return nil
+	case strings.ContainsAny(src, "\n\r"):
+		return errors.New("одна ссылка, без переносов строки")
+	case isURL(src):
+		u, err := url.Parse(src)
+		if err != nil || u.Host == "" {
+			return errors.New("ссылка не разбирается, проверьте адрес")
+		}
+		return nil
+	case filepath.IsAbs(src):
+		return nil
+	default:
+		return errors.New("нужна ссылка, начинающаяся с https://, или полный путь к файлу, начинающийся с /")
+	}
 }
 
 func isURL(s string) bool { return strings.HasPrefix(s, "https://") || strings.HasPrefix(s, "http://") }
@@ -137,14 +162,21 @@ func settingsFromProto(p *pb.Settings) (settings, error) {
 	if s.Geo.UpdateHours < 0 || s.Geo.UpdateHours > 24*30 {
 		return settings{}, fmt.Errorf("geo update interval %d h is out of range", s.Geo.UpdateHours)
 	}
-	for _, src := range []string{s.Geo.GeoIPSource, s.Geo.GeoSiteSource} {
-		if strings.ContainsAny(src, "\n\r") {
-			return settings{}, fmt.Errorf("geo source %q: one line, please", src)
+	s.Geo.GeoIPSource = geo.Normalize(s.Geo.GeoIPSource)
+	s.Geo.GeoSiteSource = geo.Normalize(s.Geo.GeoSiteSource)
+	for _, g := range []struct{ name, src string }{{"geoip.dat", s.Geo.GeoIPSource}, {"geosite.dat", s.Geo.GeoSiteSource}} {
+		if err := checkGeoSource(g.src); err != nil {
+			return settings{}, fmt.Errorf("Источник %s: %w", g.name, err)
 		}
 	}
 	for _, d := range append(append([]string{}, s.DNS.Servers...), s.DNS.DirectServers...) {
 		if strings.ContainsAny(d, " \t,") {
 			return settings{}, fmt.Errorf("DNS server %q: one address per line", d)
+		}
+	}
+	for _, d := range s.DNS.DirectServers {
+		if strings.EqualFold(d, "system") {
+			return settings{}, errors.New("DNS для прямых соединений: «system» не подходит. В туннеле системный DNS спрашивает сам Crocell, и прямые сайты не открываются. Впишите адрес сервера, например 77.88.8.8, или оставьте поле пустым.")
 		}
 	}
 

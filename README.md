@@ -30,9 +30,12 @@ app/          клиент на Flutter: интерфейс, никакой ло
 core/         ядро на Go поверх mihomo: подписки, проверки, туннель
   cmd/crocelld  служба ядра: держит туннель, отдаёт API клиенту
   cmd/crocell   CLI для разработки и отладки
+  third_party/mihomo  mihomo с нашими исправлениями, пока нет форка
 proto/        контракт клиента и ядра
 assets/brand/ логотип и иконки
 ```
+
+mihomo подключён из `core/third_party/mihomo` через `replace` в `go.mod`. Это upstream v1.19.33 плюс наши исправления, их список и причины в [CROCELL.md](core/third_party/mihomo/CROCELL.md). Когда появится форк bleach, `replace` будет указывать на него.
 
 На десктопе туннель держит отдельный процесс ядра, окно только с ним разговаривает: закрыли, обновили или уронили окно — VPN не моргнёт. На телефонах ядро живёт внутри системного VPN-сервиса.
 
@@ -93,7 +96,7 @@ flutter run -d linux
 git tag v0.3.0 && git push origin v0.3.0
 ```
 
-Зеркало передаёт тег на GitHub, а workflow выкладывает в релиз `Crocell-x86_64.AppImage` и `.zsync`. Ссылка на обновления зашита в сам образ, поэтому Gear Lever и AppImageUpdate подтягивают новые версии сами. Служба ставится прямо из образа:
+Описание релиза берётся из `.github/release-notes/<тег>.md`, если такой файл есть, иначе GitHub собирает его из коммитов. Зеркало передаёт тег на GitHub, а workflow выкладывает в релиз `Crocell-x86_64.AppImage` и `.zsync`. Ссылка на обновления зашита в сам образ, поэтому Gear Lever и AppImageUpdate подтягивают новые версии сами. Служба ставится прямо из образа:
 
 ```bash
 sudo ./Crocell-x86_64.AppImage crocelld install

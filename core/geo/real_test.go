@@ -19,12 +19,15 @@ func TestRealGeoSiteCheaply(t *testing.T) {
 	var before, after runtime.MemStats
 	runtime.GC()
 	runtime.ReadMemStats(&before)
-	cats, err := categories(data)
+	cats, kind, err := categories(data)
 	runtime.ReadMemStats(&after)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("%d categories from %d MB, allocated %d KB", len(cats), len(data)>>20, (after.TotalAlloc-before.TotalAlloc)>>10)
+	if kind != GeoSiteFile {
+		t.Errorf("kind = %q", kind)
+	}
 	if len(cats) < 100 {
 		t.Errorf("only %d categories", len(cats))
 	}

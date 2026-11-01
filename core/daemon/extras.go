@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
+	"net/http"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -13,6 +15,7 @@ import (
 
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/engine"
+	"git.wiseless.net/fureunoir/crocell/core/geo"
 	"git.wiseless.net/fureunoir/crocell/core/procs"
 )
 
@@ -53,9 +56,7 @@ func (s *Service) UpdateGeo(ctx context.Context, _ *pb.UpdateGeoRequest) (*pb.Ge
 	s.mu.Unlock()
 
 	if usesGeo && conn.state == pb.ConnectionState_CONNECTION_STATE_CONNECTED {
-		if _, err := s.Connect(ctx, &pb.ConnectRequest{SubscriptionId: conn.subID, NodeId: conn.nodeID}); err != nil {
-			return nil, err
-		}
+		s.reconnectSoon()
 	}
 	return s.geoInfo(), nil
 }
@@ -99,6 +100,72 @@ func (s *Service) updateGeo(ctx context.Context) error {
 	}
 	s.mu.Unlock()
 	return err
+}
+
+// tryGeoSources downloads and checks the databases whose source changed,
+// without installing them. The error is a sentence for the person.
+func (s *Service) tryGeoSources(ctx context.Context, old, next geoSettings) ([]geo.Download, error) {
+	var out []geo.Download
+	for _, f := range []struct {
+		file, label, old, next string
+	}{
+		{geo.GeoIPFile, "geoip.dat", old.GeoIPSource, next.GeoIPSource},
+		{geo.GeoSiteFile, "geosite.dat", old.GeoSiteSource, next.GeoSiteSource},
+	} {
+		if f.next == f.old {
+			continue
+		}
+		s.geoMu.Lock()
+		fctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
+		d, err := s.geo.Fetch(fctx, f.file, f.next)
+		cancel()
+		s.geoMu.Unlock()
+		if err != nil {
+			return nil, explainGeo(f.label, f.next, err)
+		}
+		out = append(out, d)
+	}
+	return out, nil
+}
+
+func (s *Service) installGeo(ds []geo.Download) error {
+	s.geoMu.Lock()
+	defer s.geoMu.Unlock()
+	if err := s.geo.Install(ds...); err != nil {
+		return err
+	}
+	engine.ReloadGeo()
+	s.mu.Lock()
+	s.geoError = ""
+	s.mu.Unlock()
+	return nil
+}
+
+// explainGeo says what is wrong with a geo source in the app's language.
+func explainGeo(label, src string, err error) error {
+	if src == "" {
+		src = "источник по умолчанию"
+	}
+	var he *geo.HTTPError
+	switch {
+	case errors.As(err, &he) && he.Status == http.StatusNotFound:
+		return fmt.Errorf("%s: по ссылке ничего нет (404). Проверьте адрес: %s", label, src)
+	case errors.As(err, &he):
+		return fmt.Errorf("%s: сервер ответил ошибкой %d на %s", label, he.Status, src)
+	case errors.Is(err, geo.ErrSwapped):
+		other := map[string]string{"geoip.dat": "geosite.dat", "geosite.dat": "geoip.dat"}[label]
+		return fmt.Errorf("%s: по этой ссылке лежит %s. Похоже, ссылки перепутаны местами.", label, other)
+	case errors.Is(err, geo.ErrNotDatabase):
+		return fmt.Errorf("%s: по ссылке не база, а что-то другое, скорее всего веб-страница. Нужна прямая ссылка на сам файл .dat.", label)
+	case errors.Is(err, fs.ErrNotExist):
+		return fmt.Errorf("%s: файла %s нет", label, src)
+	case errors.Is(err, fs.ErrPermission):
+		return fmt.Errorf("%s: службе не хватает прав прочитать %s", label, src)
+	case errors.Is(err, context.DeadlineExceeded):
+		return fmt.Errorf("%s: не скачался за 3 минуты с %s", label, src)
+	default:
+		return fmt.Errorf("%s: не скачался с %s (%v)", label, src, err)
+	}
 }
 
 // ensureGeo fetches the geo files before a connect that needs them.

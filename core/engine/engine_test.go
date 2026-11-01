@@ -232,6 +232,24 @@ func TestDNSOptions(t *testing.T) {
 	}
 }
 
+// With TUN up, "system" DNS is the tunnel itself: DIRECT sites resolved to
+// fake addresses and timed out (myip.com went to 198.18.0.24).
+func TestDirectDNSNeverLoopsIntoTunnel(t *testing.T) {
+	for _, direct := range [][]string{nil, {"system"}, {"system", "9.9.9.9"}} {
+		raw, err := buildConfig(Options{Nodes: testNodes(), Tun: &TunOptions{}, DNS: DNSOptions{DirectServers: direct}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(raw), "system") {
+			t.Errorf("direct %v: config still uses the system resolver:\n%s", direct, raw)
+		}
+		cfg := parse(t, Options{Nodes: testNodes(), Tun: &TunOptions{}, DNS: DNSOptions{DirectServers: direct}})
+		if len(cfg.DNS.DirectNameServer) == 0 || len(cfg.DNS.ProxyServerNameserver) == 0 {
+			t.Errorf("direct %v: no direct or node resolver left", direct)
+		}
+	}
+}
+
 func TestAndroidBypassSkipsTunnel(t *testing.T) {
 	cfg := parse(t, Options{
 		Nodes: testNodes(),

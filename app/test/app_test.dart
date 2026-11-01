@@ -267,4 +267,27 @@ void main() {
     }
     await unmount(tester);
   });
+
+  testWidgets('a refused geo link is explained next to the save button', (tester) async {
+    final core = FakeCore(subs: [sampleSubscription()])
+      ..refuseSettings = 'geosite.dat: по ссылке не база, а что-то другое, скорее всего веб-страница.';
+    await pumpApp(tester, core, size: const Size(1000, 1800));
+    await tester.tap(find.byTooltip('Настройки'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Дополнительно'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Источник geosite.dat'), 'https://example.com/page');
+    await tester.pump();
+    await tester.tap(find.text('Сохранить'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('скорее всего веб-страница'), findsOneWidget);
+    expect(core.settings.geo.geositeSource, isEmpty, reason: 'nothing saved');
+
+    // Typing again clears the old complaint.
+    await tester.enterText(find.widgetWithText(TextField, 'Источник geosite.dat'), 'https://example.com/geosite.dat');
+    await tester.pump();
+    expect(find.textContaining('скорее всего веб-страница'), findsNothing);
+    await unmount(tester);
+  });
 }
