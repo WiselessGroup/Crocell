@@ -1458,86 +1458,267 @@ class ProbeResult extends $pb.GeneratedMessage {
   $1.Timestamp ensureProbedAt() => $_ensure(8);
 }
 
-class AppRule extends $pb.GeneratedMessage {
-  factory AppRule({
-    $core.String? app,
-    AppMode? mode,
+class RouteRule extends $pb.GeneratedMessage {
+  factory RouteRule({
+    RuleKind? kind,
+    $core.String? value,
+    RouteAction? action,
   }) {
-    final result = AppRule._();
-    if (app != null) result.app = app;
-    if (mode != null) result.mode = mode;
+    final result = RouteRule._();
+    if (kind != null) result.kind = kind;
+    if (value != null) result.value = value;
+    if (action != null) result.action = action;
     return result;
   }
 
-  AppRule._();
+  RouteRule._();
 
-  factory AppRule.fromBuffer($core.List<$core.int> data,
+  factory RouteRule.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      AppRule()..mergeFromBuffer(data, registry);
-  factory AppRule.fromJson($core.String json,
+      RouteRule()..mergeFromBuffer(data, registry);
+  factory RouteRule.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      AppRule()..mergeFromJson(json, registry);
+      RouteRule()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
-      _omitMessageNames ? '' : 'AppRule',
+      _omitMessageNames ? '' : 'RouteRule',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
-      createEmptyInstance: AppRule.$_createMessage)
-    ..aOS(1, _omitFieldNames ? '' : 'app')
-    ..aE<AppMode>(2, _omitFieldNames ? '' : 'mode', enumValues: AppMode.values)
+      createEmptyInstance: RouteRule.$_createMessage)
+    ..aE<RuleKind>(1, _omitFieldNames ? '' : 'kind',
+        enumValues: RuleKind.values)
+    ..aOS(2, _omitFieldNames ? '' : 'value')
+    ..aE<RouteAction>(3, _omitFieldNames ? '' : 'action',
+        enumValues: RouteAction.values)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  AppRule clone() => deepCopy();
+  RouteRule clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  AppRule copyWith(void Function(AppRule) updates) =>
-      super.copyWith((message) => updates(message as AppRule)) as AppRule;
+  RouteRule copyWith(void Function(RouteRule) updates) =>
+      super.copyWith((message) => updates(message as RouteRule)) as RouteRule;
 
   @$core.override
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
-  @$core.Deprecated('Use AppRule() / AppRule.new instead')
-  static AppRule create() => AppRule._();
-  static $pb.GeneratedMessage $_createMessage() => AppRule._();
+  @$core.Deprecated('Use RouteRule() / RouteRule.new instead')
+  static RouteRule create() => RouteRule._();
+  static $pb.GeneratedMessage $_createMessage() => RouteRule._();
   @$core.override
-  AppRule createEmptyInstance() => AppRule._();
+  RouteRule createEmptyInstance() => RouteRule._();
   @$core.pragma('dart2js:noInline')
-  static AppRule getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<AppRule>(AppRule.$_createMessage);
-  static AppRule? _defaultInstance;
+  static RouteRule getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RouteRule>(RouteRule.$_createMessage);
+  static RouteRule? _defaultInstance;
 
-  /// Android: package name. Desktop: executable name or full path.
   @$pb.TagNumber(1)
-  $core.String get app => $_getSZ(0);
+  RuleKind get kind => $_getN(0);
   @$pb.TagNumber(1)
-  set app($core.String value) => $_setString(0, value);
+  set kind(RuleKind value) => $_setField(1, value);
   @$pb.TagNumber(1)
-  $core.bool hasApp() => $_has(0);
+  $core.bool hasKind() => $_has(0);
   @$pb.TagNumber(1)
-  void clearApp() => $_clearField(1);
+  void clearKind() => $_clearField(1);
 
   @$pb.TagNumber(2)
-  AppMode get mode => $_getN(1);
+  $core.String get value => $_getSZ(1);
   @$pb.TagNumber(2)
-  set mode(AppMode value) => $_setField(2, value);
+  set value($core.String value) => $_setString(1, value);
   @$pb.TagNumber(2)
-  $core.bool hasMode() => $_has(1);
+  $core.bool hasValue() => $_has(1);
   @$pb.TagNumber(2)
-  void clearMode() => $_clearField(2);
+  void clearValue() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  RouteAction get action => $_getN(2);
+  @$pb.TagNumber(3)
+  set action(RouteAction value) => $_setField(3, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAction() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAction() => $_clearField(3);
+}
+
+class DnsSettings extends $pb.GeneratedMessage {
+  factory DnsSettings({
+    $core.Iterable<$core.String>? servers,
+    $core.Iterable<$core.String>? directServers,
+    $core.bool? realIp,
+  }) {
+    final result = DnsSettings._();
+    if (servers != null) result.servers.addAll(servers);
+    if (directServers != null) result.directServers.addAll(directServers);
+    if (realIp != null) result.realIp = realIp;
+    return result;
+  }
+
+  DnsSettings._();
+
+  factory DnsSettings.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DnsSettings()..mergeFromBuffer(data, registry);
+  factory DnsSettings.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DnsSettings()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DnsSettings',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: DnsSettings.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'servers')
+    ..pPS(2, _omitFieldNames ? '' : 'directServers')
+    ..aOB(3, _omitFieldNames ? '' : 'realIp')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DnsSettings clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DnsSettings copyWith(void Function(DnsSettings) updates) =>
+      super.copyWith((message) => updates(message as DnsSettings))
+          as DnsSettings;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use DnsSettings() / DnsSettings.new instead')
+  static DnsSettings create() => DnsSettings._();
+  static $pb.GeneratedMessage $_createMessage() => DnsSettings._();
+  @$core.override
+  DnsSettings createEmptyInstance() => DnsSettings._();
+  @$core.pragma('dart2js:noInline')
+  static DnsSettings getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<DnsSettings>(
+          DnsSettings.$_createMessage);
+  static DnsSettings? _defaultInstance;
+
+  /// Resolvers for everything, queried through the VPN. Empty: defaults
+  /// (Cloudflare and Google DoH). https://…, tls://…, plain IPs.
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get servers => $_getList(0);
+
+  /// For direct traffic and node addresses. Empty: the system resolver.
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get directServers => $_getList(1);
+
+  /// Real addresses instead of fake-ip. Some games and P2P need it.
+  @$pb.TagNumber(3)
+  $core.bool get realIp => $_getBF(2);
+  @$pb.TagNumber(3)
+  set realIp($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRealIp() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRealIp() => $_clearField(3);
+}
+
+class GeoSettings extends $pb.GeneratedMessage {
+  factory GeoSettings({
+    $core.String? geoipSource,
+    $core.String? geositeSource,
+    $core.int? updateHours,
+  }) {
+    final result = GeoSettings._();
+    if (geoipSource != null) result.geoipSource = geoipSource;
+    if (geositeSource != null) result.geositeSource = geositeSource;
+    if (updateHours != null) result.updateHours = updateHours;
+    return result;
+  }
+
+  GeoSettings._();
+
+  factory GeoSettings.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GeoSettings()..mergeFromBuffer(data, registry);
+  factory GeoSettings.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GeoSettings()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GeoSettings',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: GeoSettings.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'geoipSource')
+    ..aOS(2, _omitFieldNames ? '' : 'geositeSource')
+    ..aI(3, _omitFieldNames ? '' : 'updateHours',
+        fieldType: $pb.PbFieldType.OU3)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GeoSettings clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GeoSettings copyWith(void Function(GeoSettings) updates) =>
+      super.copyWith((message) => updates(message as GeoSettings))
+          as GeoSettings;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GeoSettings() / GeoSettings.new instead')
+  static GeoSettings create() => GeoSettings._();
+  static $pb.GeneratedMessage $_createMessage() => GeoSettings._();
+  @$core.override
+  GeoSettings createEmptyInstance() => GeoSettings._();
+  @$core.pragma('dart2js:noInline')
+  static GeoSettings getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GeoSettings>(
+          GeoSettings.$_createMessage);
+  static GeoSettings? _defaultInstance;
+
+  /// An https:// URL or a local file path. Empty: runetfreedom.
+  @$pb.TagNumber(1)
+  $core.String get geoipSource => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set geoipSource($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasGeoipSource() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearGeoipSource() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get geositeSource => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set geositeSource($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasGeositeSource() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearGeositeSource() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get updateHours => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set updateHours($core.int value) => $_setUnsignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasUpdateHours() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearUpdateHours() => $_clearField(3);
 }
 
 class Settings extends $pb.GeneratedMessage {
   factory Settings({
     TunnelMode? tunnelMode,
-    $core.Iterable<AppRule>? appRules,
     $core.int? mixedPort,
     $core.String? tunStack,
+    $core.Iterable<RouteRule>? rules,
+    RouteAction? finalAction,
+    DnsSettings? dns,
+    GeoSettings? geo,
+    $core.bool? disableIpv6,
+    $core.bool? allowLan,
+    $core.bool? connectOnStart,
   }) {
     final result = Settings._();
     if (tunnelMode != null) result.tunnelMode = tunnelMode;
-    if (appRules != null) result.appRules.addAll(appRules);
     if (mixedPort != null) result.mixedPort = mixedPort;
     if (tunStack != null) result.tunStack = tunStack;
+    if (rules != null) result.rules.addAll(rules);
+    if (finalAction != null) result.finalAction = finalAction;
+    if (dns != null) result.dns = dns;
+    if (geo != null) result.geo = geo;
+    if (disableIpv6 != null) result.disableIpv6 = disableIpv6;
+    if (allowLan != null) result.allowLan = allowLan;
+    if (connectOnStart != null) result.connectOnStart = connectOnStart;
     return result;
   }
 
@@ -1556,10 +1737,19 @@ class Settings extends $pb.GeneratedMessage {
       createEmptyInstance: Settings.$_createMessage)
     ..aE<TunnelMode>(1, _omitFieldNames ? '' : 'tunnelMode',
         enumValues: TunnelMode.values)
-    ..pPM<AppRule>(2, _omitFieldNames ? '' : 'appRules',
-        subBuilder: AppRule.$_createMessage)
     ..aI(3, _omitFieldNames ? '' : 'mixedPort', fieldType: $pb.PbFieldType.OU3)
     ..aOS(4, _omitFieldNames ? '' : 'tunStack')
+    ..pPM<RouteRule>(5, _omitFieldNames ? '' : 'rules',
+        subBuilder: RouteRule.$_createMessage)
+    ..aE<RouteAction>(6, _omitFieldNames ? '' : 'finalAction',
+        enumValues: RouteAction.values)
+    ..aOM<DnsSettings>(7, _omitFieldNames ? '' : 'dns',
+        subBuilder: DnsSettings.$_createMessage)
+    ..aOM<GeoSettings>(8, _omitFieldNames ? '' : 'geo',
+        subBuilder: GeoSettings.$_createMessage)
+    ..aOB(9, _omitFieldNames ? '' : 'disableIpv6')
+    ..aOB(10, _omitFieldNames ? '' : 'allowLan')
+    ..aOB(11, _omitFieldNames ? '' : 'connectOnStart')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1591,26 +1781,84 @@ class Settings extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearTunnelMode() => $_clearField(1);
 
-  @$pb.TagNumber(2)
-  $pb.PbList<AppRule> get appRules => $_getList(1);
-
   @$pb.TagNumber(3)
-  $core.int get mixedPort => $_getIZ(2);
+  $core.int get mixedPort => $_getIZ(1);
   @$pb.TagNumber(3)
-  set mixedPort($core.int value) => $_setUnsignedInt32(2, value);
+  set mixedPort($core.int value) => $_setUnsignedInt32(1, value);
   @$pb.TagNumber(3)
-  $core.bool hasMixedPort() => $_has(2);
+  $core.bool hasMixedPort() => $_has(1);
   @$pb.TagNumber(3)
   void clearMixedPort() => $_clearField(3);
 
   @$pb.TagNumber(4)
-  $core.String get tunStack => $_getSZ(3);
+  $core.String get tunStack => $_getSZ(2);
   @$pb.TagNumber(4)
-  set tunStack($core.String value) => $_setString(3, value);
+  set tunStack($core.String value) => $_setString(2, value);
   @$pb.TagNumber(4)
-  $core.bool hasTunStack() => $_has(3);
+  $core.bool hasTunStack() => $_has(2);
   @$pb.TagNumber(4)
   void clearTunStack() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $pb.PbList<RouteRule> get rules => $_getList(3);
+
+  @$pb.TagNumber(6)
+  RouteAction get finalAction => $_getN(4);
+  @$pb.TagNumber(6)
+  set finalAction(RouteAction value) => $_setField(6, value);
+  @$pb.TagNumber(6)
+  $core.bool hasFinalAction() => $_has(4);
+  @$pb.TagNumber(6)
+  void clearFinalAction() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  DnsSettings get dns => $_getN(5);
+  @$pb.TagNumber(7)
+  set dns(DnsSettings value) => $_setField(7, value);
+  @$pb.TagNumber(7)
+  $core.bool hasDns() => $_has(5);
+  @$pb.TagNumber(7)
+  void clearDns() => $_clearField(7);
+  @$pb.TagNumber(7)
+  DnsSettings ensureDns() => $_ensure(5);
+
+  @$pb.TagNumber(8)
+  GeoSettings get geo => $_getN(6);
+  @$pb.TagNumber(8)
+  set geo(GeoSettings value) => $_setField(8, value);
+  @$pb.TagNumber(8)
+  $core.bool hasGeo() => $_has(6);
+  @$pb.TagNumber(8)
+  void clearGeo() => $_clearField(8);
+  @$pb.TagNumber(8)
+  GeoSettings ensureGeo() => $_ensure(6);
+
+  @$pb.TagNumber(9)
+  $core.bool get disableIpv6 => $_getBF(7);
+  @$pb.TagNumber(9)
+  set disableIpv6($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(9)
+  $core.bool hasDisableIpv6() => $_has(7);
+  @$pb.TagNumber(9)
+  void clearDisableIpv6() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.bool get allowLan => $_getBF(8);
+  @$pb.TagNumber(10)
+  set allowLan($core.bool value) => $_setBool(8, value);
+  @$pb.TagNumber(10)
+  $core.bool hasAllowLan() => $_has(8);
+  @$pb.TagNumber(10)
+  void clearAllowLan() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.bool get connectOnStart => $_getBF(9);
+  @$pb.TagNumber(11)
+  set connectOnStart($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(11)
+  $core.bool hasConnectOnStart() => $_has(9);
+  @$pb.TagNumber(11)
+  void clearConnectOnStart() => $_clearField(11);
 }
 
 class GetSettingsRequest extends $pb.GeneratedMessage {
@@ -1652,6 +1900,361 @@ class GetSettingsRequest extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<GetSettingsRequest>(
           GetSettingsRequest.$_createMessage);
   static GetSettingsRequest? _defaultInstance;
+}
+
+class ListProcessesRequest extends $pb.GeneratedMessage {
+  factory ListProcessesRequest() => ListProcessesRequest._();
+
+  ListProcessesRequest._();
+
+  factory ListProcessesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListProcessesRequest()..mergeFromBuffer(data, registry);
+  factory ListProcessesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListProcessesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListProcessesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: ListProcessesRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListProcessesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListProcessesRequest copyWith(void Function(ListProcessesRequest) updates) =>
+      super.copyWith((message) => updates(message as ListProcessesRequest))
+          as ListProcessesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListProcessesRequest() / ListProcessesRequest.new instead')
+  static ListProcessesRequest create() => ListProcessesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListProcessesRequest._();
+  @$core.override
+  ListProcessesRequest createEmptyInstance() => ListProcessesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListProcessesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListProcessesRequest>(
+          ListProcessesRequest.$_createMessage);
+  static ListProcessesRequest? _defaultInstance;
+}
+
+class Process extends $pb.GeneratedMessage {
+  factory Process({
+    $core.String? name,
+    $core.String? path,
+  }) {
+    final result = Process._();
+    if (name != null) result.name = name;
+    if (path != null) result.path = path;
+    return result;
+  }
+
+  Process._();
+
+  factory Process.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Process()..mergeFromBuffer(data, registry);
+  factory Process.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Process()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Process',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: Process.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Process clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Process copyWith(void Function(Process) updates) =>
+      super.copyWith((message) => updates(message as Process)) as Process;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Process() / Process.new instead')
+  static Process create() => Process._();
+  static $pb.GeneratedMessage $_createMessage() => Process._();
+  @$core.override
+  Process createEmptyInstance() => Process._();
+  @$core.pragma('dart2js:noInline')
+  static Process getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Process>(Process.$_createMessage);
+  static Process? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+}
+
+class ListProcessesResponse extends $pb.GeneratedMessage {
+  factory ListProcessesResponse({
+    $core.Iterable<Process>? processes,
+  }) {
+    final result = ListProcessesResponse._();
+    if (processes != null) result.processes.addAll(processes);
+    return result;
+  }
+
+  ListProcessesResponse._();
+
+  factory ListProcessesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListProcessesResponse()..mergeFromBuffer(data, registry);
+  factory ListProcessesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListProcessesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListProcessesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: ListProcessesResponse.$_createMessage)
+    ..pPM<Process>(1, _omitFieldNames ? '' : 'processes',
+        subBuilder: Process.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListProcessesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListProcessesResponse copyWith(
+          void Function(ListProcessesResponse) updates) =>
+      super.copyWith((message) => updates(message as ListProcessesResponse))
+          as ListProcessesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListProcessesResponse() / ListProcessesResponse.new instead')
+  static ListProcessesResponse create() => ListProcessesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListProcessesResponse._();
+  @$core.override
+  ListProcessesResponse createEmptyInstance() => ListProcessesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListProcessesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListProcessesResponse>(
+          ListProcessesResponse.$_createMessage);
+  static ListProcessesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<Process> get processes => $_getList(0);
+}
+
+class GetGeoInfoRequest extends $pb.GeneratedMessage {
+  factory GetGeoInfoRequest() => GetGeoInfoRequest._();
+
+  GetGeoInfoRequest._();
+
+  factory GetGeoInfoRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGeoInfoRequest()..mergeFromBuffer(data, registry);
+  factory GetGeoInfoRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGeoInfoRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGeoInfoRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: GetGeoInfoRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGeoInfoRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGeoInfoRequest copyWith(void Function(GetGeoInfoRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGeoInfoRequest))
+          as GetGeoInfoRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetGeoInfoRequest() / GetGeoInfoRequest.new instead')
+  static GetGeoInfoRequest create() => GetGeoInfoRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetGeoInfoRequest._();
+  @$core.override
+  GetGeoInfoRequest createEmptyInstance() => GetGeoInfoRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGeoInfoRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetGeoInfoRequest>(
+          GetGeoInfoRequest.$_createMessage);
+  static GetGeoInfoRequest? _defaultInstance;
+}
+
+class UpdateGeoRequest extends $pb.GeneratedMessage {
+  factory UpdateGeoRequest() => UpdateGeoRequest._();
+
+  UpdateGeoRequest._();
+
+  factory UpdateGeoRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateGeoRequest()..mergeFromBuffer(data, registry);
+  factory UpdateGeoRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateGeoRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpdateGeoRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: UpdateGeoRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateGeoRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateGeoRequest copyWith(void Function(UpdateGeoRequest) updates) =>
+      super.copyWith((message) => updates(message as UpdateGeoRequest))
+          as UpdateGeoRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use UpdateGeoRequest() / UpdateGeoRequest.new instead')
+  static UpdateGeoRequest create() => UpdateGeoRequest._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateGeoRequest._();
+  @$core.override
+  UpdateGeoRequest createEmptyInstance() => UpdateGeoRequest._();
+  @$core.pragma('dart2js:noInline')
+  static UpdateGeoRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<UpdateGeoRequest>(
+          UpdateGeoRequest.$_createMessage);
+  static UpdateGeoRequest? _defaultInstance;
+}
+
+class GeoInfo extends $pb.GeneratedMessage {
+  factory GeoInfo({
+    $1.Timestamp? geoipUpdated,
+    $1.Timestamp? geositeUpdated,
+    $core.Iterable<$core.String>? geoipCategories,
+    $core.Iterable<$core.String>? geositeCategories,
+    $core.bool? updating,
+    $core.String? error,
+  }) {
+    final result = GeoInfo._();
+    if (geoipUpdated != null) result.geoipUpdated = geoipUpdated;
+    if (geositeUpdated != null) result.geositeUpdated = geositeUpdated;
+    if (geoipCategories != null) result.geoipCategories.addAll(geoipCategories);
+    if (geositeCategories != null)
+      result.geositeCategories.addAll(geositeCategories);
+    if (updating != null) result.updating = updating;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  GeoInfo._();
+
+  factory GeoInfo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GeoInfo()..mergeFromBuffer(data, registry);
+  factory GeoInfo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GeoInfo()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GeoInfo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: GeoInfo.$_createMessage)
+    ..aOM<$1.Timestamp>(1, _omitFieldNames ? '' : 'geoipUpdated',
+        subBuilder: $1.Timestamp.$_createMessage)
+    ..aOM<$1.Timestamp>(2, _omitFieldNames ? '' : 'geositeUpdated',
+        subBuilder: $1.Timestamp.$_createMessage)
+    ..pPS(3, _omitFieldNames ? '' : 'geoipCategories')
+    ..pPS(4, _omitFieldNames ? '' : 'geositeCategories')
+    ..aOB(5, _omitFieldNames ? '' : 'updating')
+    ..aOS(6, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GeoInfo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GeoInfo copyWith(void Function(GeoInfo) updates) =>
+      super.copyWith((message) => updates(message as GeoInfo)) as GeoInfo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GeoInfo() / GeoInfo.new instead')
+  static GeoInfo create() => GeoInfo._();
+  static $pb.GeneratedMessage $_createMessage() => GeoInfo._();
+  @$core.override
+  GeoInfo createEmptyInstance() => GeoInfo._();
+  @$core.pragma('dart2js:noInline')
+  static GeoInfo getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GeoInfo>(GeoInfo.$_createMessage);
+  static GeoInfo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $1.Timestamp get geoipUpdated => $_getN(0);
+  @$pb.TagNumber(1)
+  set geoipUpdated($1.Timestamp value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasGeoipUpdated() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearGeoipUpdated() => $_clearField(1);
+  @$pb.TagNumber(1)
+  $1.Timestamp ensureGeoipUpdated() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $1.Timestamp get geositeUpdated => $_getN(1);
+  @$pb.TagNumber(2)
+  set geositeUpdated($1.Timestamp value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasGeositeUpdated() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearGeositeUpdated() => $_clearField(2);
+  @$pb.TagNumber(2)
+  $1.Timestamp ensureGeositeUpdated() => $_ensure(1);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get geoipCategories => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $pb.PbList<$core.String> get geositeCategories => $_getList(3);
+
+  @$pb.TagNumber(5)
+  $core.bool get updating => $_getBF(4);
+  @$pb.TagNumber(5)
+  set updating($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasUpdating() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearUpdating() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get error => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set error($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasError() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearError() => $_clearField(6);
 }
 
 const $core.bool _omitFieldNames =

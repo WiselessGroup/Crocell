@@ -92,6 +92,9 @@ func serve(args []string) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Connect-on-start and keeping geo databases fresh.
+	go svc.Run(ctx)
+
 	go func() {
 		<-ctx.Done()
 		// GracefulStop waits for every open stream, and a client watching

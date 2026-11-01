@@ -69,30 +69,72 @@ class TunnelMode extends $pb.ProtobufEnum {
   const TunnelMode._(super.value, super.name);
 }
 
-/// What happens to one application's traffic while Crocell is on.
-class AppMode extends $pb.ProtobufEnum {
-  static const AppMode APP_MODE_UNSPECIFIED =
-      AppMode._(0, _omitEnumNames ? '' : 'APP_MODE_UNSPECIFIED');
-  static const AppMode APP_MODE_PROXY =
-      AppMode._(1, _omitEnumNames ? '' : 'APP_MODE_PROXY');
-  static const AppMode APP_MODE_BYPASS =
-      AppMode._(2, _omitEnumNames ? '' : 'APP_MODE_BYPASS');
-  static const AppMode APP_MODE_BLOCK =
-      AppMode._(3, _omitEnumNames ? '' : 'APP_MODE_BLOCK');
+/// Where matching traffic goes.
+class RouteAction extends $pb.ProtobufEnum {
+  static const RouteAction ROUTE_ACTION_UNSPECIFIED =
+      RouteAction._(0, _omitEnumNames ? '' : 'ROUTE_ACTION_UNSPECIFIED');
+  static const RouteAction ROUTE_ACTION_PROXY =
+      RouteAction._(1, _omitEnumNames ? '' : 'ROUTE_ACTION_PROXY');
+  static const RouteAction ROUTE_ACTION_DIRECT =
+      RouteAction._(2, _omitEnumNames ? '' : 'ROUTE_ACTION_DIRECT');
+  static const RouteAction ROUTE_ACTION_BLOCK =
+      RouteAction._(3, _omitEnumNames ? '' : 'ROUTE_ACTION_BLOCK');
 
-  static const $core.List<AppMode> values = <AppMode>[
-    APP_MODE_UNSPECIFIED,
-    APP_MODE_PROXY,
-    APP_MODE_BYPASS,
-    APP_MODE_BLOCK,
+  static const $core.List<RouteAction> values = <RouteAction>[
+    ROUTE_ACTION_UNSPECIFIED,
+    ROUTE_ACTION_PROXY,
+    ROUTE_ACTION_DIRECT,
+    ROUTE_ACTION_BLOCK,
   ];
 
-  static final $core.List<AppMode?> _byValue =
+  static final $core.List<RouteAction?> _byValue =
       $pb.ProtobufEnum.$_initByValueList(values, 3);
-  static AppMode? valueOf($core.int value) =>
+  static RouteAction? valueOf($core.int value) =>
       value < 0 || value >= _byValue.length ? null : _byValue[value];
 
-  const AppMode._(super.value, super.name);
+  const RouteAction._(super.value, super.name);
+}
+
+/// What a rule matches. Specific beats general: rules apply in this order,
+/// so a single site in Proxy wins over a geosite set in Direct.
+class RuleKind extends $pb.ProtobufEnum {
+  static const RuleKind RULE_KIND_UNSPECIFIED =
+      RuleKind._(0, _omitEnumNames ? '' : 'RULE_KIND_UNSPECIFIED');
+  static const RuleKind RULE_KIND_PROCESS_PATH =
+      RuleKind._(1, _omitEnumNames ? '' : 'RULE_KIND_PROCESS_PATH');
+  static const RuleKind RULE_KIND_PROCESS_NAME =
+      RuleKind._(2, _omitEnumNames ? '' : 'RULE_KIND_PROCESS_NAME');
+  static const RuleKind RULE_KIND_DOMAIN =
+      RuleKind._(3, _omitEnumNames ? '' : 'RULE_KIND_DOMAIN');
+  static const RuleKind RULE_KIND_DOMAIN_WILDCARD =
+      RuleKind._(4, _omitEnumNames ? '' : 'RULE_KIND_DOMAIN_WILDCARD');
+  static const RuleKind RULE_KIND_DOMAIN_SUFFIX =
+      RuleKind._(5, _omitEnumNames ? '' : 'RULE_KIND_DOMAIN_SUFFIX');
+  static const RuleKind RULE_KIND_IP_CIDR =
+      RuleKind._(6, _omitEnumNames ? '' : 'RULE_KIND_IP_CIDR');
+  static const RuleKind RULE_KIND_GEOSITE =
+      RuleKind._(7, _omitEnumNames ? '' : 'RULE_KIND_GEOSITE');
+  static const RuleKind RULE_KIND_GEOIP =
+      RuleKind._(8, _omitEnumNames ? '' : 'RULE_KIND_GEOIP');
+
+  static const $core.List<RuleKind> values = <RuleKind>[
+    RULE_KIND_UNSPECIFIED,
+    RULE_KIND_PROCESS_PATH,
+    RULE_KIND_PROCESS_NAME,
+    RULE_KIND_DOMAIN,
+    RULE_KIND_DOMAIN_WILDCARD,
+    RULE_KIND_DOMAIN_SUFFIX,
+    RULE_KIND_IP_CIDR,
+    RULE_KIND_GEOSITE,
+    RULE_KIND_GEOIP,
+  ];
+
+  static final $core.List<RuleKind?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 8);
+  static RuleKind? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const RuleKind._(super.value, super.name);
 }
 
 const $core.bool _omitEnumNames =

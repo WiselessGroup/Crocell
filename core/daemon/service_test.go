@@ -70,7 +70,7 @@ func (h *harness) setCheckErr(err error) {
 	h.checkMu.Unlock()
 }
 
-func newHarness(t *testing.T) *harness {
+func newHarness(t *testing.T, opts ...func(*Config)) *harness {
 	t.Helper()
 	links, err := os.ReadFile("../subscription/testdata/links.b64")
 	if err != nil {
@@ -86,7 +86,7 @@ func newHarness(t *testing.T) *harness {
 	t.Cleanup(web.Close)
 
 	h := &harness{eng: &fakeEngine{}, subURL: web.URL + "/sub/secret-token-123456", dir: t.TempDir()}
-	svc, err := New(Config{
+	cfg := Config{
 		StateDir: h.dir,
 		Engine:   h.eng,
 		Probe: func(ctx context.Context, proxy map[string]any) probe.Result {
@@ -102,10 +102,15 @@ func newHarness(t *testing.T) *harness {
 			}
 			return probe.Result{ExitIP: "203.0.113.8", ExitCountry: "DE", ExitColo: "FRA", Latency: 90 * time.Millisecond}
 		},
-	})
+	}
+	for _, o := range opts {
+		o(&cfg)
+	}
+	svc, err := New(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(svc.Close) // stops the check loop
 
 	lis := bufconn.Listen(1 << 20)
 	srv := grpc.NewServer()
@@ -145,13 +150,20 @@ func TestAddSubscriptionHidesTheLink(t *testing.T) {
 		t.Errorf("masked url leaks the token: %s", sub.UrlMasked)
 	}
 
-	// The state file keeps the real link, readable by its owner only.
-	info, err := os.Stat(filepath.Join(h.dir, "state.json"))
+	// The state file keeps the real link, encrypted and owner-only.
+	path := filepath.Join(h.dir, "state.enc")
+	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if info.Mode().Perm() != 0o600 {
-		t.Errorf("state.json mode = %v, want 0600", info.Mode().Perm())
+		t.Errorf("state.enc mode = %v, want 0600", info.Mode().Perm())
+	}
+	raw, _ := os.ReadFile(path)
+	for _, secret := range []string{"secret-token", "00000000-0000-4000-8000-000000000002", "example.com", "WISELESS"} {
+		if strings.Contains(string(raw), secret) {
+			t.Errorf("state.enc contains %q in the clear", secret)
+		}
 	}
 }
 
@@ -242,10 +254,14 @@ func TestSettingsReachTheEngine(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := h.client.UpdateSettings(ctx, &pb.Settings{
-		TunnelMode: pb.TunnelMode_TUNNEL_MODE_TUN,
-		AppRules: []*pb.AppRule{
-			{App: "steam", Mode: pb.AppMode_APP_MODE_BYPASS},
-			{App: "spyware", Mode: pb.AppMode_APP_MODE_BLOCK},
+		TunnelMode:  pb.TunnelMode_TUNNEL_MODE_TUN,
+		FinalAction: pb.RouteAction_ROUTE_ACTION_DIRECT,
+		DisableIpv6: true,
+		Dns:         &pb.DnsSettings{Servers: []string{"https://dns.adguard-dns.com/dns-query"}, RealIp: true},
+		Rules: []*pb.RouteRule{
+			{Kind: pb.RuleKind_RULE_KIND_PROCESS_NAME, Value: "steam", Action: pb.RouteAction_ROUTE_ACTION_DIRECT},
+			{Kind: pb.RuleKind_RULE_KIND_DOMAIN_WILDCARD, Value: "*.wiseless.net", Action: pb.RouteAction_ROUTE_ACTION_PROXY},
+			{Kind: pb.RuleKind_RULE_KIND_IP_CIDR, Value: "10.8.0.0/16", Action: pb.RouteAction_ROUTE_ACTION_BLOCK},
 		},
 	})
 	if err != nil {
@@ -257,13 +273,23 @@ func TestSettingsReachTheEngine(t *testing.T) {
 	if last.Tun == nil {
 		t.Error("TUN not applied")
 	}
-	if len(last.AppRules) != 2 || last.AppRules[0].Mode != engine.AppBypass || last.AppRules[1].Mode != engine.AppBlock {
-		t.Errorf("app rules = %+v", last.AppRules)
+	if len(last.Rules) != 3 || last.Rules[0].Kind != engine.ProcessName || last.Rules[1].Kind != engine.DomainWildcard ||
+		last.Rules[2].Action != engine.Block {
+		t.Errorf("rules = %+v", last.Rules)
+	}
+	if last.Final != engine.Direct || last.IPv6 || !last.DNS.RealIP || len(last.DNS.Servers) != 1 {
+		t.Errorf("final %v, ipv6 %v, dns %+v", last.Final, last.IPv6, last.DNS)
 	}
 
 	_, err = h.client.UpdateSettings(ctx, &pb.Settings{MixedPort: 80})
 	if status.Code(err) != codes.InvalidArgument {
 		t.Errorf("privileged port must be refused, got %v", err)
+	}
+	_, err = h.client.UpdateSettings(ctx, &pb.Settings{Rules: []*pb.RouteRule{
+		{Kind: pb.RuleKind_RULE_KIND_DOMAIN, Value: "evil.com,DIRECT", Action: pb.RouteAction_ROUTE_ACTION_PROXY},
+	}})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("a rule that would split the mihomo line must be refused, got %v", err)
 	}
 }
 
@@ -401,11 +427,7 @@ func TestBrokenConnectionIsReported(t *testing.T) {
 }
 
 func TestRecheckOnInterval(t *testing.T) {
-	old := CheckInterval
-	CheckInterval = 50 * time.Millisecond
-	t.Cleanup(func() { CheckInterval = old })
-
-	h := newHarness(t)
+	h := newHarness(t, func(c *Config) { c.CheckInterval = 50 * time.Millisecond })
 	sub := h.add(t)
 	if _, err := h.client.Connect(context.Background(), &pb.ConnectRequest{SubscriptionId: sub.Id}); err != nil {
 		t.Fatal(err)

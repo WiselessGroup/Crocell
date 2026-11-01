@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -22,6 +23,7 @@ import (
 
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/engine"
+	"git.wiseless.net/fureunoir/crocell/core/geo"
 	"git.wiseless.net/fureunoir/crocell/core/probe"
 	"git.wiseless.net/fureunoir/crocell/core/subscription"
 )
@@ -50,12 +52,15 @@ type Config struct {
 	// Check tests the live path while connected: through TUN or the mixed
 	// port. Default: probe.System / probe.ViaProxy.
 	Check func(ctx context.Context, mode pb.TunnelMode, port int) probe.Result
+	// GeoClient fetches geoip.dat / geosite.dat. Default: plain HTTP.
+	GeoClient *http.Client
+	// CheckInterval is how often a live connection is re-checked. One small
+	// HTTPS request: cheap, and it is how "it silently stopped working"
+	// turns into a notification. Default: DefaultCheckInterval.
+	CheckInterval time.Duration
 }
 
-// CheckInterval is how often a live connection is re-checked. One small
-// HTTPS request: cheap, and it is how "it silently stopped working" turns
-// into a notification.
-var CheckInterval = 2 * time.Minute
+const DefaultCheckInterval = 2 * time.Minute
 
 func realCheck(ctx context.Context, mode pb.TunnelMode, port int) probe.Result {
 	if mode == pb.TunnelMode_TUNNEL_MODE_TUN {
@@ -73,6 +78,7 @@ type Service struct {
 	fetcher *subscription.Fetcher
 	probe   func(context.Context, map[string]any) probe.Result
 	check   func(context.Context, pb.TunnelMode, int) probe.Result
+	every   time.Duration // live check interval
 
 	// op serialises connect/disconnect/reconfigure, which can take seconds
 	// (TUN setup). mu guards the fields below and is never held across them.
@@ -85,6 +91,11 @@ type Service struct {
 	changed chan struct{}              // closed and replaced on every change
 
 	stopChecks context.CancelFunc // ends the running check loop, if any
+
+	geo      *geo.Manager
+	geoMu    sync.Mutex // one update at a time
+	geoBusy  bool       // guarded by mu
+	geoError string     // guarded by mu
 }
 
 type connection struct {
@@ -106,7 +117,7 @@ func New(cfg Config) (*Service, error) {
 		return nil, errors.New("daemon: no state dir")
 	}
 	s := &Service{
-		store:   store{path: filepath.Join(cfg.StateDir, "state.json")},
+		store:   store{dir: cfg.StateDir},
 		homeDir: filepath.Join(cfg.StateDir, "engine"),
 		eng:     cfg.Engine,
 		fetcher: cfg.Fetcher,
@@ -128,6 +139,17 @@ func New(cfg Config) (*Service, error) {
 	if s.check == nil {
 		s.check = realCheck
 	}
+	s.every = cfg.CheckInterval
+	if s.every <= 0 {
+		s.every = DefaultCheckInterval
+	}
+
+	sealer, err := newSealer(cfg.StateDir)
+	if err != nil {
+		return nil, err
+	}
+	s.store.sealer = sealer
+	s.geo = &geo.Manager{Dir: s.homeDir, Client: cfg.GeoClient}
 
 	st, err := s.store.load()
 	if err != nil {
@@ -177,7 +199,7 @@ func (s *Service) startChecksLocked() {
 	mode, port, nodeID := s.conn.mode, s.conn.port, s.conn.nodeID
 
 	go func() {
-		ticker := time.NewTicker(CheckInterval)
+		ticker := time.NewTicker(s.every)
 		defer ticker.Stop()
 		for {
 			s.mu.Lock()
@@ -311,7 +333,13 @@ func (s *Service) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.Stat
 
 	s.setConn(connection{state: pb.ConnectionState_CONNECTION_STATE_CONNECTING, subID: sub.ID, nodeID: node.ID, mode: mode})
 
-	if err := s.eng.Start(opts); err != nil {
+	// Geo rules need the files in place: mihomo would otherwise try to fetch
+	// them itself in the middle of Start, with no word to the client.
+	err = s.ensureGeo(ctx, opts.Rules)
+	if err == nil {
+		err = s.eng.Start(opts)
+	}
+	if err != nil {
 		s.setConn(connection{
 			state: pb.ConnectionState_CONNECTION_STATE_FAILED, subID: sub.ID, nodeID: node.ID,
 			mode: mode, err: scrub(err.Error(), sub.URL),
@@ -337,21 +365,36 @@ func (s *Service) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.Stat
 
 func (s *Service) engineOptionsLocked(sub *storedSub, node storedNode) (engine.Options, pb.TunnelMode, error) {
 	set := s.st.Settings
+	rules, err := engineRules(set.Rules)
+	if err != nil {
+		return engine.Options{}, 0, err
+	}
 	opts := engine.Options{
 		HomeDir:   s.homeDir,
 		MixedPort: set.MixedPort,
 		Nodes:     sub.engineNodes(),
 		Selected:  node.Name,
+		Rules:     rules,
+		Final:     engine.Proxy,
+		IPv6:      !set.DisableIPv6,
+		AllowLAN:  set.AllowLAN,
+		DNS: engine.DNSOptions{
+			Servers:       set.DNS.Servers,
+			DirectServers: set.DNS.DirectServers,
+			RealIP:        set.DNS.RealIP,
+		},
+	}
+	if set.Final == "direct" {
+		opts.Final = engine.Direct
 	}
 	if opts.MixedPort == 0 {
 		opts.MixedPort = defaultMixedPort
 	}
-	for _, r := range set.AppRules {
-		mode, err := appModeFromString(r.Mode)
-		if err != nil {
-			return engine.Options{}, 0, err
-		}
-		opts.AppRules = append(opts.AppRules, engine.AppRule{App: r.App, Mode: mode})
+	if isURL(set.Geo.GeoIPSource) {
+		opts.GeoIPURL = set.Geo.GeoIPSource
+	}
+	if isURL(set.Geo.GeoSiteSource) {
+		opts.GeoSiteURL = set.Geo.GeoSiteSource
 	}
 
 	mode := pb.TunnelMode_TUNNEL_MODE_SYSTEM_PROXY
@@ -636,67 +679,4 @@ func toProtoProbe(nodeID string, r probe.Result) *pb.ProbeResult {
 		out.Error = r.Err.Error()
 	}
 	return out
-}
-
-func appModeFromString(s string) (engine.AppMode, error) {
-	switch s {
-	case "proxy":
-		return engine.AppProxy, nil
-	case "bypass":
-		return engine.AppBypass, nil
-	case "block":
-		return engine.AppBlock, nil
-	}
-	return 0, fmt.Errorf("unknown app mode %q", s)
-}
-
-func settingsToProto(s settings) *pb.Settings {
-	out := &pb.Settings{
-		TunnelMode: pb.TunnelMode_TUNNEL_MODE_SYSTEM_PROXY,
-		MixedPort:  uint32(s.MixedPort),
-		TunStack:   s.TunStack,
-	}
-	if s.TunnelMode == "tun" {
-		out.TunnelMode = pb.TunnelMode_TUNNEL_MODE_TUN
-	}
-	for _, r := range s.AppRules {
-		mode := map[string]pb.AppMode{
-			"proxy": pb.AppMode_APP_MODE_PROXY, "bypass": pb.AppMode_APP_MODE_BYPASS, "block": pb.AppMode_APP_MODE_BLOCK,
-		}[r.Mode]
-		out.AppRules = append(out.AppRules, &pb.AppRule{App: r.App, Mode: mode})
-	}
-	return out
-}
-
-func settingsFromProto(p *pb.Settings) (settings, error) {
-	s := settings{TunnelMode: "proxy", MixedPort: int(p.GetMixedPort()), TunStack: p.GetTunStack()}
-	if p.GetTunnelMode() == pb.TunnelMode_TUNNEL_MODE_TUN {
-		s.TunnelMode = "tun"
-	}
-	if s.MixedPort == 0 {
-		s.MixedPort = defaultMixedPort
-	}
-	if s.MixedPort < 1024 || s.MixedPort > 65535 {
-		return settings{}, fmt.Errorf("mixed port %d out of range 1024-65535", s.MixedPort)
-	}
-	switch s.TunStack {
-	case "", "mixed", "system", "gvisor":
-	default:
-		return settings{}, fmt.Errorf("unknown TUN stack %q", s.TunStack)
-	}
-	for _, r := range p.GetAppRules() {
-		var mode string
-		switch r.GetMode() {
-		case pb.AppMode_APP_MODE_PROXY:
-			mode = "proxy"
-		case pb.AppMode_APP_MODE_BYPASS:
-			mode = "bypass"
-		case pb.AppMode_APP_MODE_BLOCK:
-			mode = "block"
-		default:
-			return settings{}, fmt.Errorf("app %q: mode not set", r.GetApp())
-		}
-		s.AppRules = append(s.AppRules, appRule{App: r.GetApp(), Mode: mode})
-	}
-	return s, nil
 }

@@ -18,7 +18,10 @@
 - **Подписки любых форматов.** Share-ссылки (`vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `tuic://`), base64 от них, Clash/Mihomo YAML вместе с `proxy-providers`. Формат определяется по содержимому, метаданные подписки (название, трафик, срок) читаются из заголовков и из тела.
 - **Современные транспорты.** VLESS Reality + Vision, XHTTP, Hysteria2 с obfs и всё, что умеет [mihomo](https://github.com/MetaCubeX/mihomo).
 - **Понятное качество нод.** Вместо «пинг 5000» по кнопке «Проверить»: где у ноды выход (страна и город) и работает ли она. Дальше — вход, доступность нужных сайтов _(в работе)_.
-- **Два режима подключения.** Системный прокси для браузеров и приложений, которые его слушаются, и TUN, когда через VPN идёт вся система, включая программы, которые про прокси не знают или не дают его отключить. Отдельным программам можно сказать «через VPN», «напрямую» или «без сети».
+- **Два режима подключения.** Системный прокси для браузеров и приложений, которые его слушаются, и TUN, когда через VPN идёт вся система, включая программы, которые про прокси не знают или не дают его отключить.
+- **Маршрутизация в три списка: через VPN, напрямую, блокировать.** Сайты (`wiseless.net` — только он, `*.wiseless.net` — поддомены, `+.wiseless.net` — всё вместе), IP и подсети, наборы `geosite:` и `geoip:` из баз [runetfreedom](https://github.com/runetfreedom/russia-v2ray-rules-dat) (или своих), запущенные программы и программы по пути. Точное правило важнее общего.
+- **Проверка соединения.** После подключения и потом раз в пару минут Crocell проверяет, что интернет правда идёт через VPN, и присылает уведомление, если нет.
+- **Данные зашифрованы.** Подписки и настройки лежат на диске в AES-256-GCM; на Linux ключ запечатан через `systemd-creds` (TPM или ключ хоста), так что скопированный файл бесполезен.
 
 ## Как устроено
 
@@ -61,12 +64,13 @@ sudo bin/crocell up 'https://example.com/sub/…' -node 'nlWISELESS' -tun
 make install-daemon          # копирует в /usr/local/bin, ставит и запускает systemd-юнит
 bin/crocell ctl add 'https://example.com/sub/…'
 bin/crocell ctl mode tun     # или proxy
-bin/crocell ctl app steam bypass
+bin/crocell ctl rule direct proc:steam geosite:category-ru geoip:ru
+bin/crocell ctl rule proxy geosite:ru-blocked *.wiseless.net
 bin/crocell ctl connect nlWISELESS
 bin/crocell ctl watch
 ```
 
-Подписки и настройки лежат в `/var/lib/crocell/state.json` (только для root). Убрать службу: `sudo bin/crocelld uninstall`. Пока служба ставится только на Linux, на macOS и Windows `crocelld` запускается руками.
+Подписки и настройки лежат в `/var/lib/crocell/state.enc`, зашифрованные ключом из `/etc/credstore.encrypted/crocell-state-key`. Убрать службу: `sudo bin/crocelld uninstall`. Пока служба ставится только на Linux, на macOS и Windows `crocelld` запускается руками.
 
 ### Клиент
 

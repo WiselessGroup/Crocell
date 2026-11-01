@@ -35,6 +35,13 @@ service Core {
   // Settings
   rpc GetSettings(GetSettingsRequest) returns (Settings);
   rpc UpdateSettings(Settings) returns (Settings);
+
+  // Running programs, to pick one for a routing rule.
+  rpc ListProcesses(ListProcessesRequest) returns (ListProcessesResponse);
+
+  // geoip.dat / geosite.dat: when they were fetched and what is inside.
+  rpc GetGeoInfo(GetGeoInfoRequest) returns (GeoInfo);
+  rpc UpdateGeo(UpdateGeoRequest) returns (GeoInfo);
 }
 
 // ---------- State ----------
@@ -164,25 +171,90 @@ enum TunnelMode {
   TUNNEL_MODE_TUN = 2;          // whole system
 }
 
-// What happens to one application's traffic while Crocell is on.
-enum AppMode {
-  APP_MODE_UNSPECIFIED = 0;
-  APP_MODE_PROXY = 1;  // through the selected node
-  APP_MODE_BYPASS = 2; // straight to the internet, ideally never enters the tunnel
-  APP_MODE_BLOCK = 3;  // no network while Crocell is connected
+// Where matching traffic goes.
+enum RouteAction {
+  ROUTE_ACTION_UNSPECIFIED = 0;
+  ROUTE_ACTION_PROXY = 1;  // through the selected node
+  ROUTE_ACTION_DIRECT = 2; // straight out
+  ROUTE_ACTION_BLOCK = 3;  // nowhere
 }
 
-message AppRule {
-  // Android: package name. Desktop: executable name or full path.
-  string app = 1;
-  AppMode mode = 2;
+// What a rule matches. Specific beats general: rules apply in this order,
+// so a single site in Proxy wins over a geosite set in Direct.
+enum RuleKind {
+  RULE_KIND_UNSPECIFIED = 0;
+  RULE_KIND_PROCESS_PATH = 1;    // /usr/bin/steam, C:\Games\dota2.exe
+  RULE_KIND_PROCESS_NAME = 2;    // steam, Telegram.exe; package name on Android
+  RULE_KIND_DOMAIN = 3;          // wiseless.net, exactly
+  RULE_KIND_DOMAIN_WILDCARD = 4; // *.wiseless.net: subdomains, not the domain
+  RULE_KIND_DOMAIN_SUFFIX = 5;   // +.wiseless.net: the domain and subdomains
+  RULE_KIND_IP_CIDR = 6;         // 10.0.0.0/8, 2001:db8::/32, a bare IP
+  RULE_KIND_GEOSITE = 7;         // ru-blocked (geosite:ru-blocked)
+  RULE_KIND_GEOIP = 8;           // telegram (geoip:telegram)
+}
+
+message RouteRule {
+  RuleKind kind = 1;
+  string value = 2;
+  RouteAction action = 3;
+}
+
+message DnsSettings {
+  // Resolvers for everything, queried through the VPN. Empty: defaults
+  // (Cloudflare and Google DoH). https://…, tls://…, plain IPs.
+  repeated string servers = 1;
+  // For direct traffic and node addresses. Empty: the system resolver.
+  repeated string direct_servers = 2;
+  // Real addresses instead of fake-ip. Some games and P2P need it.
+  bool real_ip = 3;
+}
+
+message GeoSettings {
+  // An https:// URL or a local file path. Empty: runetfreedom.
+  string geoip_source = 1;
+  string geosite_source = 2;
+  uint32 update_hours = 3; // 0: daily
 }
 
 message Settings {
+  reserved 2; // app_rules, replaced by rules
   TunnelMode tunnel_mode = 1;
-  repeated AppRule app_rules = 2;
   uint32 mixed_port = 3; // 0: default 7890
   string tun_stack = 4;  // mixed (default), system, gvisor
+  repeated RouteRule rules = 5;
+  RouteAction final_action = 6; // everything else; unspecified means proxy
+  DnsSettings dns = 7;
+  GeoSettings geo = 8;
+  bool disable_ipv6 = 9;
+  bool allow_lan = 10;   // others on the network may use the proxy port
+  bool connect_on_start = 11;
 }
 
 message GetSettingsRequest {}
+
+// ---------- Processes ----------
+
+message ListProcessesRequest {}
+
+message Process {
+  string name = 1;
+  string path = 2;
+}
+
+message ListProcessesResponse {
+  repeated Process processes = 1;
+}
+
+// ---------- Geo databases ----------
+
+message GetGeoInfoRequest {}
+message UpdateGeoRequest {}
+
+message GeoInfo {
+  google.protobuf.Timestamp geoip_updated = 1;   // unset: not downloaded
+  google.protobuf.Timestamp geosite_updated = 2;
+  repeated string geoip_categories = 3;
+  repeated string geosite_categories = 4;
+  bool updating = 5;
+  string error = 6; // last update failure, empty when fine
+}

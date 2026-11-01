@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
 	"errors"
 	"flag"
 	"fmt"
@@ -20,6 +22,12 @@ const (
 	binaryPath = "/usr/local/bin/crocelld"
 	// Where 0.1 installed it; cleaned up on install and uninstall.
 	legacyBinaryDir = "/usr/local/lib/crocell"
+
+	// The state encryption key, sealed by systemd-creds with the TPM (if
+	// there is one) and the host key. systemd decrypts it into the
+	// service's $CREDENTIALS_DIRECTORY; on another machine it is noise.
+	credentialPath = "/etc/credstore.encrypted/crocell-state-key"
+	plainKeyPath   = "/var/lib/crocell/state.key"
 )
 
 // The service runs as root: TUN needs CAP_NET_ADMIN, and sing-tun configures
@@ -34,7 +42,7 @@ Wants=network-online.target
 
 [Service]
 ExecStart=%s --allow-uid=%d
-Restart=on-failure
+%sRestart=on-failure
 RestartSec=2
 RuntimeDirectory=crocell
 StateDirectory=crocell
@@ -73,7 +81,14 @@ func install(args []string) error {
 	}
 	relabel(binaryPath)
 	_ = os.RemoveAll(legacyBinaryDir)
-	unit := fmt.Sprintf(unitTemplate, binaryPath, *uid)
+
+	credLine := ""
+	if err := sealStateKey(); err != nil {
+		fmt.Fprintf(os.Stderr, "crocelld: no sealed key (%v); state is encrypted with a root-only key file instead\n", err)
+	} else {
+		credLine = "LoadCredentialEncrypted=state-key:" + credentialPath + "\n"
+	}
+	unit := fmt.Sprintf(unitTemplate, binaryPath, *uid, credLine)
 	if err := os.WriteFile(unitPath, []byte(unit), 0o644); err != nil {
 		return err
 	}
@@ -103,7 +118,40 @@ func uninstall() error {
 	}
 	_ = os.RemoveAll(legacyBinaryDir)
 	_ = systemctl("daemon-reload")
-	fmt.Println("crocelld removed. Subscriptions stay in /var/lib/crocell, delete it to forget them.")
+	fmt.Println("crocelld removed. Subscriptions stay in /var/lib/crocell (encrypted with " + credentialPath + "); delete both to forget them.")
+	return nil
+}
+
+// sealStateKey creates the systemd credential holding the state key. An
+// existing plain key file (a manual run, or before this existed) is sealed
+// as is, so the state written with it still opens, and then removed.
+func sealStateKey() error {
+	tool, err := exec.LookPath("systemd-creds")
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(credentialPath); err == nil {
+		return nil // reinstall: keep the key the state is sealed with
+	}
+
+	key, err := os.ReadFile(plainKeyPath)
+	if err != nil || len(key) < 32 {
+		key = make([]byte, 32)
+		if _, err := io.ReadFull(rand.Reader, key); err != nil {
+			return err
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(credentialPath), 0o700); err != nil {
+		return err
+	}
+	cmd := exec.Command(tool, "encrypt", "--name=state-key", "-", credentialPath)
+	cmd.Stdin = bytes.NewReader(key)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("systemd-creds encrypt: %v: %s", err, bytes.TrimSpace(out))
+	}
+	if err := os.Remove(plainKeyPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
 	return nil
 }
 

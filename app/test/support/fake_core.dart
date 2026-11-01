@@ -82,12 +82,30 @@ class FakeCore implements CoreApi {
     yield ProbeResult(nodeId: 'n2', error: 'probe: timeout');
   }
 
+  GeoInfo geo = GeoInfo(geoipCategories: ['ru', 'private', 'telegram'], geositeCategories: ['category-ru', 'ru-blocked', 'youtube']);
+  List<Process> processes = [
+    Process(name: 'steam', path: '/usr/bin/steam'),
+    Process(name: 'telegram-desktop', path: '/usr/bin/telegram-desktop'),
+  ];
+
+  @override
+  Future<List<Process>> listProcesses() async => processes;
+
+  @override
+  Future<GeoInfo> getGeoInfo() async => geo;
+
+  @override
+  Future<GeoInfo> updateGeo() async {
+    calls.add('geo update');
+    return geo;
+  }
+
   @override
   Future<Settings> getSettings() async => settings;
 
   @override
   Future<Settings> updateSettings(Settings s) async {
-    calls.add('settings ${s.tunnelMode.name} ${s.appRules.map((r) => '${r.app}=${r.mode.name}').join(',')}');
+    calls.add('settings ${s.tunnelMode.name} ${s.rules.map((r) => '${r.value}=${r.action.name}').join(',')}');
     settings = s;
     return s;
   }

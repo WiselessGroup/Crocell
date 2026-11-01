@@ -39,6 +39,9 @@ const (
 	Core_ProbeNodes_FullMethodName          = "/crocell.v1.Core/ProbeNodes"
 	Core_GetSettings_FullMethodName         = "/crocell.v1.Core/GetSettings"
 	Core_UpdateSettings_FullMethodName      = "/crocell.v1.Core/UpdateSettings"
+	Core_ListProcesses_FullMethodName       = "/crocell.v1.Core/ListProcesses"
+	Core_GetGeoInfo_FullMethodName          = "/crocell.v1.Core/GetGeoInfo"
+	Core_UpdateGeo_FullMethodName           = "/crocell.v1.Core/UpdateGeo"
 )
 
 // CoreClient is the client API for Core service.
@@ -62,6 +65,11 @@ type CoreClient interface {
 	// Settings
 	GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
 	UpdateSettings(ctx context.Context, in *Settings, opts ...grpc.CallOption) (*Settings, error)
+	// Running programs, to pick one for a routing rule.
+	ListProcesses(ctx context.Context, in *ListProcessesRequest, opts ...grpc.CallOption) (*ListProcessesResponse, error)
+	// geoip.dat / geosite.dat: when they were fetched and what is inside.
+	GetGeoInfo(ctx context.Context, in *GetGeoInfoRequest, opts ...grpc.CallOption) (*GeoInfo, error)
+	UpdateGeo(ctx context.Context, in *UpdateGeoRequest, opts ...grpc.CallOption) (*GeoInfo, error)
 }
 
 type coreClient struct {
@@ -210,6 +218,36 @@ func (c *coreClient) UpdateSettings(ctx context.Context, in *Settings, opts ...g
 	return out, nil
 }
 
+func (c *coreClient) ListProcesses(ctx context.Context, in *ListProcessesRequest, opts ...grpc.CallOption) (*ListProcessesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListProcessesResponse)
+	err := c.cc.Invoke(ctx, Core_ListProcesses_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreClient) GetGeoInfo(ctx context.Context, in *GetGeoInfoRequest, opts ...grpc.CallOption) (*GeoInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GeoInfo)
+	err := c.cc.Invoke(ctx, Core_GetGeoInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreClient) UpdateGeo(ctx context.Context, in *UpdateGeoRequest, opts ...grpc.CallOption) (*GeoInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GeoInfo)
+	err := c.cc.Invoke(ctx, Core_UpdateGeo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CoreServer is the server API for Core service.
 // All implementations must embed UnimplementedCoreServer
 // for forward compatibility.
@@ -231,6 +269,11 @@ type CoreServer interface {
 	// Settings
 	GetSettings(context.Context, *GetSettingsRequest) (*Settings, error)
 	UpdateSettings(context.Context, *Settings) (*Settings, error)
+	// Running programs, to pick one for a routing rule.
+	ListProcesses(context.Context, *ListProcessesRequest) (*ListProcessesResponse, error)
+	// geoip.dat / geosite.dat: when they were fetched and what is inside.
+	GetGeoInfo(context.Context, *GetGeoInfoRequest) (*GeoInfo, error)
+	UpdateGeo(context.Context, *UpdateGeoRequest) (*GeoInfo, error)
 	mustEmbedUnimplementedCoreServer()
 }
 
@@ -276,6 +319,15 @@ func (UnimplementedCoreServer) GetSettings(context.Context, *GetSettingsRequest)
 }
 func (UnimplementedCoreServer) UpdateSettings(context.Context, *Settings) (*Settings, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSettings not implemented")
+}
+func (UnimplementedCoreServer) ListProcesses(context.Context, *ListProcessesRequest) (*ListProcessesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListProcesses not implemented")
+}
+func (UnimplementedCoreServer) GetGeoInfo(context.Context, *GetGeoInfoRequest) (*GeoInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetGeoInfo not implemented")
+}
+func (UnimplementedCoreServer) UpdateGeo(context.Context, *UpdateGeoRequest) (*GeoInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateGeo not implemented")
 }
 func (UnimplementedCoreServer) mustEmbedUnimplementedCoreServer() {}
 func (UnimplementedCoreServer) testEmbeddedByValue()              {}
@@ -500,6 +552,60 @@ func _Core_UpdateSettings_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Core_ListProcesses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListProcessesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServer).ListProcesses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Core_ListProcesses_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServer).ListProcesses(ctx, req.(*ListProcessesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Core_GetGeoInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetGeoInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServer).GetGeoInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Core_GetGeoInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServer).GetGeoInfo(ctx, req.(*GetGeoInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Core_UpdateGeo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateGeoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServer).UpdateGeo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Core_UpdateGeo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServer).UpdateGeo(ctx, req.(*UpdateGeoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Core_ServiceDesc is the grpc.ServiceDesc for Core service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -546,6 +652,18 @@ var Core_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateSettings",
 			Handler:    _Core_UpdateSettings_Handler,
+		},
+		{
+			MethodName: "ListProcesses",
+			Handler:    _Core_ListProcesses_Handler,
+		},
+		{
+			MethodName: "GetGeoInfo",
+			Handler:    _Core_GetGeoInfo_Handler,
+		},
+		{
+			MethodName: "UpdateGeo",
+			Handler:    _Core_UpdateGeo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

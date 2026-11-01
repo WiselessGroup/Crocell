@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -30,7 +31,15 @@ const ctlUsage = `usage: crocell ctl [-socket PATH] <command>
   disconnect
   probe [-sub SUB]            entry, exit and latency of every node
   mode proxy|tun              how traffic gets to the core
-  app <name> proxy|bypass|block|remove
+  rules                       routing rules
+  rule proxy|direct|block <what>...
+                              add rules: example.com, *.example.com,
+                              +.example.com, 10.0.0.0/8, geosite:ru-blocked,
+                              geoip:telegram, proc:steam, /usr/bin/steam
+  rule rm <what>              remove a rule
+  final proxy|direct          where everything else goes
+  geo [update|list]           geo databases: dates, categories
+  procs                       running programs
 `
 
 // cmdCtl talks to a running crocelld, the way the GUI will.
@@ -194,31 +203,100 @@ func runCtl(ctx context.Context, c pb.CoreClient, cmd string, args []string) err
 		_, err = c.UpdateSettings(ctx, set)
 		return err
 
-	case "app":
-		if len(args) != 2 {
-			return errors.New("app <name> proxy|bypass|block|remove")
+	case "rules":
+		set, err := c.GetSettings(ctx, &pb.GetSettingsRequest{})
+		if err != nil {
+			return err
+		}
+		for _, r := range set.Rules {
+			fmt.Printf("%-7s %-16s %s\n", actionWord(r.Action), kindWord(r.Kind), r.Value)
+		}
+		fmt.Printf("%-7s %s\n", actionWord(set.FinalAction), "everything else")
+		return nil
+
+	case "rule":
+		if len(args) < 2 {
+			return errors.New("rule proxy|direct|block <what>...  or  rule rm <what>")
 		}
 		set, err := c.GetSettings(ctx, &pb.GetSettingsRequest{})
 		if err != nil {
 			return err
 		}
-		var rules []*pb.AppRule
-		for _, r := range set.AppRules {
-			if r.App != args[0] {
-				rules = append(rules, r)
+		if args[0] == "rm" {
+			var kept []*pb.RouteRule
+			for _, r := range set.Rules {
+				if r.Value != strings.TrimPrefix(args[1], "proc:") && ruleInput(r) != args[1] {
+					kept = append(kept, r)
+				}
+			}
+			set.Rules = kept
+		} else {
+			action, ok := map[string]pb.RouteAction{
+				"proxy": pb.RouteAction_ROUTE_ACTION_PROXY, "direct": pb.RouteAction_ROUTE_ACTION_DIRECT, "block": pb.RouteAction_ROUTE_ACTION_BLOCK,
+			}[args[0]]
+			if !ok {
+				return errors.New("rule proxy|direct|block <what>...")
+			}
+			for _, in := range args[1:] {
+				kind, value := parseRuleInput(in)
+				set.Rules = append(set.Rules, &pb.RouteRule{Kind: kind, Value: value, Action: action})
 			}
 		}
-		modes := map[string]pb.AppMode{
-			"proxy": pb.AppMode_APP_MODE_PROXY, "bypass": pb.AppMode_APP_MODE_BYPASS, "block": pb.AppMode_APP_MODE_BLOCK,
-		}
-		if mode, ok := modes[args[1]]; ok {
-			rules = append(rules, &pb.AppRule{App: args[0], Mode: mode})
-		} else if args[1] != "remove" {
-			return errors.New("app <name> proxy|bypass|block|remove")
-		}
-		set.AppRules = rules
 		_, err = c.UpdateSettings(ctx, set)
 		return err
+
+	case "final":
+		if len(args) != 1 || (args[0] != "proxy" && args[0] != "direct") {
+			return errors.New("final proxy|direct")
+		}
+		set, err := c.GetSettings(ctx, &pb.GetSettingsRequest{})
+		if err != nil {
+			return err
+		}
+		set.FinalAction = pb.RouteAction_ROUTE_ACTION_PROXY
+		if args[0] == "direct" {
+			set.FinalAction = pb.RouteAction_ROUTE_ACTION_DIRECT
+		}
+		_, err = c.UpdateSettings(ctx, set)
+		return err
+
+	case "geo":
+		var info *pb.GeoInfo
+		var err error
+		if len(args) == 1 && args[0] == "update" {
+			info, err = c.UpdateGeo(ctx, &pb.UpdateGeoRequest{})
+		} else {
+			info, err = c.GetGeoInfo(ctx, &pb.GetGeoInfoRequest{})
+		}
+		if err != nil {
+			return err
+		}
+		when := func(ts interface{ AsTime() time.Time }, ok bool) string {
+			if !ok {
+				return "not downloaded"
+			}
+			return ts.AsTime().Local().Format("2006-01-02 15:04")
+		}
+		fmt.Printf("geoip   %s, %d categories\n", when(info.GeoipUpdated, info.GeoipUpdated != nil), len(info.GeoipCategories))
+		fmt.Printf("geosite %s, %d categories\n", when(info.GeositeUpdated, info.GeositeUpdated != nil), len(info.GeositeCategories))
+		if info.Error != "" {
+			fmt.Println("last update failed:", info.Error)
+		}
+		if len(args) == 1 && args[0] == "list" {
+			fmt.Println("\ngeoip:", strings.Join(info.GeoipCategories, " "))
+			fmt.Println("\ngeosite:", strings.Join(info.GeositeCategories, " "))
+		}
+		return nil
+
+	case "procs":
+		resp, err := c.ListProcesses(ctx, &pb.ListProcessesRequest{})
+		if err != nil {
+			return err
+		}
+		for _, p := range resp.Processes {
+			fmt.Printf("%-28s %s\n", p.Name, p.Path)
+		}
+		return nil
 	}
 
 	fmt.Fprint(os.Stderr, ctlUsage)
@@ -369,4 +447,57 @@ func bytes(n uint64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
+}
+
+// parseRuleInput reads what a person types: the same forms the app takes.
+func parseRuleInput(in string) (pb.RuleKind, string) {
+	switch {
+	case strings.HasPrefix(in, "geosite:"):
+		return pb.RuleKind_RULE_KIND_GEOSITE, strings.TrimPrefix(in, "geosite:")
+	case strings.HasPrefix(in, "geoip:"):
+		return pb.RuleKind_RULE_KIND_GEOIP, strings.TrimPrefix(in, "geoip:")
+	case strings.HasPrefix(in, "proc:"):
+		return pb.RuleKind_RULE_KIND_PROCESS_NAME, strings.TrimPrefix(in, "proc:")
+	case strings.HasPrefix(in, "/") || strings.Contains(in, `\`):
+		return pb.RuleKind_RULE_KIND_PROCESS_PATH, in
+	case strings.HasPrefix(in, "+."):
+		return pb.RuleKind_RULE_KIND_DOMAIN_SUFFIX, strings.TrimPrefix(in, "+.")
+	case strings.ContainsAny(in, "*?"):
+		return pb.RuleKind_RULE_KIND_DOMAIN_WILDCARD, in
+	}
+	if _, err := netip.ParsePrefix(in); err == nil {
+		return pb.RuleKind_RULE_KIND_IP_CIDR, in
+	}
+	if _, err := netip.ParseAddr(in); err == nil {
+		return pb.RuleKind_RULE_KIND_IP_CIDR, in
+	}
+	return pb.RuleKind_RULE_KIND_DOMAIN, in
+}
+
+func ruleInput(r *pb.RouteRule) string {
+	switch r.Kind {
+	case pb.RuleKind_RULE_KIND_GEOSITE:
+		return "geosite:" + r.Value
+	case pb.RuleKind_RULE_KIND_GEOIP:
+		return "geoip:" + r.Value
+	case pb.RuleKind_RULE_KIND_PROCESS_NAME:
+		return "proc:" + r.Value
+	case pb.RuleKind_RULE_KIND_DOMAIN_SUFFIX:
+		return "+." + r.Value
+	}
+	return r.Value
+}
+
+func actionWord(a pb.RouteAction) string {
+	switch a {
+	case pb.RouteAction_ROUTE_ACTION_DIRECT:
+		return "direct"
+	case pb.RouteAction_ROUTE_ACTION_BLOCK:
+		return "block"
+	}
+	return "proxy"
+}
+
+func kindWord(k pb.RuleKind) string {
+	return strings.ToLower(strings.TrimPrefix(k.String(), "RULE_KIND_"))
 }

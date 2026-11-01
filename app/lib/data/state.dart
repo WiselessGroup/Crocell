@@ -140,12 +140,42 @@ class SettingsNotifier extends AsyncNotifier<Settings> {
 
   Future<void> setMode(TunnelMode mode) => _update((s) => s.tunnelMode = mode);
 
-  Future<void> setAppRule(String app, AppMode mode) => _update((s) {
-        s.appRules.removeWhere((r) => r.app == app);
-        s.appRules.add(AppRule(app: app, mode: mode));
+  /// Adds rules to an action's list. A rule already in another list moves.
+  Future<void> addRules(List<RouteRule> rules) => _update((s) {
+        for (final r in rules) {
+          s.rules.removeWhere((x) => x.kind == r.kind && x.value == r.value);
+          s.rules.add(r);
+        }
       });
 
-  Future<void> removeAppRule(String app) => _update((s) => s.appRules.removeWhere((r) => r.app == app));
+  Future<void> removeRule(RouteRule rule) =>
+      _update((s) => s.rules.removeWhere((x) => x.kind == rule.kind && x.value == rule.value));
+
+  Future<void> setFinal(RouteAction action) => _update((s) => s.finalAction = action);
+
+  /// Any other edit, for the advanced section.
+  Future<void> edit(void Function(Settings s) change) => _update(change);
+}
+
+/// Running programs, fetched when the picker opens.
+final processesProvider = FutureProvider.autoDispose<List<Process>>((ref) => ref.read(coreApiProvider).listProcesses());
+
+/// The geo databases: dates, categories, update.
+final geoInfoProvider = AsyncNotifierProvider<GeoInfoNotifier, GeoInfo>(GeoInfoNotifier.new);
+
+class GeoInfoNotifier extends AsyncNotifier<GeoInfo> {
+  @override
+  Future<GeoInfo> build() {
+    ref.watch(daemonReachableProvider);
+    return ref.read(coreApiProvider).getGeoInfo();
+  }
+
+  /// Fetches both databases now (Riverpod already has an `update`).
+  Future<void> refresh() async {
+    final current = state.value;
+    if (current != null) state = AsyncData(current.deepCopy()..updating = true);
+    state = AsyncData(await ref.read(coreApiProvider).updateGeo());
+  }
 }
 
 /// Connect, disconnect, switch nodes. Errors bubble to the caller to show.

@@ -125,6 +125,29 @@ class CoreClient extends $grpc.Client {
     return $createUnaryCall(_$updateSettings, request, options: options);
   }
 
+  /// Running programs, to pick one for a routing rule.
+  $grpc.ResponseFuture<$0.ListProcessesResponse> listProcesses(
+    $0.ListProcessesRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$listProcesses, request, options: options);
+  }
+
+  /// geoip.dat / geosite.dat: when they were fetched and what is inside.
+  $grpc.ResponseFuture<$0.GeoInfo> getGeoInfo(
+    $0.GetGeoInfoRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getGeoInfo, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.GeoInfo> updateGeo(
+    $0.UpdateGeoRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$updateGeo, request, options: options);
+  }
+
   // method descriptors
 
   static final _$getStatus = $grpc.ClientMethod<$0.GetStatusRequest, $0.Status>(
@@ -184,6 +207,21 @@ class CoreClient extends $grpc.Client {
       '/crocell.v1.Core/UpdateSettings',
       ($0.Settings value) => value.writeToBuffer(),
       $0.Settings.fromBuffer);
+  static final _$listProcesses =
+      $grpc.ClientMethod<$0.ListProcessesRequest, $0.ListProcessesResponse>(
+          '/crocell.v1.Core/ListProcesses',
+          ($0.ListProcessesRequest value) => value.writeToBuffer(),
+          $0.ListProcessesResponse.fromBuffer);
+  static final _$getGeoInfo =
+      $grpc.ClientMethod<$0.GetGeoInfoRequest, $0.GeoInfo>(
+          '/crocell.v1.Core/GetGeoInfo',
+          ($0.GetGeoInfoRequest value) => value.writeToBuffer(),
+          $0.GeoInfo.fromBuffer);
+  static final _$updateGeo =
+      $grpc.ClientMethod<$0.UpdateGeoRequest, $0.GeoInfo>(
+          '/crocell.v1.Core/UpdateGeo',
+          ($0.UpdateGeoRequest value) => value.writeToBuffer(),
+          $0.GeoInfo.fromBuffer);
 }
 
 @$pb.GrpcServiceName('crocell.v1.Core')
@@ -284,6 +322,29 @@ abstract class CoreServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.Settings.fromBuffer(value),
         ($0.Settings value) => value.writeToBuffer()));
+    $addMethod(
+        $grpc.ServiceMethod<$0.ListProcessesRequest, $0.ListProcessesResponse>(
+            'ListProcesses',
+            listProcesses_Pre,
+            false,
+            false,
+            ($core.List<$core.int> value) =>
+                $0.ListProcessesRequest.fromBuffer(value),
+            ($0.ListProcessesResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetGeoInfoRequest, $0.GeoInfo>(
+        'GetGeoInfo',
+        getGeoInfo_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GetGeoInfoRequest.fromBuffer(value),
+        ($0.GeoInfo value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.UpdateGeoRequest, $0.GeoInfo>(
+        'UpdateGeo',
+        updateGeo_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.UpdateGeoRequest.fromBuffer(value),
+        ($0.GeoInfo value) => value.writeToBuffer()));
   }
 
   $async.Future<$0.Status> getStatus_Pre($grpc.ServiceCall $call,
@@ -384,4 +445,29 @@ abstract class CoreServiceBase extends $grpc.Service {
 
   $async.Future<$0.Settings> updateSettings(
       $grpc.ServiceCall call, $0.Settings request);
+
+  $async.Future<$0.ListProcessesResponse> listProcesses_Pre(
+      $grpc.ServiceCall $call,
+      $async.Future<$0.ListProcessesRequest> $request) async {
+    return listProcesses($call, await $request);
+  }
+
+  $async.Future<$0.ListProcessesResponse> listProcesses(
+      $grpc.ServiceCall call, $0.ListProcessesRequest request);
+
+  $async.Future<$0.GeoInfo> getGeoInfo_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetGeoInfoRequest> $request) async {
+    return getGeoInfo($call, await $request);
+  }
+
+  $async.Future<$0.GeoInfo> getGeoInfo(
+      $grpc.ServiceCall call, $0.GetGeoInfoRequest request);
+
+  $async.Future<$0.GeoInfo> updateGeo_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.UpdateGeoRequest> $request) async {
+    return updateGeo($call, await $request);
+  }
+
+  $async.Future<$0.GeoInfo> updateGeo(
+      $grpc.ServiceCall call, $0.UpdateGeoRequest request);
 }

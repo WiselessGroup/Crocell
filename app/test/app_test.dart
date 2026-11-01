@@ -162,16 +162,34 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('settings: add a program that bypasses the VPN', (tester) async {
-    final core = await pumpApp(tester, FakeCore(subs: [sampleSubscription()]));
+  testWidgets('settings: a running program goes direct, sites go through the VPN', (tester) async {
+    final core = await pumpApp(tester, FakeCore(subs: [sampleSubscription()]), size: const Size(1200, 900));
     await tester.tap(find.byTooltip('Настройки'));
     await tester.pumpAndSettle();
+    expect(find.text('Пока пусто'), findsNWidgets(3));
 
-    await tester.enterText(find.byType(TextField), 'steam');
+    await tester.tap(find.byTooltip('Добавить в «Напрямую»'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Программа'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('steam'));
     await tester.tap(find.widgetWithText(FilledButton, 'Добавить'));
     await tester.pumpAndSettle();
-    expect(core.calls.last, 'settings TUNNEL_MODE_SYSTEM_PROXY steam=APP_MODE_BYPASS');
-    expect(find.text('Напрямую'), findsOneWidget);
+    expect(core.calls.last, 'settings TUNNEL_MODE_SYSTEM_PROXY steam=ROUTE_ACTION_DIRECT');
+
+    await tester.tap(find.byTooltip('Добавить в «Через VPN»'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Сайты, адреса или наборы'), '*.wiseless.net\ngeosite:ru-blocked');
+    await tester.pumpAndSettle();
+    expect(find.text('Поддомены'), findsOneWidget, reason: 'live preview names the kind');
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить'));
+    await tester.pumpAndSettle();
+    expect(core.calls.last, endsWith('*.wiseless.net=ROUTE_ACTION_PROXY,ru-blocked=ROUTE_ACTION_PROXY'));
+    expect(find.text('geosite:ru-blocked'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Убрать steam'));
+    await tester.pumpAndSettle();
+    expect(core.calls.last, isNot(contains('steam')));
     await unmount(tester);
   });
 
@@ -225,6 +243,28 @@ void main() {
     core.push(connectedTo('n1')..liveCheck = ProbeResult(nodeId: 'n1', exitCountry: 'DE', exitColo: 'FRA', exitIp: '1.2.3.4'));
     await tester.pumpAndSettle();
     expect(alerts.shown.last, 'Интернет через VPN снова работает');
+    await unmount(tester);
+  });
+
+  testWidgets('settings fit a phone-width window, advanced section open', (tester) async {
+    final core = FakeCore(subs: [sampleSubscription()]);
+    core.settings.rules.addAll([
+      RouteRule(kind: RuleKind.RULE_KIND_GEOSITE, value: 'ru-available-only-inside', action: RouteAction.ROUTE_ACTION_DIRECT),
+      RouteRule(kind: RuleKind.RULE_KIND_PROCESS_PATH, value: '/home/someone/.local/share/Steam/ubuntu12_32/steam', action: RouteAction.ROUTE_ACTION_DIRECT),
+    ]);
+    await pumpApp(tester, core, size: const Size(360, 1600));
+    await tester.tap(find.byTooltip('Настройки'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Дополнительно'));
+    await tester.pumpAndSettle();
+    expect(find.text('DNS-серверы'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Добавить в «Блокировать»'));
+    await tester.pumpAndSettle();
+    for (final tab in ['Программа', 'Набор', 'Сайт или IP']) {
+      await tester.tap(find.text(tab));
+      await tester.pumpAndSettle();
+    }
     await unmount(tester);
   });
 }

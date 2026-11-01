@@ -25,6 +25,10 @@ abstract interface class CoreApi {
 
   Future<Settings> getSettings();
   Future<Settings> updateSettings(Settings settings);
+
+  Future<List<Process>> listProcesses();
+  Future<GeoInfo> getGeoInfo();
+  Future<GeoInfo> updateGeo();
 }
 
 /// Something went wrong in a way the person can read.
@@ -125,6 +129,18 @@ class GrpcCoreApi implements CoreApi {
 
   @override
   Future<Settings> updateSettings(Settings settings) => _call(() => _client.updateSettings(settings));
+
+  @override
+  Future<List<Process>> listProcesses() async =>
+      (await _call(() => _client.listProcesses(ListProcessesRequest()))).processes;
+
+  @override
+  Future<GeoInfo> getGeoInfo() => _call(() => _client.getGeoInfo(GetGeoInfoRequest()));
+
+  @override
+  Future<GeoInfo> updateGeo() => _call(() => _client.updateGeo(UpdateGeoRequest(),
+      // Two databases, ~100 MB from GitHub: give it time.
+      options: CallOptions(timeout: const Duration(minutes: 4))));
 
   Future<void> close() => _channel.shutdown();
 }

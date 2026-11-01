@@ -50,21 +50,46 @@ final $typed_data.Uint8List tunnelModeDescriptor = $convert.base64Decode(
     'CgpUdW5uZWxNb2RlEhsKF1RVTk5FTF9NT0RFX1VOU1BFQ0lGSUVEEAASHAoYVFVOTkVMX01PRE'
     'VfU1lTVEVNX1BST1hZEAESEwoPVFVOTkVMX01PREVfVFVOEAI=');
 
-@$core.Deprecated('Use appModeDescriptor instead')
-const AppMode$json = {
-  '1': 'AppMode',
+@$core.Deprecated('Use routeActionDescriptor instead')
+const RouteAction$json = {
+  '1': 'RouteAction',
   '2': [
-    {'1': 'APP_MODE_UNSPECIFIED', '2': 0},
-    {'1': 'APP_MODE_PROXY', '2': 1},
-    {'1': 'APP_MODE_BYPASS', '2': 2},
-    {'1': 'APP_MODE_BLOCK', '2': 3},
+    {'1': 'ROUTE_ACTION_UNSPECIFIED', '2': 0},
+    {'1': 'ROUTE_ACTION_PROXY', '2': 1},
+    {'1': 'ROUTE_ACTION_DIRECT', '2': 2},
+    {'1': 'ROUTE_ACTION_BLOCK', '2': 3},
   ],
 };
 
-/// Descriptor for `AppMode`. Decode as a `google.protobuf.EnumDescriptorProto`.
-final $typed_data.Uint8List appModeDescriptor = $convert.base64Decode(
-    'CgdBcHBNb2RlEhgKFEFQUF9NT0RFX1VOU1BFQ0lGSUVEEAASEgoOQVBQX01PREVfUFJPWFkQAR'
-    'ITCg9BUFBfTU9ERV9CWVBBU1MQAhISCg5BUFBfTU9ERV9CTE9DSxAD');
+/// Descriptor for `RouteAction`. Decode as a `google.protobuf.EnumDescriptorProto`.
+final $typed_data.Uint8List routeActionDescriptor = $convert.base64Decode(
+    'CgtSb3V0ZUFjdGlvbhIcChhST1VURV9BQ1RJT05fVU5TUEVDSUZJRUQQABIWChJST1VURV9BQ1'
+    'RJT05fUFJPWFkQARIXChNST1VURV9BQ1RJT05fRElSRUNUEAISFgoSUk9VVEVfQUNUSU9OX0JM'
+    'T0NLEAM=');
+
+@$core.Deprecated('Use ruleKindDescriptor instead')
+const RuleKind$json = {
+  '1': 'RuleKind',
+  '2': [
+    {'1': 'RULE_KIND_UNSPECIFIED', '2': 0},
+    {'1': 'RULE_KIND_PROCESS_PATH', '2': 1},
+    {'1': 'RULE_KIND_PROCESS_NAME', '2': 2},
+    {'1': 'RULE_KIND_DOMAIN', '2': 3},
+    {'1': 'RULE_KIND_DOMAIN_WILDCARD', '2': 4},
+    {'1': 'RULE_KIND_DOMAIN_SUFFIX', '2': 5},
+    {'1': 'RULE_KIND_IP_CIDR', '2': 6},
+    {'1': 'RULE_KIND_GEOSITE', '2': 7},
+    {'1': 'RULE_KIND_GEOIP', '2': 8},
+  ],
+};
+
+/// Descriptor for `RuleKind`. Decode as a `google.protobuf.EnumDescriptorProto`.
+final $typed_data.Uint8List ruleKindDescriptor = $convert.base64Decode(
+    'CghSdWxlS2luZBIZChVSVUxFX0tJTkRfVU5TUEVDSUZJRUQQABIaChZSVUxFX0tJTkRfUFJPQ0'
+    'VTU19QQVRIEAESGgoWUlVMRV9LSU5EX1BST0NFU1NfTkFNRRACEhQKEFJVTEVfS0lORF9ET01B'
+    'SU4QAxIdChlSVUxFX0tJTkRfRE9NQUlOX1dJTERDQVJEEAQSGwoXUlVMRV9LSU5EX0RPTUFJTl'
+    '9TVUZGSVgQBRIVChFSVUxFX0tJTkRfSVBfQ0lEUhAGEhUKEVJVTEVfS0lORF9HRU9TSVRFEAcS'
+    'EwoPUlVMRV9LSU5EX0dFT0lQEAg=');
 
 @$core.Deprecated('Use statusDescriptor instead')
 const Status$json = {
@@ -412,26 +437,66 @@ final $typed_data.Uint8List probeResultDescriptor = $convert.base64Decode(
     'TXMSFAoFZXJyb3IYCCABKAlSBWVycm9yEjcKCXByb2JlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm'
     '90b2J1Zi5UaW1lc3RhbXBSCHByb2JlZEF0');
 
-@$core.Deprecated('Use appRuleDescriptor instead')
-const AppRule$json = {
-  '1': 'AppRule',
+@$core.Deprecated('Use routeRuleDescriptor instead')
+const RouteRule$json = {
+  '1': 'RouteRule',
   '2': [
-    {'1': 'app', '3': 1, '4': 1, '5': 9, '10': 'app'},
     {
-      '1': 'mode',
-      '3': 2,
+      '1': 'kind',
+      '3': 1,
       '4': 1,
       '5': 14,
-      '6': '.crocell.v1.AppMode',
-      '10': 'mode'
+      '6': '.crocell.v1.RuleKind',
+      '10': 'kind'
+    },
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+    {
+      '1': 'action',
+      '3': 3,
+      '4': 1,
+      '5': 14,
+      '6': '.crocell.v1.RouteAction',
+      '10': 'action'
     },
   ],
 };
 
-/// Descriptor for `AppRule`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List appRuleDescriptor = $convert.base64Decode(
-    'CgdBcHBSdWxlEhAKA2FwcBgBIAEoCVIDYXBwEicKBG1vZGUYAiABKA4yEy5jcm9jZWxsLnYxLk'
-    'FwcE1vZGVSBG1vZGU=');
+/// Descriptor for `RouteRule`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List routeRuleDescriptor = $convert.base64Decode(
+    'CglSb3V0ZVJ1bGUSKAoEa2luZBgBIAEoDjIULmNyb2NlbGwudjEuUnVsZUtpbmRSBGtpbmQSFA'
+    'oFdmFsdWUYAiABKAlSBXZhbHVlEi8KBmFjdGlvbhgDIAEoDjIXLmNyb2NlbGwudjEuUm91dGVB'
+    'Y3Rpb25SBmFjdGlvbg==');
+
+@$core.Deprecated('Use dnsSettingsDescriptor instead')
+const DnsSettings$json = {
+  '1': 'DnsSettings',
+  '2': [
+    {'1': 'servers', '3': 1, '4': 3, '5': 9, '10': 'servers'},
+    {'1': 'direct_servers', '3': 2, '4': 3, '5': 9, '10': 'directServers'},
+    {'1': 'real_ip', '3': 3, '4': 1, '5': 8, '10': 'realIp'},
+  ],
+};
+
+/// Descriptor for `DnsSettings`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List dnsSettingsDescriptor = $convert.base64Decode(
+    'CgtEbnNTZXR0aW5ncxIYCgdzZXJ2ZXJzGAEgAygJUgdzZXJ2ZXJzEiUKDmRpcmVjdF9zZXJ2ZX'
+    'JzGAIgAygJUg1kaXJlY3RTZXJ2ZXJzEhcKB3JlYWxfaXAYAyABKAhSBnJlYWxJcA==');
+
+@$core.Deprecated('Use geoSettingsDescriptor instead')
+const GeoSettings$json = {
+  '1': 'GeoSettings',
+  '2': [
+    {'1': 'geoip_source', '3': 1, '4': 1, '5': 9, '10': 'geoipSource'},
+    {'1': 'geosite_source', '3': 2, '4': 1, '5': 9, '10': 'geositeSource'},
+    {'1': 'update_hours', '3': 3, '4': 1, '5': 13, '10': 'updateHours'},
+  ],
+};
+
+/// Descriptor for `GeoSettings`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List geoSettingsDescriptor = $convert.base64Decode(
+    'CgtHZW9TZXR0aW5ncxIhCgxnZW9pcF9zb3VyY2UYASABKAlSC2dlb2lwU291cmNlEiUKDmdlb3'
+    'NpdGVfc291cmNlGAIgASgJUg1nZW9zaXRlU291cmNlEiEKDHVwZGF0ZV9ob3VycxgDIAEoDVIL'
+    'dXBkYXRlSG91cnM=');
 
 @$core.Deprecated('Use settingsDescriptor instead')
 const Settings$json = {
@@ -445,25 +510,59 @@ const Settings$json = {
       '6': '.crocell.v1.TunnelMode',
       '10': 'tunnelMode'
     },
-    {
-      '1': 'app_rules',
-      '3': 2,
-      '4': 3,
-      '5': 11,
-      '6': '.crocell.v1.AppRule',
-      '10': 'appRules'
-    },
     {'1': 'mixed_port', '3': 3, '4': 1, '5': 13, '10': 'mixedPort'},
     {'1': 'tun_stack', '3': 4, '4': 1, '5': 9, '10': 'tunStack'},
+    {
+      '1': 'rules',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.crocell.v1.RouteRule',
+      '10': 'rules'
+    },
+    {
+      '1': 'final_action',
+      '3': 6,
+      '4': 1,
+      '5': 14,
+      '6': '.crocell.v1.RouteAction',
+      '10': 'finalAction'
+    },
+    {
+      '1': 'dns',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.crocell.v1.DnsSettings',
+      '10': 'dns'
+    },
+    {
+      '1': 'geo',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.crocell.v1.GeoSettings',
+      '10': 'geo'
+    },
+    {'1': 'disable_ipv6', '3': 9, '4': 1, '5': 8, '10': 'disableIpv6'},
+    {'1': 'allow_lan', '3': 10, '4': 1, '5': 8, '10': 'allowLan'},
+    {'1': 'connect_on_start', '3': 11, '4': 1, '5': 8, '10': 'connectOnStart'},
+  ],
+  '9': [
+    {'1': 2, '2': 3},
   ],
 };
 
 /// Descriptor for `Settings`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List settingsDescriptor = $convert.base64Decode(
     'CghTZXR0aW5ncxI3Cgt0dW5uZWxfbW9kZRgBIAEoDjIWLmNyb2NlbGwudjEuVHVubmVsTW9kZV'
-    'IKdHVubmVsTW9kZRIwCglhcHBfcnVsZXMYAiADKAsyEy5jcm9jZWxsLnYxLkFwcFJ1bGVSCGFw'
-    'cFJ1bGVzEh0KCm1peGVkX3BvcnQYAyABKA1SCW1peGVkUG9ydBIbCgl0dW5fc3RhY2sYBCABKA'
-    'lSCHR1blN0YWNr');
+    'IKdHVubmVsTW9kZRIdCgptaXhlZF9wb3J0GAMgASgNUgltaXhlZFBvcnQSGwoJdHVuX3N0YWNr'
+    'GAQgASgJUgh0dW5TdGFjaxIrCgVydWxlcxgFIAMoCzIVLmNyb2NlbGwudjEuUm91dGVSdWxlUg'
+    'VydWxlcxI6CgxmaW5hbF9hY3Rpb24YBiABKA4yFy5jcm9jZWxsLnYxLlJvdXRlQWN0aW9uUgtm'
+    'aW5hbEFjdGlvbhIpCgNkbnMYByABKAsyFy5jcm9jZWxsLnYxLkRuc1NldHRpbmdzUgNkbnMSKQ'
+    'oDZ2VvGAggASgLMhcuY3JvY2VsbC52MS5HZW9TZXR0aW5nc1IDZ2VvEiEKDGRpc2FibGVfaXB2'
+    'NhgJIAEoCFILZGlzYWJsZUlwdjYSGwoJYWxsb3dfbGFuGAogASgIUghhbGxvd0xhbhIoChBjb2'
+    '5uZWN0X29uX3N0YXJ0GAsgASgIUg5jb25uZWN0T25TdGFydEoECAIQAw==');
 
 @$core.Deprecated('Use getSettingsRequestDescriptor instead')
 const GetSettingsRequest$json = {
@@ -473,3 +572,105 @@ const GetSettingsRequest$json = {
 /// Descriptor for `GetSettingsRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List getSettingsRequestDescriptor =
     $convert.base64Decode('ChJHZXRTZXR0aW5nc1JlcXVlc3Q=');
+
+@$core.Deprecated('Use listProcessesRequestDescriptor instead')
+const ListProcessesRequest$json = {
+  '1': 'ListProcessesRequest',
+};
+
+/// Descriptor for `ListProcessesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listProcessesRequestDescriptor =
+    $convert.base64Decode('ChRMaXN0UHJvY2Vzc2VzUmVxdWVzdA==');
+
+@$core.Deprecated('Use processDescriptor instead')
+const Process$json = {
+  '1': 'Process',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'path', '3': 2, '4': 1, '5': 9, '10': 'path'},
+  ],
+};
+
+/// Descriptor for `Process`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List processDescriptor = $convert.base64Decode(
+    'CgdQcm9jZXNzEhIKBG5hbWUYASABKAlSBG5hbWUSEgoEcGF0aBgCIAEoCVIEcGF0aA==');
+
+@$core.Deprecated('Use listProcessesResponseDescriptor instead')
+const ListProcessesResponse$json = {
+  '1': 'ListProcessesResponse',
+  '2': [
+    {
+      '1': 'processes',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.crocell.v1.Process',
+      '10': 'processes'
+    },
+  ],
+};
+
+/// Descriptor for `ListProcessesResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listProcessesResponseDescriptor = $convert.base64Decode(
+    'ChVMaXN0UHJvY2Vzc2VzUmVzcG9uc2USMQoJcHJvY2Vzc2VzGAEgAygLMhMuY3JvY2VsbC52MS'
+    '5Qcm9jZXNzUglwcm9jZXNzZXM=');
+
+@$core.Deprecated('Use getGeoInfoRequestDescriptor instead')
+const GetGeoInfoRequest$json = {
+  '1': 'GetGeoInfoRequest',
+};
+
+/// Descriptor for `GetGeoInfoRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGeoInfoRequestDescriptor =
+    $convert.base64Decode('ChFHZXRHZW9JbmZvUmVxdWVzdA==');
+
+@$core.Deprecated('Use updateGeoRequestDescriptor instead')
+const UpdateGeoRequest$json = {
+  '1': 'UpdateGeoRequest',
+};
+
+/// Descriptor for `UpdateGeoRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List updateGeoRequestDescriptor =
+    $convert.base64Decode('ChBVcGRhdGVHZW9SZXF1ZXN0');
+
+@$core.Deprecated('Use geoInfoDescriptor instead')
+const GeoInfo$json = {
+  '1': 'GeoInfo',
+  '2': [
+    {
+      '1': 'geoip_updated',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'geoipUpdated'
+    },
+    {
+      '1': 'geosite_updated',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.google.protobuf.Timestamp',
+      '10': 'geositeUpdated'
+    },
+    {'1': 'geoip_categories', '3': 3, '4': 3, '5': 9, '10': 'geoipCategories'},
+    {
+      '1': 'geosite_categories',
+      '3': 4,
+      '4': 3,
+      '5': 9,
+      '10': 'geositeCategories'
+    },
+    {'1': 'updating', '3': 5, '4': 1, '5': 8, '10': 'updating'},
+    {'1': 'error', '3': 6, '4': 1, '5': 9, '10': 'error'},
+  ],
+};
+
+/// Descriptor for `GeoInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List geoInfoDescriptor = $convert.base64Decode(
+    'CgdHZW9JbmZvEj8KDWdlb2lwX3VwZGF0ZWQYASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZX'
+    'N0YW1wUgxnZW9pcFVwZGF0ZWQSQwoPZ2Vvc2l0ZV91cGRhdGVkGAIgASgLMhouZ29vZ2xlLnBy'
+    'b3RvYnVmLlRpbWVzdGFtcFIOZ2Vvc2l0ZVVwZGF0ZWQSKQoQZ2VvaXBfY2F0ZWdvcmllcxgDIA'
+    'MoCVIPZ2VvaXBDYXRlZ29yaWVzEi0KEmdlb3NpdGVfY2F0ZWdvcmllcxgEIAMoCVIRZ2Vvc2l0'
+    'ZUNhdGVnb3JpZXMSGgoIdXBkYXRpbmcYBSABKAhSCHVwZGF0aW5nEhQKBWVycm9yGAYgASgJUg'
+    'VlcnJvcg==');

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
@@ -39,9 +40,26 @@ type Options struct {
 	// proxy. Needs root / CAP_NET_ADMIN on desktop, VpnService on Android.
 	Tun *TunOptions
 
-	// AppRules route single applications. Process lookup works for TUN
-	// traffic and for local apps hitting the mixed port.
-	AppRules []AppRule
+	// Rules route programs, sites, subnets and geo sets; Final is where
+	// everything else goes (Proxy unless set to Direct). LAN is always direct.
+	Rules []Rule
+	Final Action
+
+	DNS      DNSOptions
+	IPv6     bool // off cuts IPv6 out of the tunnel and DNS answers
+	AllowLAN bool // other devices may use the mixed port
+
+	// GeoURLs are mihomo's fallback sources if a geo rule finds no file in
+	// HomeDir. The daemon normally fetches the files before Start.
+	GeoIPURL, GeoSiteURL string
+}
+
+// DNSOptions: Servers resolve everything through the node; DirectServers
+// serve direct traffic and node addresses. Empty means sane defaults.
+type DNSOptions struct {
+	Servers       []string
+	DirectServers []string
+	RealIP        bool // redir-host instead of fake-ip
 }
 
 // TunOptions configure the TUN device. Zero values are sane defaults.
@@ -204,9 +222,9 @@ func buildConfig(opts Options) ([]byte, error) {
 	cfg := map[string]any{
 		"mode":         "rule",
 		"log-level":    logLevel,
-		"allow-lan":    false,
-		"bind-address": "127.0.0.1",
-		"ipv6":         true,
+		"allow-lan":    opts.AllowLAN,
+		"bind-address": map[bool]string{true: "*", false: "127.0.0.1"}[opts.AllowLAN],
+		"ipv6":         opts.IPv6,
 		"profile": map[string]any{
 			"store-selected": false,
 		},
@@ -218,13 +236,25 @@ func buildConfig(opts Options) ([]byte, error) {
 		}},
 	}
 
-	rules, err := appRules(opts.AppRules)
+	rules, err := buildRules(opts.Rules, opts.Final)
 	if err != nil {
 		return nil, err
 	}
-	cfg["rules"] = append(rules, "MATCH,"+GroupName)
-	if len(rules) > 0 {
-		cfg["find-process-mode"] = "strict"
+	cfg["rules"] = rules
+	cfg["find-process-mode"] = "strict"
+	if geoip, geosite := UsesGeo(opts.Rules); geoip || geosite {
+		// .dat files, not MaxMind: runetfreedom ships geoip.dat, and the
+		// daemon keeps both in HomeDir as GeoIP.dat / GeoSite.dat.
+		cfg["geodata-mode"] = true
+		cfg["geo-auto-update"] = false
+		geox := map[string]any{}
+		if opts.GeoIPURL != "" {
+			geox["geoip"] = opts.GeoIPURL
+		}
+		if opts.GeoSiteURL != "" {
+			geox["geosite"] = opts.GeoSiteURL
+		}
+		cfg["geox-url"] = geox
 	}
 	if opts.MixedPort > 0 {
 		cfg["mixed-port"] = opts.MixedPort
@@ -232,12 +262,12 @@ func buildConfig(opts Options) ([]byte, error) {
 	if opts.Tun != nil {
 		tun := tunConfig(opts.Tun)
 		if opts.Tun.FileDescriptor > 0 {
-			if pkgs := append(bypassPackages(opts.AppRules), opts.Tun.ExcludePackages...); len(pkgs) > 0 {
+			if pkgs := append(bypassPackages(opts.Rules), opts.Tun.ExcludePackages...); len(pkgs) > 0 {
 				tun["exclude-package"] = pkgs
 			}
 		}
 		cfg["tun"] = tun
-		cfg["dns"] = dnsConfig()
+		cfg["dns"] = dnsConfig(opts.DNS, opts.IPv6)
 		cfg["sniffer"] = snifferConfig()
 	}
 
@@ -307,11 +337,33 @@ func tunConfig(t *TunOptions) map[string]any {
 // dnsConfig: names resolve through the tunnel (no DNS leaks, no poisoned
 // answers from the local ISP), except node addresses and DIRECT traffic,
 // which use the system resolver so they never loop through the node.
-func dnsConfig() map[string]any {
+func dnsConfig(o DNSOptions, ipv6 bool) map[string]any {
+	servers := []string{"https://1.1.1.1/dns-query", "https://8.8.8.8/dns-query"}
+	if len(o.Servers) > 0 {
+		servers = o.Servers
+	}
+	viaNode := make([]string, 0, len(servers))
+	for _, s := range servers {
+		// "#Crocell" sends the query through the node; keep any routing the
+		// person spelled out themselves.
+		if !strings.Contains(s, "#") {
+			s += "#" + GroupName
+		}
+		viaNode = append(viaNode, s)
+	}
+	direct := []string{"system"}
+	if len(o.DirectServers) > 0 {
+		direct = o.DirectServers
+	}
+	mode := "fake-ip"
+	if o.RealIP {
+		mode = "redir-host"
+	}
+
 	return map[string]any{
 		"enable":        true,
-		"ipv6":          true,
-		"enhanced-mode": "fake-ip",
+		"ipv6":          ipv6,
+		"enhanced-mode": mode,
 		"fake-ip-range": "198.18.0.1/16",
 		// Things that break when they see a fake address: captive portal and
 		// connectivity checks, NTP, STUN for calls and games, console networks.
@@ -332,13 +384,10 @@ func dnsConfig() map[string]any {
 			"xbox.*.microsoft.com",
 			"+.xboxlive.com",
 		},
-		"default-nameserver": []string{"system", "1.1.1.1", "77.88.8.8"},
-		"nameserver": []string{
-			"https://1.1.1.1/dns-query#" + GroupName,
-			"https://8.8.8.8/dns-query#" + GroupName,
-		},
-		"proxy-server-nameserver": []string{"system", "1.1.1.1", "77.88.8.8"},
-		"direct-nameserver":       []string{"system"},
+		"default-nameserver":      []string{"system", "1.1.1.1", "77.88.8.8"},
+		"nameserver":              viaNode,
+		"proxy-server-nameserver": append([]string{}, direct...),
+		"direct-nameserver":       direct,
 	}
 }
 

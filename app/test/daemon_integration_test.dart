@@ -27,9 +27,13 @@ void main() {
       expect(list.map((s) => s.id), contains(added.id));
 
       final settings = await api.getSettings();
-      settings.appRules.add(AppRule(app: 'steam', mode: AppMode.APP_MODE_BYPASS));
+      settings.rules.add(RouteRule(kind: RuleKind.RULE_KIND_PROCESS_NAME, value: 'steam', action: RouteAction.ROUTE_ACTION_DIRECT));
+      settings.rules.add(RouteRule(kind: RuleKind.RULE_KIND_DOMAIN_WILDCARD, value: '*.wiseless.net', action: RouteAction.ROUTE_ACTION_PROXY));
       final saved = await api.updateSettings(settings);
-      expect(saved.appRules.single.app, 'steam');
+      expect(saved.rules.map((r) => r.value), ['steam', '*.wiseless.net']);
+
+      final procs = await api.listProcesses();
+      expect(procs, isNotEmpty);
 
       await expectLater(api.connect(subscriptionId: 'nope'), throwsA(isA<CoreError>()));
     } finally {
