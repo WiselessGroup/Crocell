@@ -1,47 +1,87 @@
 <p align="center">
-  <img src="assets/brand/crocell-emblem.svg" width="220" alt="Crocell">
+  <img src="assets/brand/crocell-emblem.svg" width="200" alt="Crocell">
 </p>
 
 <h1 align="center">Crocell</h1>
 
 <p align="center">
-  Кросс-платформенный VPN-клиент, которым приятно пользоваться.<br>
-  Linux · Windows · macOS · Android · iOS — позже
+  A VPN client you don't have to study first.<br>
+  Linux · Windows · macOS · Android
 </p>
 
----
+<p align="center">
+  <b>English</b> &nbsp;|&nbsp; <a href="README.ru.md">Русский</a>
+</p>
 
-Вставил ссылку на подписку, выбрал ноду, подключился. Без простыни настроек на первом экране и без цифр, которые ничего не говорят обычному человеку.
+<p align="center">
+  <a href="https://github.com/WiselessGroup/Crocell/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/WiselessGroup/Crocell?label=release&color=E9524E"></a>
+  <a href="https://github.com/WiselessGroup/Crocell/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/WiselessGroup/Crocell/total?color=D4572A"></a>
+  <a href="https://github.com/WiselessGroup/Crocell/actions/workflows/build.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/WiselessGroup/Crocell/build.yml?branch=master"></a>
+  <a href="https://github.com/WiselessGroup/Crocell/commits/master"><img alt="Last commit" src="https://img.shields.io/github/last-commit/WiselessGroup/Crocell?color=860111"></a>
+  <a href="https://github.com/WiselessGroup/Crocell/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/WiselessGroup/Crocell?style=flat&color=E9524E"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/WiselessGroup/Crocell?color=555"></a>
+</p>
 
-## Что умеет
+<p align="center">
+  <img src="assets/screenshots/home-dark.png" width="820" alt="Crocell connected, with the node list">
+</p>
 
-- **Подписки любых форматов.** Share-ссылки (`vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `tuic://`), base64 от них, Clash/Mihomo YAML вместе с `proxy-providers`. Формат определяется по содержимому, метаданные подписки (название, трафик, срок) читаются из заголовков и из тела.
-- **Современные транспорты.** VLESS Reality + Vision, XHTTP, Hysteria2 с obfs и всё, что умеет [mihomo](https://github.com/MetaCubeX/mihomo).
-- **Понятное качество нод.** Вместо «пинг 5000» по кнопке «Проверить»: где у ноды выход (страна и город) и работает ли она. Дальше — вход, доступность нужных сайтов _(в работе)_.
-- **Два режима подключения.** Системный прокси для браузеров и приложений, которые его слушаются, и TUN, когда через VPN идёт вся система, включая программы, которые про прокси не знают или не дают его отключить.
-- **Маршрутизация в три списка: через VPN, напрямую, блокировать.** Сайты (`wiseless.net` — только он, `*.wiseless.net` — поддомены, `+.wiseless.net` — всё вместе), IP и подсети, наборы `geosite:` и `geoip:` из баз [runetfreedom](https://github.com/runetfreedom/russia-v2ray-rules-dat) (или своих), запущенные программы и программы по пути. Точное правило важнее общего.
-- **Проверка соединения.** После подключения и потом раз в пару минут Crocell проверяет, что интернет правда идёт через VPN, и присылает уведомление, если нет.
-- **Данные зашифрованы.** Подписки и настройки лежат на диске в AES-256-GCM; на Linux ключ запечатан через `systemd-creds` (TPM или ключ хоста), так что скопированный файл бесполезен.
+Paste your subscription link, pick a node, press the button. That's the whole first screen. No wall of toggles, no "ping 5000" that means nothing to anyone.
 
-## Как устроено
+Under the hood it's [mihomo](https://github.com/MetaCubeX/mihomo), so it speaks every modern protocol. On top of that it does the things I kept missing in other clients: it shows where a node really exits, it checks that traffic actually goes through the VPN (and tells you when it stops), and it lets you send a site or a program around the tunnel without editing YAML.
+
+## Download
+
+| System | File |
+|---|---|
+| Linux, x86_64 | [Crocell-x86_64.AppImage](https://github.com/WiselessGroup/Crocell/releases/latest/download/Crocell-x86_64.AppImage) |
+| Windows 10 / 11, x64 | [Crocell-x86_64-Setup.exe](https://github.com/WiselessGroup/Crocell/releases/latest/download/Crocell-x86_64-Setup.exe) |
+| macOS, Apple silicon | [Crocell-arm64.dmg](https://github.com/WiselessGroup/Crocell/releases/latest/download/Crocell-arm64.dmg) |
+| Android 7+ | [Crocell.apk](https://github.com/WiselessGroup/Crocell/releases/latest/download/Crocell.apk) |
+
+When a new version comes out, Crocell says so after you connect, and a click on the notice shows how to update on your system. The interface is in Russian for now.
+
+### First start
+
+On a desktop the VPN is held by a small system service, so closing or updating the window never drops the connection. The service needs admin rights once:
+
+- **Linux.** Crocell shows the install command and a copy button. If [Gear Lever](https://flathub.org/apps/it.mijorus.gearlever) keeps the AppImage, it's `sudo ~/AppImages/crocell.appimage crocelld install`. Gear Lever also picks up updates by itself.
+- **Windows.** The installer sets the service up. The build isn't code-signed yet, so SmartScreen will warn you: "More info", then "Run anyway".
+- **macOS.** Drag Crocell to Applications. It isn't notarized, so macOS blocks the first launch; allow it in System Settings → Privacy & Security → "Open Anyway". Then press "Установить службу" (install service) in Crocell and enter your password.
+- **Android.** Let your browser install the APK, then allow the VPN when Crocell asks. That's it, there's no service to install.
+
+## What it does
+
+- Takes subscriptions in any shape: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `tuic://` links, base64 of them, or Clash/mihomo YAML with `proxy-providers`. It figures out the format itself and reads the title, traffic and expiry the provider sends.
+- Handles VLESS Reality and Vision, XHTTP, Hysteria2 with obfs, and the rest of what mihomo supports.
+- Shows each node as a flag and an exit city after a check, not as a latency number. If the name says Netherlands and the exit says Germany, you'll see that.
+- Runs as a system proxy (no admin rights, for apps that respect it) or as a TUN tunnel for the whole system. Android always tunnels the whole phone.
+- Routes traffic through three lists: through the VPN, direct, or blocked. A rule can be a site, a wildcard, a subnet, a [runetfreedom](https://github.com/runetfreedom/russia-v2ray-rules-dat) geosite/geoip set (or your own database), a program, or an Android app. Lists copied from v2ray configs paste as they are, `domain:` and `full:` included. A specific rule beats a general one.
+- Checks the connection right after connecting and every couple of minutes, and sends a notification if traffic stops getting through.
+- Picks up new settings on its own: change a rule while connected and the tunnel quietly reconnects.
+- Keeps subscriptions and settings encrypted with AES-256-GCM. On Linux the key is sealed with `systemd-creds` (TPM when there is one), on Android it sits in the Keystore. A copied state file is useless anywhere else.
+
+<p align="center">
+  <img src="assets/screenshots/rules-dark.png" width="820" alt="Routing rules: three lists, grouped by kind">
+</p>
+
+## How it's built
 
 ```
-app/          клиент на Flutter: интерфейс, никакой логики протоколов
-core/         ядро на Go поверх mihomo: подписки, проверки, туннель
-  cmd/crocelld  служба ядра: держит туннель, отдаёт API клиенту
-  cmd/crocell   CLI для разработки и отладки
-  third_party/mihomo  mihomo с нашими исправлениями, пока нет форка
-proto/        контракт клиента и ядра
-assets/brand/ логотип и иконки
+app/              Flutter client: the interface, no protocol code
+core/             Go core on top of mihomo: subscriptions, checks, the tunnel
+  cmd/crocelld    the desktop service that holds the tunnel
+  cmd/crocell     a CLI for development and debugging
+  mobile          the core as an Android library (gomobile)
+  third_party/    mihomo with our fixes, see its CROCELL.md
+proto/            the API between the client and the core
 ```
 
-mihomo подключён из `core/third_party/mihomo` через `replace` в `go.mod`. Это upstream v1.19.33 плюс наши исправления, их список и причины в [CROCELL.md](core/third_party/mihomo/CROCELL.md). Когда появится форк bleach, `replace` будет указывать на него.
+On desktops the client talks to `crocelld` over a local socket (loopback with a token on Windows, where Dart has no unix sockets). On Android the same core runs inside the app, and `VpnService` builds the interface it asks for.
 
-На десктопе туннель держит отдельный процесс ядра, окно только с ним разговаривает: закрыли, обновили или уронили окно — VPN не моргнёт. На телефонах ядро живёт внутри системного VPN-сервиса.
+## Building from source
 
-## Разработка
-
-Нужны Go 1.26+ и Flutter 3.47+.
+You need Go 1.26+ and Flutter 3.47+.
 
 ```bash
 cd core
@@ -50,62 +90,25 @@ go run ./cmd/crocell nodes 'https://example.com/sub/…'
 go run ./cmd/crocell up 'https://example.com/sub/…' --node 'nlWISELESS'
 ```
 
-`crocell up` поднимает mixed-прокси на `127.0.0.1:7890` через выбранную ноду: удобно проверять ядро без клиента и без прав. С `-sysproxy` он сам пропишет системный прокси и вернёт старые настройки при выходе, с `-tun` пустит через ноду всю систему:
+`crocell up` starts a mixed proxy on `127.0.0.1:7890` through the chosen node, which is handy for poking at the core without the app. Add `-sysproxy` to point the system proxy at it, or build with `make build` and run `sudo bin/crocell up … -tun` to send the whole system through it.
+
+To run the app against a service on your machine:
 
 ```bash
-make build    # с тегом with_gvisor: без него стек TUN mixed не поднимется
-sudo bin/crocell up 'https://example.com/sub/…' -node 'nlWISELESS' -tun
+cd core && make install-daemon     # Linux: installs and starts crocelld
+cd ../app && flutter run -d linux
 ```
 
-Через `make setcap` можно обойтись без sudo, но тогда `resolvectl` попросит пароль у polkit: три раза при старте и раз при выходе. В приложении туннель держит служба, которая получает права один раз при установке. Не держите одновременно два TUN-клиента: их маршруты подерутся.
+`CROCELL_SOCKET=/path/to/crocelld.sock` points the client at a service you started by hand. After changing `proto/`, run `make proto` in `core/` (needs `dart pub global activate protoc_plugin`).
 
-### Служба crocelld
+The packages come out of `scripts/`: `build-appimage.sh`, `build-windows.sh`, `build-macos.sh` and `build-android.sh`, each taking a version.
 
-Так ядро будет работать под приложением: служба от root держит туннель и отвечает по gRPC на unix-сокете `/run/crocell/crocelld.sock`. Пускает она только root и пользователя, который её поставил, а uid проверяет по самому соединению.
+## Star history
 
-```bash
-make install-daemon          # копирует в /usr/local/bin, ставит и запускает systemd-юнит
-bin/crocell ctl add 'https://example.com/sub/…'
-bin/crocell ctl mode tun     # или proxy
-bin/crocell ctl rule direct proc:steam geosite:category-ru geoip:ru
-bin/crocell ctl rule proxy geosite:ru-blocked *.wiseless.net
-bin/crocell ctl connect nlWISELESS
-bin/crocell ctl watch
-```
+<a href="https://star-history.com/#WiselessGroup/Crocell&Date">
+  <img src="https://api.star-history.com/svg?repos=WiselessGroup/Crocell&type=Date" width="600" alt="Star history">
+</a>
 
-Подписки и настройки лежат в `/var/lib/crocell/state.enc`, зашифрованные ключом из `/etc/credstore.encrypted/crocell-state-key`. Убрать службу: `sudo bin/crocelld uninstall`. Пока служба ставится только на Linux, на macOS и Windows `crocelld` запускается руками.
+## License
 
-### Клиент
-
-Клиент ничего не знает про протоколы: он говорит с `crocelld` по сокету и сам прописывает системный прокси, когда выбран этот режим. Без службы он покажет, как её поставить.
-
-```bash
-cd app
-flutter run -d linux
-```
-
-Чтобы направить клиент на демон, запущенный руками, задайте `CROCELL_SOCKET=/путь/к/crocelld.sock`. Код клиента для API генерируется вместе с Go: `make proto` в `core/` (нужен `dart pub global activate protoc_plugin`).
-
-## Сборки и релизы
-
-Исходники живут на git.wiseless.net, оттуда они сами уходят в зеркало [github.com/WiselessGroup/Crocell](https://github.com/WiselessGroup/Crocell). Собирает всё GitHub Actions ([build.yml](.github/workflows/build.yml)): тесты ядра и клиента, AppImage, а также проверочные сборки под Windows, macOS и Android. Эти три пока никуда не публикуются, потому что ни службы, ни VPN-слоя под них ещё нет.
-
-Релиз выпускается тегом:
-
-```bash
-git tag v0.3.0 && git push origin v0.3.0
-```
-
-Описание релиза берётся из `.github/release-notes/<тег>.md`, если такой файл есть, иначе GitHub собирает его из коммитов. Зеркало передаёт тег на GitHub, а workflow выкладывает в релиз `Crocell-x86_64.AppImage` и `.zsync`. Ссылка на обновления зашита в сам образ, поэтому Gear Lever и AppImageUpdate подтягивают новые версии сами. Служба ставится прямо из образа:
-
-```bash
-sudo ./Crocell-x86_64.AppImage crocelld install
-```
-
-Если у root нет FUSE, сработает `--appimage-extract-and-run` перед `crocelld`. После обновления образа службу надо переустановить той же командой, иначе продолжит работать старая.
-
-AppImage можно собрать и локально, это `scripts/build-appimage.sh [версия]`. Нужен `appimagetool` в PATH, а без него скрипт останавливается на готовой `dist/AppDir`.
-
-## Лицензия
-
-[GPL-3.0](LICENSE). Crocell построен на [mihomo](https://github.com/MetaCubeX/mihomo), который тоже под GPL-3.0.
+[GPL-3.0](LICENSE).
