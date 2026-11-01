@@ -12,8 +12,14 @@ import (
 )
 
 const (
-	unitPath   = "/etc/systemd/system/crocelld.service"
-	binaryPath = "/usr/local/lib/crocell/crocelld"
+	unitPath = "/etc/systemd/system/crocelld.service"
+	// /usr/local/bin, not /usr/local/lib: on SELinux systems (Fedora, RHEL)
+	// files under lib get lib_t, systemd then runs them in its own init_t
+	// domain, and init_t may not open outgoing connections. bin_t starts as
+	// unconfined_service_t like any other service.
+	binaryPath = "/usr/local/bin/crocelld"
+	// Where 0.1 installed it; cleaned up on install and uninstall.
+	legacyBinaryDir = "/usr/local/lib/crocell"
 )
 
 // The service runs as root: TUN needs CAP_NET_ADMIN, and sing-tun configures
@@ -65,6 +71,8 @@ func install(args []string) error {
 	if err := copyFile(self, binaryPath, 0o755); err != nil {
 		return fmt.Errorf("copy binary: %w", err)
 	}
+	relabel(binaryPath)
+	_ = os.RemoveAll(legacyBinaryDir)
 	unit := fmt.Sprintf(unitTemplate, binaryPath, *uid)
 	if err := os.WriteFile(unitPath, []byte(unit), 0o644); err != nil {
 		return err
@@ -93,9 +101,18 @@ func uninstall() error {
 			return err
 		}
 	}
+	_ = os.RemoveAll(legacyBinaryDir)
 	_ = systemctl("daemon-reload")
 	fmt.Println("crocelld removed. Subscriptions stay in /var/lib/crocell, delete it to forget them.")
 	return nil
+}
+
+// relabel gives the binary its default SELinux label. A file renamed into
+// place can keep the label of where it was created. No SELinux, no-op.
+func relabel(path string) {
+	if restorecon, err := exec.LookPath("restorecon"); err == nil {
+		_ = exec.Command(restorecon, path).Run()
+	}
 }
 
 func sudoUID() int {

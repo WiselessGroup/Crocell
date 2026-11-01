@@ -58,7 +58,7 @@ sudo bin/crocell up 'https://example.com/sub/…' -node 'nlWISELESS' -tun
 Так ядро будет работать под приложением: служба от root держит туннель и отвечает по gRPC на unix-сокете `/run/crocell/crocelld.sock`. Пускает она только root и пользователя, который её поставил, а uid проверяет по самому соединению.
 
 ```bash
-make install-daemon          # копирует в /usr/local/lib/crocell, ставит и запускает systemd-юнит
+make install-daemon          # копирует в /usr/local/bin, ставит и запускает systemd-юнит
 bin/crocell ctl add 'https://example.com/sub/…'
 bin/crocell ctl mode tun     # или proxy
 bin/crocell ctl app steam bypass
