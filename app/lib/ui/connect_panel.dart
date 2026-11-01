@@ -69,6 +69,12 @@ class ConnectPanel extends ConsumerWidget {
                   ),
                   const SizedBox(height: 20),
                   _StatusText(status: status, hasNodes: subs.isNotEmpty),
+                  // The figure is the signature, but a figure alone does not
+                  // say "press me". A plain button next to the state does.
+                  if (subs.isNotEmpty && status != null) ...[
+                    const SizedBox(height: 16),
+                    _ActionButton(connected: connected, onPressed: onPressed),
+                  ],
                   const SizedBox(height: 28),
                   if (subs.isEmpty)
                     _EmptyCard(onAdd: () => showAddSubscription(context))
@@ -148,6 +154,32 @@ class _StatusText extends StatelessWidget {
           if (detail != null) ...[const SizedBox(height: 6), detail],
         ],
       ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({required this.connected, required this.onPressed});
+
+  final bool connected;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    const size = Size(200, 48);
+    if (connected) {
+      return OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(minimumSize: size, foregroundColor: context.tokens.brandText),
+        icon: const Icon(Icons.power_settings_new_rounded),
+        label: const Text('Отключить'),
+      );
+    }
+    return FilledButton.icon(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(minimumSize: size),
+      icon: const Icon(Icons.power_settings_new_rounded),
+      label: const Text('Подключить'),
     );
   }
 }

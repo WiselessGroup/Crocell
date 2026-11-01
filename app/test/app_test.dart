@@ -174,7 +174,7 @@ void main() {
 
     expect(find.text('150 нод'), findsOneWidget);
     expect(find.text('Provider 0 | Швейцария'), findsOneWidget, reason: 'leading flag stripped from the name');
-    expect(find.text('CH'), findsWidgets, reason: 'claimed country shown before any probe');
+    expect(find.byTooltip('Швейцария, по названию ноды'), findsWidgets, reason: 'claimed country shown before any probe');
 
     await tester.enterText(find.widgetWithText(TextField, 'Найти ноду или страну'), 'финляндия');
     await tester.pumpAndSettle();
