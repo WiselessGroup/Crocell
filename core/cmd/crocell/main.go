@@ -25,6 +25,7 @@ import (
 const usage = `usage:
   crocell nodes <subscription-url> [-probe]
   crocell up <subscription-url> [-node NAME] [-port 7890] [-sysproxy] [-tun]
+  crocell ctl <command>        drive a running crocelld (see crocell ctl -h)
 
   -sysproxy  point the desktop proxy settings at us, restore them on exit
   -tun       capture the whole system (needs root or CAP_NET_ADMIN)
@@ -45,6 +46,8 @@ func main() {
 		err = cmdNodes(ctx, os.Args[2:])
 	case "up":
 		err = cmdUp(ctx, os.Args[2:])
+	case "ctl":
+		err = cmdCtl(ctx, os.Args[2:])
 	default:
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)

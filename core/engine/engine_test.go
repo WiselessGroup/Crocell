@@ -116,3 +116,52 @@ func TestFingerprintDefaults(t *testing.T) {
 		t.Error("shadowsocks has no TLS, no fingerprint")
 	}
 }
+
+func TestAppRules(t *testing.T) {
+	cfg := parse(t, Options{Nodes: testNodes(), AppRules: []AppRule{
+		{App: "steam", Mode: AppBypass},
+		{App: `C:\Games\Dota\dota2.exe`, Mode: AppBypass},
+		{App: "spyware", Mode: AppBlock},
+		{App: "telegram-desktop", Mode: AppProxy},
+	}})
+
+	var got []string
+	for _, r := range cfg.Rules {
+		got = append(got, r.RuleType().String()+","+r.Payload()+","+r.Adapter())
+	}
+	want := []string{
+		"ProcessName,steam,DIRECT",
+		`ProcessPath,C:\Games\Dota\dota2.exe,DIRECT`,
+		"ProcessName,spyware,REJECT",
+		"ProcessName,telegram-desktop," + GroupName,
+		"Match,," + GroupName,
+	}
+	if len(got) != len(want) {
+		t.Fatalf("rules = %v", got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("rule %d = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestAppRuleRejectsInjection(t *testing.T) {
+	_, err := buildConfig(Options{Nodes: testNodes(), AppRules: []AppRule{
+		{App: "evil,DIRECT\nMATCH", Mode: AppBlock},
+	}})
+	if err == nil {
+		t.Fatal("a comma in the app name must be refused")
+	}
+}
+
+func TestAndroidBypassSkipsTunnel(t *testing.T) {
+	cfg := parse(t, Options{
+		Nodes:    testNodes(),
+		Tun:      &TunOptions{FileDescriptor: 7},
+		AppRules: []AppRule{{App: "com.valvesoftware.android.steam.community", Mode: AppBypass}},
+	})
+	if len(cfg.General.Tun.ExcludePackage) != 1 {
+		t.Errorf("exclude-package = %v", cfg.General.Tun.ExcludePackage)
+	}
+}

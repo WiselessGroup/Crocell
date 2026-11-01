@@ -4,7 +4,7 @@
 // Mobile: the same messages, serialized, over a platform channel to the VPN
 // service. The client must not care which one it talks to.
 //
-// Draft: nothing generates code from this yet.
+// Go code is generated into core/api/crocellv1: `make proto` in core/.
 syntax = "proto3";
 
 package crocell.v1;
@@ -56,6 +56,10 @@ message Status {
   Traffic traffic = 5;
   // Human-readable reason when state is FAILED. Never contains secrets.
   string error = 6;
+  TunnelMode tunnel_mode = 7;
+  // HTTP+SOCKS on 127.0.0.1 while connected, for the client to put into
+  // the system proxy settings (that has to happen as the user, not root).
+  uint32 mixed_port = 8;
 }
 
 message Traffic {
@@ -170,9 +174,8 @@ message AppRule {
 message Settings {
   TunnelMode tunnel_mode = 1;
   repeated AppRule app_rules = 2;
-  // Russian and CIS destinations go direct, the rest through the node.
-  bool split_ru = 3;
-  bool ipv6 = 4;
+  uint32 mixed_port = 3; // 0: default 7890
+  string tun_stack = 4;  // mixed (default), system, gvisor
 }
 
 message GetSettingsRequest {}

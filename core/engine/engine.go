@@ -38,6 +38,10 @@ type Options struct {
 	// Tun captures the whole system instead of waiting for apps to use the
 	// proxy. Needs root / CAP_NET_ADMIN on desktop, VpnService on Android.
 	Tun *TunOptions
+
+	// AppRules route single applications. Process lookup works for TUN
+	// traffic and for local apps hitting the mixed port.
+	AppRules []AppRule
 }
 
 // TunOptions configure the TUN device. Zero values are sane defaults.
@@ -179,13 +183,27 @@ func buildConfig(opts Options) ([]byte, error) {
 			"type":    "select",
 			"proxies": names,
 		}},
-		"rules": []string{"MATCH," + GroupName},
+	}
+
+	rules, err := appRules(opts.AppRules)
+	if err != nil {
+		return nil, err
+	}
+	cfg["rules"] = append(rules, "MATCH,"+GroupName)
+	if len(rules) > 0 {
+		cfg["find-process-mode"] = "strict"
 	}
 	if opts.MixedPort > 0 {
 		cfg["mixed-port"] = opts.MixedPort
 	}
 	if opts.Tun != nil {
-		cfg["tun"] = tunConfig(opts.Tun)
+		tun := tunConfig(opts.Tun)
+		if opts.Tun.FileDescriptor > 0 {
+			if pkgs := append(bypassPackages(opts.AppRules), opts.Tun.ExcludePackages...); len(pkgs) > 0 {
+				tun["exclude-package"] = pkgs
+			}
+		}
+		cfg["tun"] = tun
 		cfg["dns"] = dnsConfig()
 		cfg["sniffer"] = snifferConfig()
 	}

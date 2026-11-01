@@ -1,0 +1,14 @@
+version: v2
+lint:
+  use:
+    - STANDARD
+  # A private API between our own client and daemon: shared Status /
+  # Subscription / Settings messages read better than a Response type per RPC.
+  except:
+    - SERVICE_SUFFIX
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+breaking:
+  use:
+    - FILE

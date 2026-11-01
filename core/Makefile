@@ -3,10 +3,11 @@
 TAGS := with_gvisor
 LDFLAGS := -s -w
 
-.PHONY: build test vet setcap
+.PHONY: build test vet setcap install-daemon
 
 build:
 	go build -tags $(TAGS) -trimpath -ldflags="$(LDFLAGS)" -o bin/crocell ./cmd/crocell
+	go build -tags $(TAGS) -trimpath -ldflags="$(LDFLAGS)" -o bin/crocelld ./cmd/crocelld
 
 test:
 	go test -tags $(TAGS) ./...
@@ -20,3 +21,12 @@ vet:
 # password (3 times on start, once on stop): run with sudo to avoid that.
 setcap: build
 	sudo setcap cap_net_admin,cap_net_bind_service+ep bin/crocell
+
+.PHONY: proto
+proto:
+	go tool -modfile=tools/go.mod buf lint ../proto
+	go tool -modfile=tools/go.mod buf generate
+
+# Installs crocelld as a systemd service controlled by the current user.
+install-daemon: build
+	sudo bin/crocelld install

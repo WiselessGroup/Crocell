@@ -25,6 +25,7 @@
 ```
 app/          клиент на Flutter: интерфейс, никакой логики протоколов
 core/         ядро на Go поверх mihomo: подписки, проверки, туннель
+  cmd/crocelld  служба ядра: держит туннель, отдаёт API клиенту
   cmd/crocell   CLI для разработки и отладки
 proto/        контракт клиента и ядра
 assets/brand/ логотип и иконки
@@ -51,6 +52,23 @@ sudo bin/crocell up 'https://example.com/sub/…' -node 'nlWISELESS' -tun
 ```
 
 Через `make setcap` можно обойтись без sudo, но тогда `resolvectl` попросит пароль у polkit: три раза при старте и раз при выходе. В приложении туннель держит служба, которая получает права один раз при установке. Не держите одновременно два TUN-клиента: их маршруты подерутся.
+
+### Служба crocelld
+
+Так ядро будет работать под приложением: служба от root держит туннель и отвечает по gRPC на unix-сокете `/run/crocell/crocelld.sock`. Пускает она только root и пользователя, который её поставил, а uid проверяет по самому соединению.
+
+```bash
+make install-daemon          # копирует в /usr/local/lib/crocell, ставит и запускает systemd-юнит
+bin/crocell ctl add 'https://example.com/sub/…'
+bin/crocell ctl mode tun     # или proxy
+bin/crocell ctl app steam bypass
+bin/crocell ctl connect nlWISELESS
+bin/crocell ctl watch
+```
+
+Подписки и настройки лежат в `/var/lib/crocell/state.json` (только для root). Убрать службу: `sudo bin/crocelld uninstall`. Пока служба ставится только на Linux, на macOS и Windows `crocelld` запускается руками.
+
+### Клиент
 
 ```bash
 cd app
