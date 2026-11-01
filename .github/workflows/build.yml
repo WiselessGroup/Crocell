@@ -4,10 +4,14 @@
 # disk image and the Android APK.
 name: Build
 
+# A push to master runs the tests only; the four packages are built for a
+# tag (and released) or on demand from the Actions tab, not twice for the
+# same commit. Docs-only pushes skip CI altogether.
 on:
   push:
     branches: [master]
     tags: ['v*']
+    paths-ignore: ['**.md', '.github/release-notes/**', 'assets/screenshots/**']
   pull_request:
   workflow_dispatch:
 
@@ -53,7 +57,7 @@ jobs:
           flutter test
 
   appimage:
-    needs: [core, app]
+    if: github.server_url == 'https://github.com' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
     # The oldest glibc on offer: an image built here runs on older distros
     # too, not the other way round.
     runs-on: ubuntu-22.04
@@ -90,7 +94,7 @@ jobs:
           if-no-files-found: error
 
   windows:
-    needs: [core, app]
+    if: github.server_url == 'https://github.com' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
     runs-on: windows-latest
     defaults:
       run:
@@ -116,7 +120,7 @@ jobs:
           if-no-files-found: error
 
   macos:
-    needs: [core, app]
+    if: github.server_url == 'https://github.com' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
     # Apple silicon runner: the .dmg is arm64 only.
     runs-on: macos-latest
     steps:
@@ -138,7 +142,7 @@ jobs:
           if-no-files-found: error
 
   android:
-    needs: [core, app]
+    if: github.server_url == 'https://github.com' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -146,6 +150,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
       - uses: actions/setup-go@v6
         with:
           go-version-file: core/go.mod
@@ -183,7 +188,9 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [appimage, windows, macos, android]
+    # Packages build in parallel with the tests; nothing ships unless both
+    # the tests and every package came through.
+    needs: [core, app, appimage, windows, macos, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
