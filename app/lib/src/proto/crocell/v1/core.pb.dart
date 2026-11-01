@@ -1963,10 +1963,12 @@ class Process extends $pb.GeneratedMessage {
   factory Process({
     $core.String? name,
     $core.String? path,
+    $core.String? label,
   }) {
     final result = Process._();
     if (name != null) result.name = name;
     if (path != null) result.path = path;
+    if (label != null) result.label = label;
     return result;
   }
 
@@ -1985,6 +1987,7 @@ class Process extends $pb.GeneratedMessage {
       createEmptyInstance: Process.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'name')
     ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..aOS(3, _omitFieldNames ? '' : 'label')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2024,6 +2027,15 @@ class Process extends $pb.GeneratedMessage {
   $core.bool hasPath() => $_has(1);
   @$pb.TagNumber(2)
   void clearPath() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get label => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set label($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasLabel() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearLabel() => $_clearField(3);
 }
 
 class ListProcessesResponse extends $pb.GeneratedMessage {

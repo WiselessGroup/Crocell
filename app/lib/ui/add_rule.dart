@@ -4,13 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/core_api.dart';
 import '../data/rules.dart';
 import '../data/state.dart';
+import '../host.dart';
 import '../theme.dart';
 
 /// Adds rules to one of the three lists. Three ways in, because people
 /// think of them differently: something they type (a site, an IP, a set),
 /// a program they see running, or a ready-made set from the geo files.
 Future<void> showAddRule(BuildContext context, RouteAction action, String listName) {
-  return showDialog<void>(context: context, builder: (_) => _AddRuleDialog(action: action, listName: listName));
+  return showDialog<void>(
+    context: context,
+    builder: (_) => _AddRuleDialog(action: action, listName: listName),
+  );
 }
 
 enum _Tab { site, program, set }
@@ -91,6 +95,7 @@ class _AddRuleDialogState extends ConsumerState<_AddRuleDialog> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final narrow = size.width < 520;
+    final android = ref.watch(hostProvider).embeddedCore;
     return AlertDialog(
       // Phones: the default 40 px inset leaves ~230 px for three tabs.
       insetPadding: narrow ? const EdgeInsets.symmetric(horizontal: 12, vertical: 24) : null,
@@ -104,9 +109,23 @@ class _AddRuleDialogState extends ConsumerState<_AddRuleDialog> {
             SegmentedButton<_Tab>(
               showSelectedIcon: false,
               segments: [
-                ButtonSegment(value: _Tab.site, icon: narrow ? null : const Icon(Icons.language_rounded), label: const Text('Сайт или IP')),
-                ButtonSegment(value: _Tab.program, icon: narrow ? null : const Icon(Icons.apps_rounded), label: const Text('Программа')),
-                ButtonSegment(value: _Tab.set, icon: narrow ? null : const Icon(Icons.category_outlined), label: const Text('Набор')),
+                ButtonSegment(
+                  value: _Tab.site,
+                  icon: narrow ? null : const Icon(Icons.language_rounded),
+                  label: const Text('Сайт или IP'),
+                ),
+                // Android can send an app around the VPN or through it, not block it.
+                if (!(android && widget.action == RouteAction.ROUTE_ACTION_BLOCK))
+                  ButtonSegment(
+                    value: _Tab.program,
+                    icon: narrow ? null : const Icon(Icons.apps_rounded),
+                    label: Text(android ? 'Приложение' : 'Программа'),
+                  ),
+                ButtonSegment(
+                  value: _Tab.set,
+                  icon: narrow ? null : const Icon(Icons.category_outlined),
+                  label: const Text('Набор'),
+                ),
               ],
               selected: {_tab},
               onSelectionChanged: (v) => setState(() {
@@ -121,11 +140,11 @@ class _AddRuleDialogState extends ConsumerState<_AddRuleDialog> {
               child: switch (_tab) {
                 _Tab.site => _SiteTab(controller: _sites, onChanged: () => setState(() => _error = null)),
                 _Tab.program => _ProgramTab(
-                    search: _search,
-                    path: _path,
-                    picked: _picked,
-                    onChanged: () => setState(() => _error = null),
-                  ),
+                  search: _search,
+                  path: _path,
+                  picked: _picked,
+                  onChanged: () => setState(() => _error = null),
+                ),
                 _Tab.set => _SetTab(search: _search, picked: _picked, onChanged: () => setState(() => _error = null)),
               },
             ),
@@ -212,6 +231,9 @@ class _ProgramTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final procs = ref.watch(processesProvider);
     final q = search.text.trim().toLowerCase();
+    // Android lists installed apps by name, with the package behind it,
+    // and has no paths to give.
+    final android = ref.watch(hostProvider).embeddedCore;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -219,42 +241,54 @@ class _ProgramTab extends ConsumerWidget {
         TextField(
           controller: search,
           onChanged: (_) => onChanged(),
-          decoration: const InputDecoration(hintText: 'Найти запущенную программу', prefixIcon: Icon(Icons.search_rounded)),
+          decoration: InputDecoration(
+            hintText: android ? 'Найти приложение' : 'Найти запущенную программу',
+            prefixIcon: const Icon(Icons.search_rounded),
+          ),
         ),
         const SizedBox(height: 8),
         Expanded(
           child: switch (procs) {
             AsyncData(:final value) => ListView(
-                children: [
-                  for (final p in value)
-                    if (q.isEmpty || p.name.toLowerCase().contains(q) || p.path.toLowerCase().contains(q))
-                      CheckboxListTile(
-                        dense: true,
-                        value: picked.contains(p.name),
-                        onChanged: (v) {
-                          v == true ? picked.add(p.name) : picked.remove(p.name);
-                          onChanged();
-                        },
-                        title: Text(p.name),
-                        subtitle: p.path.isEmpty ? null : Text(p.path, overflow: TextOverflow.ellipsis),
-                      ),
-                ],
-              ),
+              children: [
+                for (final p in value)
+                  if (q.isEmpty ||
+                      p.name.toLowerCase().contains(q) ||
+                      p.path.toLowerCase().contains(q) ||
+                      p.label.toLowerCase().contains(q))
+                    CheckboxListTile(
+                      dense: true,
+                      value: picked.contains(p.name),
+                      onChanged: (v) {
+                        v == true ? picked.add(p.name) : picked.remove(p.name);
+                        onChanged();
+                      },
+                      title: Text(p.label.isEmpty ? p.name : p.label),
+                      subtitle: p.label.isNotEmpty
+                          ? Text(p.name, overflow: TextOverflow.ellipsis)
+                          : p.path.isEmpty
+                          ? null
+                          : Text(p.path, overflow: TextOverflow.ellipsis),
+                    ),
+              ],
+            ),
             AsyncError(:final error) => Center(child: Text('$error')),
             _ => const Center(child: CircularProgressIndicator()),
           },
         ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: path,
-          autocorrect: false,
-          onChanged: (_) => onChanged(),
-          decoration: const InputDecoration(
-            labelText: 'Или путь к программе',
-            hintText: '/usr/bin/steam',
-            prefixIcon: Icon(Icons.folder_outlined),
+        if (!android) ...[
+          const SizedBox(height: 8),
+          TextField(
+            controller: path,
+            autocorrect: false,
+            onChanged: (_) => onChanged(),
+            decoration: const InputDecoration(
+              labelText: 'Или путь к программе',
+              hintText: '/usr/bin/steam',
+              prefixIcon: Icon(Icons.folder_outlined),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -301,7 +335,10 @@ class _SetTab extends ConsumerWidget {
     }
 
     final available = all.toSet();
-    final suggested = [for (final s in geoSuggestions) if (available.contains(s.input)) s];
+    final suggested = [
+      for (final s in geoSuggestions)
+        if (available.contains(s.input)) s,
+    ];
     final q = search.text.trim().toLowerCase();
     final matches = q.isEmpty ? <String>[] : all.where((c) => c.contains(q)).take(60).toList();
 
@@ -335,24 +372,19 @@ class _SetTab extends ConsumerWidget {
           ),
         ),
         for (final c in matches)
-          CheckboxListTile(
-            dense: true,
-            value: picked.contains(c),
-            onChanged: (_) => toggle(c),
-            title: Text(c),
-          ),
+          CheckboxListTile(dense: true, value: picked.contains(c), onChanged: (_) => toggle(c), title: Text(c)),
       ],
     );
   }
 }
 
 IconData ruleIcon(RouteRule r) => switch (r.kind) {
-      RuleKind.RULE_KIND_DOMAIN => Icons.language_rounded,
-      RuleKind.RULE_KIND_DOMAIN_WILDCARD || RuleKind.RULE_KIND_DOMAIN_SUFFIX => Icons.account_tree_outlined,
-      RuleKind.RULE_KIND_IP_CIDR => Icons.lan_outlined,
-      RuleKind.RULE_KIND_GEOSITE => Icons.category_outlined,
-      RuleKind.RULE_KIND_GEOIP => Icons.map_outlined,
-      RuleKind.RULE_KIND_PROCESS_NAME => Icons.apps_rounded,
-      RuleKind.RULE_KIND_PROCESS_PATH => Icons.folder_outlined,
-      _ => Icons.rule_rounded,
-    };
+  RuleKind.RULE_KIND_DOMAIN => Icons.language_rounded,
+  RuleKind.RULE_KIND_DOMAIN_WILDCARD || RuleKind.RULE_KIND_DOMAIN_SUFFIX => Icons.account_tree_outlined,
+  RuleKind.RULE_KIND_IP_CIDR => Icons.lan_outlined,
+  RuleKind.RULE_KIND_GEOSITE => Icons.category_outlined,
+  RuleKind.RULE_KIND_GEOIP => Icons.map_outlined,
+  RuleKind.RULE_KIND_PROCESS_NAME => Icons.apps_rounded,
+  RuleKind.RULE_KIND_PROCESS_PATH => Icons.folder_outlined,
+  _ => Icons.rule_rounded,
+};

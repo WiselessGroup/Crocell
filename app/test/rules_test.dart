@@ -34,6 +34,15 @@ void main() {
     expect(parseRuleInput('full:ru').error, isNotNull);
   });
 
+  test('punycode zones read as letters', () {
+    expect(unicodeDomain('xn--p1ai'), 'рф');
+    expect(unicodeDomain('xn--90ais'), 'бел');
+    expect(unicodeDomain('xn--80adxhks'), 'москва');
+    expect(unicodeDomain('xn--d1acufc.xn--p1ai'), 'домен.рф');
+    expect(unicodeDomain('xn--zz'), 'xn--zz', reason: 'garbage stays');
+    expect(ruleTitle(RouteRule(kind: RuleKind.RULE_KIND_DOMAIN_SUFFIX, value: 'xn--p1ai')), '+.рф');
+  });
+
   test('nonsense is named in the error', () {
     for (final bad in ['not a domain', '10.0.0.0/40', 'geosite:', 'localhost', '*.']) {
       final r = parseRuleInput(bad);

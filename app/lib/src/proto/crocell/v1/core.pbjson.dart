@@ -590,12 +590,14 @@ const Process$json = {
   '2': [
     {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
     {'1': 'path', '3': 2, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'label', '3': 3, '4': 1, '5': 9, '10': 'label'},
   ],
 };
 
 /// Descriptor for `Process`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List processDescriptor = $convert.base64Decode(
-    'CgdQcm9jZXNzEhIKBG5hbWUYASABKAlSBG5hbWUSEgoEcGF0aBgCIAEoCVIEcGF0aA==');
+    'CgdQcm9jZXNzEhIKBG5hbWUYASABKAlSBG5hbWUSEgoEcGF0aBgCIAEoCVIEcGF0aBIUCgVsYW'
+    'JlbBgDIAEoCVIFbGFiZWw=');
 
 @$core.Deprecated('Use listProcessesResponseDescriptor instead')
 const ListProcessesResponse$json = {

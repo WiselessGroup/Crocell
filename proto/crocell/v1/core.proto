@@ -241,8 +241,9 @@ message GetSettingsRequest {}
 message ListProcessesRequest {}
 
 message Process {
-  string name = 1;
+  string name = 1; // what a program rule matches; the package on Android
   string path = 2;
+  string label = 3; // the app's own name on Android, else empty
 }
 
 message ListProcessesResponse {

@@ -1,5 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
+
+import 'data/core_api.dart';
+import 'data/state.dart';
+import 'platform/android.dart';
 
 import 'notify/alerts.dart';
 import 'sysproxy/controller.dart';
@@ -7,8 +14,15 @@ import 'theme.dart';
 import 'ui/home.dart';
 import 'update/how_to_update.dart';
 
-void main() {
-  runApp(const ProviderScope(child: CrocellApp()));
+Future<void> main() async {
+  final overrides = <Override>[];
+  if (Platform.isAndroid) {
+    // The core runs inside the app here; the platform side knows its socket.
+    WidgetsFlutterBinding.ensureInitialized();
+    final socket = await androidCore.invokeMethod<String>('socketPath');
+    overrides.add(coreEndpointProvider.overrideWithValue(CoreEndpoint.unix(socket!)));
+  }
+  runApp(ProviderScope(overrides: overrides, child: const CrocellApp()));
 }
 
 class CrocellApp extends ConsumerWidget {

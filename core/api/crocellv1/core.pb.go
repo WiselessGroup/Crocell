@@ -1699,8 +1699,9 @@ func (*ListProcessesRequest) Descriptor() ([]byte, []int) {
 
 type Process struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // what a program rule matches; the package on Android
 	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"` // the app's own name on Android, else empty
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1745,6 +1746,13 @@ func (x *Process) GetName() string {
 func (x *Process) GetPath() string {
 	if x != nil {
 		return x.Path
+	}
+	return ""
+}
+
+func (x *Process) GetLabel() string {
+	if x != nil {
+		return x.Label
 	}
 	return ""
 }
@@ -2065,10 +2073,11 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	" \x01(\bR\ballowLan\x12(\n" +
 	"\x10connect_on_start\x18\v \x01(\bR\x0econnectOnStartJ\x04\b\x02\x10\x03\"\x14\n" +
 	"\x12GetSettingsRequest\"\x16\n" +
-	"\x14ListProcessesRequest\"1\n" +
+	"\x14ListProcessesRequest\"G\n" +
 	"\aProcess\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\"J\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\"J\n" +
 	"\x15ListProcessesResponse\x121\n" +
 	"\tprocesses\x18\x01 \x03(\v2\x13.crocell.v1.ProcessR\tprocesses\"\x13\n" +
 	"\x11GetGeoInfoRequest\"\x12\n" +

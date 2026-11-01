@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Built from core/ by scripts/build-android-core.sh
+/app/libs/

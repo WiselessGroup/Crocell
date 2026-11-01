@@ -27,6 +27,7 @@ import (
 	"git.wiseless.net/fureunoir/crocell/core/geo"
 	"git.wiseless.net/fureunoir/crocell/core/internal/version"
 	"git.wiseless.net/fureunoir/crocell/core/probe"
+	"git.wiseless.net/fureunoir/crocell/core/procs"
 	"git.wiseless.net/fureunoir/crocell/core/subscription"
 )
 
@@ -60,6 +61,17 @@ type Config struct {
 	// HTTPS request: cheap, and it is how "it silently stopped working"
 	// turns into a notification. Default: DefaultCheckInterval.
 	CheckInterval time.Duration
+	// Tun builds the interface where the OS owns it (Android's VpnService).
+	// With it every connection is a tunnel: there is no system proxy mode.
+	Tun TunProvider
+	// Programs lists what program rules can name. Default: running
+	// processes. Android passes its installed apps.
+	Programs func() ([]procs.Process, error)
+	// Package is the app's own package, kept out of its tunnel (Android).
+	Package string
+	// StateKey encrypts the state when the platform keeps the key (the
+	// Android Keystore). Default: see crypt.go.
+	StateKey []byte
 	// ReconnectDelay is how long settings must stay unchanged before a live
 	// connection picks them up. Adding three rules in a row restarts the
 	// tunnel once, not three times. Default: DefaultReconnectDelay.
@@ -81,14 +93,17 @@ func realCheck(ctx context.Context, mode pb.TunnelMode, port int) probe.Result {
 type Service struct {
 	pb.UnimplementedCoreServer
 
-	store   store
-	homeDir string
-	eng     Engine
-	fetcher *subscription.Fetcher
-	probe   func(context.Context, map[string]any) probe.Result
-	check   func(context.Context, pb.TunnelMode, int) probe.Result
-	every   time.Duration // live check interval
-	settle  time.Duration // see Config.ReconnectDelay
+	store    store
+	homeDir  string
+	eng      Engine
+	fetcher  *subscription.Fetcher
+	probe    func(context.Context, map[string]any) probe.Result
+	check    func(context.Context, pb.TunnelMode, int) probe.Result
+	every    time.Duration // live check interval
+	settle   time.Duration // see Config.ReconnectDelay
+	tun      TunProvider   // Android only
+	programs func() ([]procs.Process, error)
+	pkg      string
 
 	// op serialises connect/disconnect/reconfigure, which can take seconds
 	// (TUN setup). mu guards the fields below and is never held across them.
@@ -128,14 +143,17 @@ func New(cfg Config) (*Service, error) {
 		return nil, errors.New("daemon: no state dir")
 	}
 	s := &Service{
-		store:   store{dir: cfg.StateDir},
-		homeDir: filepath.Join(cfg.StateDir, "engine"),
-		eng:     cfg.Engine,
-		fetcher: cfg.Fetcher,
-		probe:   cfg.Probe,
-		probes:  map[string]*pb.ProbeResult{},
-		changed: make(chan struct{}),
-		conn:    connection{state: pb.ConnectionState_CONNECTION_STATE_DISCONNECTED},
+		store:    store{dir: cfg.StateDir},
+		homeDir:  filepath.Join(cfg.StateDir, "engine"),
+		eng:      cfg.Engine,
+		fetcher:  cfg.Fetcher,
+		probe:    cfg.Probe,
+		probes:   map[string]*pb.ProbeResult{},
+		changed:  make(chan struct{}),
+		conn:     connection{state: pb.ConnectionState_CONNECTION_STATE_DISCONNECTED},
+		tun:      cfg.Tun,
+		programs: cfg.Programs,
+		pkg:      cfg.Package,
 	}
 	if s.eng == nil {
 		s.eng = realEngine{}
@@ -145,6 +163,9 @@ func New(cfg Config) (*Service, error) {
 	}
 	if s.probe == nil {
 		s.probe = probe.Node
+	}
+	if s.programs == nil {
+		s.programs = procs.List
 	}
 	s.check = cfg.Check
 	if s.check == nil {
@@ -159,7 +180,7 @@ func New(cfg Config) (*Service, error) {
 		s.settle = DefaultReconnectDelay
 	}
 
-	sealer, err := newSealer(cfg.StateDir)
+	sealer, err := newSealer(cfg.StateDir, cfg.StateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +206,9 @@ func (s *Service) Close() {
 	}
 	s.mu.Unlock()
 	s.eng.Stop()
+	if s.tun != nil {
+		s.tun.Close()
+	}
 }
 
 // notifyLocked wakes every WatchStatus stream. Caller holds mu.
@@ -388,8 +412,14 @@ func (s *Service) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.Stat
 	// Geo rules need the files in place: mihomo would otherwise try to fetch
 	// them itself in the middle of Start, with no word to the client.
 	err = s.ensureGeo(ctx, opts.Rules)
+	if err == nil && s.tun != nil {
+		err = s.openTun(&opts)
+	}
 	if err == nil {
 		err = s.eng.Start(opts)
+		if err != nil && s.tun != nil {
+			s.tun.Close()
+		}
 	}
 	if err != nil {
 		s.setConn(connection{
@@ -450,11 +480,34 @@ func (s *Service) engineOptionsLocked(sub *storedSub, node storedNode) (engine.O
 	}
 
 	mode := pb.TunnelMode_TUNNEL_MODE_SYSTEM_PROXY
+	if s.tun != nil {
+		opts.Rules = withoutPrograms(opts.Rules)
+		opts.Tun = &engine.TunOptions{Stack: set.TunStack}
+		return opts, pb.TunnelMode_TUNNEL_MODE_TUN, nil
+	}
 	if set.TunnelMode == "tun" {
 		mode = pb.TunnelMode_TUNNEL_MODE_TUN
 		opts.Tun = &engine.TunOptions{Stack: set.TunStack}
 	}
 	return opts, mode, nil
+}
+
+// openTun asks the platform for the interface and gives its fd to the
+// engine. Program rules are read from the settings again: opts no longer
+// has them.
+func (s *Service) openTun(opts *engine.Options) error {
+	s.mu.Lock()
+	rules, err := engineRules(s.st.Settings.Rules)
+	s.mu.Unlock()
+	if err != nil {
+		return err
+	}
+	fd, err := s.tun.Open(tunRequest(rules, opts.Final, opts.IPv6, s.pkg))
+	if err != nil {
+		return fmt.Errorf("VPN не поднялся: %w", err)
+	}
+	opts.Tun.FileDescriptor = fd
+	return nil
 }
 
 func (s *Service) Disconnect(context.Context, *pb.DisconnectRequest) (*pb.Status, error) {
@@ -467,6 +520,9 @@ func (s *Service) Disconnect(context.Context, *pb.DisconnectRequest) (*pb.Status
 
 	s.setConn(connection{state: pb.ConnectionState_CONNECTION_STATE_DISCONNECTING, subID: prev.subID, nodeID: prev.nodeID, mode: prev.mode})
 	s.eng.Stop()
+	if s.tun != nil {
+		s.tun.Close()
+	}
 	s.setConn(connection{state: pb.ConnectionState_CONNECTION_STATE_DISCONNECTED})
 
 	s.mu.Lock()
@@ -662,6 +718,9 @@ func (s *Service) GetSettings(context.Context, *pb.GetSettingsRequest) (*pb.Sett
 // right away by reconnecting to the same node.
 func (s *Service) UpdateSettings(ctx context.Context, req *pb.Settings) (*pb.Settings, error) {
 	set, err := settingsFromProto(req)
+	if err == nil && s.tun != nil {
+		err = checkMobileRules(set.Rules)
+	}
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}

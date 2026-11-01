@@ -12,6 +12,8 @@ import (
 type Process struct {
 	Name string // what PROCESS-NAME matches: the executable's file name
 	Path string // full path, empty if unknown
+	// Label is the name people know an Android app by. Empty elsewhere.
+	Label string
 }
 
 // List returns running programs, one entry per executable, sorted by name.

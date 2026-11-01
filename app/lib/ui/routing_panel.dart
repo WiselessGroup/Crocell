@@ -84,7 +84,9 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
     final title = _listTitle(_list);
     final inList = [for (final r in widget.rules) if (r.action == _list) r];
     final query = _search.text.trim().toLowerCase();
-    final shown = query.isEmpty ? inList : [for (final r in inList) if (ruleTitle(r).toLowerCase().contains(query)) r];
+    // Both the shown name and the stored one: .рф is found as xn--p1ai too.
+    bool hit(RouteRule r) => ruleTitle(r).toLowerCase().contains(query) || ruleInput(r).toLowerCase().contains(query);
+    final shown = query.isEmpty ? inList : [for (final r in inList) if (hit(r)) r];
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -217,7 +219,7 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
           const SizedBox(height: 8),
           Wrap(
             spacing: 6,
-            runSpacing: 6,
+            runSpacing: 4,
             children: [
               for (final r in visible) _RuleChip(rule: r, onMove: (to) => _move(r, to), onRemove: () => _remove([r])),
               if (fold)
@@ -275,6 +277,11 @@ class _RuleChip extends StatelessWidget {
       message: ruleKindLabel(rule),
       waitDuration: const Duration(milliseconds: 600),
       child: InputChip(
+        // Dense with a mouse, finger-sized on a phone.
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: Theme.of(context).platform == TargetPlatform.android
+            ? MaterialTapTargetSize.padded
+            : MaterialTapTargetSize.shrinkWrap,
         avatar: Icon(ruleIcon(rule), size: 16, color: t.muted),
         label: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 260),

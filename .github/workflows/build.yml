@@ -1,6 +1,7 @@
 # Runs on the GitHub mirror (github.com/WiselessGroup/Crocell). The source of
 # truth is git.wiseless.net, which pushes here; a tag v* pushed there ends up
-# as a GitHub release with the AppImage.
+# as a GitHub release with the AppImage, the Windows installer, the macOS
+# disk image and the Android APK.
 name: Build
 
 on:
@@ -79,13 +80,7 @@ jobs:
         env:
           # No FUSE on the runner.
           APPIMAGE_EXTRACT_AND_RUN: 1
-        run: |
-          if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            version="${GITHUB_REF_NAME#v}"
-          else
-            version="dev-${GITHUB_SHA::7}"
-          fi
-          scripts/build-appimage.sh "$version"
+        run: scripts/build-appimage.sh "$(scripts/version.sh)"
       - uses: actions/upload-artifact@v7
         with:
           name: appimage
@@ -94,20 +89,9 @@ jobs:
             dist/Crocell-x86_64.AppImage.zsync
           if-no-files-found: error
 
-  # Windows, macOS and Android have no service or VPN layer yet, so nothing
-  # from these is published. They are built so the day they get one, the
-  # rest already compiles.
-  desktop:
+  windows:
     needs: [core, app]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            target: windows
-          - os: macos-latest
-            target: macos
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     defaults:
       run:
         shell: bash
@@ -122,10 +106,36 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-      - run: go build -tags with_gvisor ./cmd/crocelld ./cmd/crocell
-        working-directory: core
-      - run: flutter build ${{ matrix.target }} --release
-        working-directory: app
+      - name: Inno Setup
+        run: command -v iscc || [[ -x "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" ]] || choco install innosetup --no-progress -y
+      - run: scripts/build-windows.sh "$(scripts/version.sh)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: dist/Crocell-x86_64-Setup.exe
+          if-no-files-found: error
+
+  macos:
+    needs: [core, app]
+    # Apple silicon runner: the .dmg is arm64 only.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: scripts/build-macos.sh "$(scripts/version.sh)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: dist/Crocell-arm64.dmg
+          if-no-files-found: error
 
   android:
     needs: [core, app]
@@ -136,17 +146,44 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-      - run: flutter build apk --debug
-        working-directory: app
+      - name: Signing key
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          if [[ -n $ANDROID_KEYSTORE ]]; then
+            echo "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          elif [[ $GITHUB_REF == refs/tags/v* ]]; then
+            # A release signed with the debug key could never be updated
+            # by one signed with the real key.
+            echo "::error::ANDROID_KEYSTORE secret is missing, refusing to release a debug-signed APK"
+            exit 1
+          fi
+      - name: Build
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile@latest golang.org/x/mobile/cmd/gobind@latest
+          scripts/build-android.sh "$(scripts/version.sh)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android
+          path: dist/Crocell.apk
+          if-no-files-found: error
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: appimage
+    needs: [appimage, windows, macos, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -156,7 +193,7 @@ jobs:
           sparse-checkout: .github/release-notes
       - uses: actions/download-artifact@v8
         with:
-          name: appimage
+          merge-multiple: true
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -166,6 +203,7 @@ jobs:
           if [[ -f $notes ]]; then about=(--notes-file "$notes"); else about=(--generate-notes); fi
           gh release create "$GITHUB_REF_NAME" \
             Crocell-x86_64.AppImage Crocell-x86_64.AppImage.zsync \
+            Crocell-x86_64-Setup.exe Crocell-arm64.dmg Crocell.apk \
             --repo "$GITHUB_REPOSITORY" \
             --title "Crocell ${GITHUB_REF_NAME#v}" \
             "${about[@]}"

@@ -16,9 +16,6 @@ import 'releases.dart';
 /// outside the widget tree.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
-/// The machine the app runs on. Overridden in tests.
-final hostProvider = Provider<Host>((ref) => Host.detect());
-
 /// Opens "how to update" when the update notification is clicked. Watch it
 /// once from the root widget.
 final updatePromptProvider = Provider<void>((ref) {

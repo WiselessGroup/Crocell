@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 /// How this copy of Crocell got onto this machine. Decides how it updates
 /// and how its service gets installed.
 enum HostKind {
@@ -43,3 +45,6 @@ class Host {
   /// or to fall out of date.
   bool get embeddedCore => kind == HostKind.android;
 }
+
+/// The machine the app runs on. Overridden in tests.
+final hostProvider = Provider<Host>((ref) => Host.detect());

@@ -16,19 +16,18 @@ import (
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/engine"
 	"git.wiseless.net/fureunoir/crocell/core/geo"
-	"git.wiseless.net/fureunoir/crocell/core/procs"
 )
 
 // ---------- Processes ----------
 
 func (s *Service) ListProcesses(context.Context, *pb.ListProcessesRequest) (*pb.ListProcessesResponse, error) {
-	list, err := procs.List()
+	list, err := s.programs()
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	resp := &pb.ListProcessesResponse{}
 	for _, p := range list {
-		resp.Processes = append(resp.Processes, &pb.Process{Name: p.Name, Path: p.Path})
+		resp.Processes = append(resp.Processes, &pb.Process{Name: p.Name, Path: p.Path, Label: p.Label})
 	}
 	return resp, nil
 }

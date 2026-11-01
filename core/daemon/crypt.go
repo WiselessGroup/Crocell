@@ -25,7 +25,7 @@ import (
 //  2. state.key next to the state, created on first run, root-only. For
 //     manual runs and systems without systemd-creds.
 //
-// On Android the key will come from the Keystore through the same seam.
+// On Android the app keeps the key in the Keystore and passes it in.
 
 var stateMagic = []byte("CRC1")
 
@@ -33,10 +33,13 @@ const keyCredential = "state-key"
 
 type sealer struct{ aead cipher.AEAD }
 
-func newSealer(stateDir string) (*sealer, error) {
-	material, err := keyMaterial(stateDir)
-	if err != nil {
-		return nil, err
+func newSealer(stateDir string, given []byte) (*sealer, error) {
+	material := given
+	if len(material) < 32 {
+		var err error
+		if material, err = keyMaterial(stateDir); err != nil {
+			return nil, err
+		}
 	}
 	sum := sha256.Sum256(material) // any length in, 256 bits out
 	block, err := aes.NewCipher(sum[:])

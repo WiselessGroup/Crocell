@@ -94,9 +94,11 @@ String ruleInput(RouteRule r) => switch (r.kind) {
       _ => r.value,
     };
 
-/// How a rule reads back in the list.
+/// How a rule reads back in the list. Punycode reads as letters:
+/// +.xn--p1ai is shown as +.рф.
 String ruleTitle(RouteRule r) => switch (r.kind) {
-      RuleKind.RULE_KIND_DOMAIN_SUFFIX => '+.${r.value}',
+      RuleKind.RULE_KIND_DOMAIN || RuleKind.RULE_KIND_DOMAIN_WILDCARD => unicodeDomain(r.value),
+      RuleKind.RULE_KIND_DOMAIN_SUFFIX => '+.${unicodeDomain(r.value)}',
       RuleKind.RULE_KIND_GEOSITE => 'geosite:${r.value}',
       RuleKind.RULE_KIND_GEOIP => 'geoip:${r.value}',
       RuleKind.RULE_KIND_PROCESS_PATH => r.value.split(RegExp(r'[/\\]')).last,
@@ -131,3 +133,51 @@ const geoSuggestions = <({String input, String label})>[
   (input: 'geosite:category-ads-all', label: 'Реклама'),
   (input: 'geosite:win-spy', label: 'Слежка Windows'),
 ];
+
+/// Decodes xn-- labels (RFC 3492). Anything malformed stays as it was.
+String unicodeDomain(String domain) =>
+    domain.split('.').map((l) => l.startsWith('xn--') ? (_punycode(l.substring(4)) ?? l) : l).join('.');
+
+String? _punycode(String input) {
+  const base = 36, tMin = 1, tMax = 26, skew = 38, damp = 700;
+  final out = <int>[];
+  var n = 128, i = 0, bias = 72;
+  final cut = input.lastIndexOf('-');
+  if (cut > 0) out.addAll(input.substring(0, cut).codeUnits);
+  var pos = cut > 0 ? cut + 1 : 0;
+  int adapt(int delta, int points, bool first) {
+    delta = first ? delta ~/ damp : delta ~/ 2;
+    delta += delta ~/ points;
+    var k = 0;
+    while (delta > ((base - tMin) * tMax) ~/ 2) {
+      delta ~/= base - tMin;
+      k += base;
+    }
+    return k + (base - tMin + 1) * delta ~/ (delta + skew);
+  }
+
+  while (pos < input.length) {
+    final old = i;
+    var w = 1;
+    for (var k = base;; k += base) {
+      if (pos >= input.length) return null;
+      final c = input.codeUnitAt(pos++);
+      final digit = c >= 0x61 && c <= 0x7a
+          ? c - 0x61
+          : c >= 0x30 && c <= 0x39
+              ? c - 22
+              : -1;
+      if (digit < 0) return null;
+      i += digit * w;
+      final t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+      if (digit < t) break;
+      w *= base - t;
+    }
+    bias = adapt(i - old, out.length + 1, old == 0);
+    n += i ~/ (out.length + 1);
+    i %= out.length + 1;
+    out.insert(i, n);
+    i++;
+  }
+  return String.fromCharCodes(out);
+}

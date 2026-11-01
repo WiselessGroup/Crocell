@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/core_api.dart';
 import '../data/state.dart';
 import '../sysproxy/controller.dart';
+import '../host.dart';
+import '../platform/android.dart';
 import '../theme.dart';
 import '../update/how_to_update.dart';
 import '../widgets/connect_button.dart';
@@ -35,6 +37,9 @@ class ConnectPanel extends ConsumerWidget {
         if (connected) {
           await ref.read(connectionProvider).disconnect();
         } else {
+          if (!await ensureVpnPermission()) {
+            throw const CoreError('Без разрешения на VPN Crocell не подключится. Нажмите ещё раз и разрешите.');
+          }
           // Checked after connecting, so it goes through the VPN like
           // everything else and works where GitHub is blocked.
           try {
@@ -303,7 +308,8 @@ class _ModePicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider).value;
-    if (settings == null) return const SizedBox.shrink();
+    // A phone has one way: the VPN for everything.
+    if (settings == null || ref.watch(hostProvider).embeddedCore) return const SizedBox.shrink();
     final t = context.tokens;
     final mode = settings.tunnelMode == TunnelMode.TUNNEL_MODE_TUN
         ? TunnelMode.TUNNEL_MODE_TUN

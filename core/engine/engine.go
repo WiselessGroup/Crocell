@@ -74,6 +74,16 @@ type TunOptions struct {
 	ExcludePackages []string
 }
 
+// The Android interface. VpnService builds it with these, and the engine's
+// TUN stack has to be told the same, or the system stack's NAT never
+// matches. The DNS address sits inside the /30 and dns-hijack answers it.
+const (
+	AndroidTun4   = "198.18.0.1/30"
+	AndroidTun6   = "fdfe:dcba:9876::1/126"
+	AndroidTunDNS = "198.18.0.2"
+	AndroidTunMTU = 9000
+)
+
 var (
 	mu      sync.Mutex
 	running bool
@@ -327,6 +337,11 @@ func tunConfig(t *TunOptions) map[string]any {
 	tun["auto-detect-interface"] = auto
 	if t.FileDescriptor > 0 {
 		tun["file-descriptor"] = t.FileDescriptor
+		tun["inet4-address"] = []string{AndroidTun4}
+		tun["inet6-address"] = []string{AndroidTun6}
+		if t.MTU == 0 {
+			tun["mtu"] = AndroidTunMTU
+		}
 	}
 	if len(t.ExcludePackages) > 0 {
 		tun["exclude-package"] = t.ExcludePackages

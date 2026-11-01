@@ -25,7 +25,9 @@ mkdir -p "$appdir/usr/bin" "$appdir/usr/lib/crocell" \
 # what the app already does. Static, because `crocelld install` copies
 # the service out of the image and the copy runs with nothing from it.
 cd "$root/core"
-CGO_ENABLED=0 go build -tags with_gvisor -trimpath -ldflags="-s -w" -o "$appdir/usr/bin/crocelld" ./cmd/crocelld
+CGO_ENABLED=0 go build -tags with_gvisor -trimpath \
+  -ldflags="-s -w -X git.wiseless.net/fureunoir/crocell/core/internal/version.Version=$version" \
+  -o "$appdir/usr/bin/crocelld" ./cmd/crocelld
 
 cd "$root/app"
 flutter_args=(--release --dart-define="CROCELL_VERSION=$version")
