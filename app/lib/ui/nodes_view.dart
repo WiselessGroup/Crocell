@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/core_api.dart';
 import '../data/state.dart';
@@ -46,6 +47,13 @@ class _NodesViewState extends ConsumerState<NodesView> {
       AsyncData(:final value) => () {
         final total = value.fold<int>(0, (n, s) => n + s.nodes.length);
         final query = _query.text;
+        final hideDown = ref.watch(hideUnavailableProvider);
+        bool isSelected(Subscription sub, Node n) => status?.subscriptionId == sub.id && status?.nodeId == n.id;
+        final down = [
+          for (final sub in value)
+            for (final n in sub.nodes)
+              if (nodeUnavailable(n) && !isSelected(sub, n)) n,
+        ].length;
         var anyMatch = false;
 
         final slivers = <Widget>[
@@ -70,14 +78,22 @@ class _NodesViewState extends ConsumerState<NodesView> {
                 ),
               ),
             ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _HideUnavailable(on: hideDown, hidden: down),
+            ),
+          ),
         ];
 
         for (final sub in value) {
           final nodes = [
             for (final n in sub.nodes)
-              if (nodeMatches(n, query)) n,
+              // The node in use stays, working or not: hiding it would lose
+              // what the button connects to.
+              if (nodeMatches(n, query) && !(hideDown && nodeUnavailable(n) && !isSelected(sub, n))) n,
           ];
-          if (query.isNotEmpty && nodes.isEmpty) continue;
+          if ((query.isNotEmpty || hideDown) && nodes.isEmpty) continue;
           anyMatch = true;
           // Searching unfolds everything: hidden matches help nobody.
           final folded = query.isEmpty && collapsed.contains(sub.id);
@@ -147,6 +163,69 @@ class _NodesViewState extends ConsumerState<NodesView> {
 }
 
 /// Folded subscriptions. In memory: a fresh start shows everything.
+/// A node whose last check failed. Unchecked nodes are not unavailable:
+/// nothing is known about them yet.
+bool nodeUnavailable(Node n) => n.hasLastProbe() && n.lastProbe.error.isNotEmpty;
+
+/// "Hide unavailable" in the node list. Off until the person turns it on,
+/// then remembered across starts.
+final hideUnavailableProvider = NotifierProvider<_HideUnavailableNotifier, bool>(_HideUnavailableNotifier.new);
+
+class _HideUnavailableNotifier extends Notifier<bool> {
+  static const _key = 'hide_unavailable_nodes';
+
+  @override
+  bool build() {
+    _load();
+    return false;
+  }
+
+  Future<void> _load() async {
+    try {
+      final saved = (await SharedPreferences.getInstance()).getBool(_key) ?? false;
+      if (saved != state) state = saved;
+    } catch (_) {
+      // No preferences store (tests): the default stays.
+    }
+  }
+
+  Future<void> set(bool on) async {
+    state = on;
+    try {
+      await (await SharedPreferences.getInstance()).setBool(_key, on);
+    } catch (_) {}
+  }
+}
+
+class _HideUnavailable extends ConsumerWidget {
+  const _HideUnavailable({required this.on, required this.hidden});
+
+  final bool on;
+
+  /// Unavailable nodes the switch hides, or would hide.
+  final int hidden;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
+    final label = tr('Скрыть недоступные', 'Hide unavailable');
+    // One control for screen readers: the text is the switch's label.
+    return MergeSemantics(
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              hidden == 0 ? label : '$label · $hidden',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: t.muted),
+            ),
+          ),
+          Switch(value: on, onChanged: (v) => ref.read(hideUnavailableProvider.notifier).set(v)),
+        ],
+      ),
+    );
+  }
+}
+
 final collapsedProvider = NotifierProvider<_CollapsedNotifier, Set<String>>(_CollapsedNotifier.new);
 
 class _CollapsedNotifier extends Notifier<Set<String>> {
@@ -242,13 +321,18 @@ class _SubscriptionHeader extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(tr('Удалить «${sub.title.isNotEmpty ? sub.title : sub.urlMasked}»?', 'Remove "${sub.title.isNotEmpty ? sub.title : sub.urlMasked}"?')),
+        title: Text(
+          tr(
+            'Удалить «${sub.title.isNotEmpty ? sub.title : sub.urlMasked}»?',
+            'Remove "${sub.title.isNotEmpty ? sub.title : sub.urlMasked}"?',
+          ),
+        ),
         content: Text(
           tr(
             'Ноды из неё пропадут. Если VPN подключён через неё, он отключится. '
-            'Вернуть можно, снова добавив ссылку.',
+                'Вернуть можно, снова добавив ссылку.',
             'Its nodes will be gone. If the VPN is connected through it, it will disconnect. '
-            'You can bring it back by adding the link again.',
+                'You can bring it back by adding the link again.',
           ),
         ),
         actions: [
@@ -311,7 +395,9 @@ class _NodeRow extends ConsumerWidget {
               Text(nodeKind(node), style: theme.textTheme.labelSmall?.copyWith(color: t.muted)),
               SizedBox(
                 width: 36,
-                child: selected ? Icon(Icons.check_rounded, color: t.brandText, semanticLabel: tr('Выбрана', 'Selected')) : null,
+                child: selected
+                    ? Icon(Icons.check_rounded, color: t.brandText, semanticLabel: tr('Выбрана', 'Selected'))
+                    : null,
               ),
             ],
           ),
@@ -340,7 +426,10 @@ class _Empty extends StatelessWidget {
             Text(tr('Здесь будут ноды', 'Nodes will show up here'), style: theme.textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(
-              tr('Добавьте подписку, и Crocell покажет все ноды из неё.', 'Add a subscription, and Crocell will show all its nodes.'),
+              tr(
+                'Добавьте подписку, и Crocell покажет все ноды из неё.',
+                'Add a subscription, and Crocell will show all its nodes.',
+              ),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(color: context.tokens.muted),
             ),

@@ -267,6 +267,24 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('hide unavailable: failed nodes go, the one in use stays', (tester) async {
+    final sub = sampleSubscription();
+    sub.nodes[1].lastProbe = ProbeResult(nodeId: 'n2', error: 'probe: timeout');
+    sub.nodes[2].lastProbe = ProbeResult(nodeId: 'n3', error: 'probe: timeout');
+    final core = FakeCore(subs: [sub], status: Status(
+      state: ConnectionState.CONNECTION_STATE_FAILED, subscriptionId: 'sub1', nodeId: 'n3', error: 'boom'));
+    await pumpApp(tester, core, size: const Size(1200, 900));
+
+    expect(find.text('Скрыть недоступные · 1'), findsOneWidget, reason: 'the selected node is not counted');
+    expect(find.text('nlWISELESS'), findsOneWidget);
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(find.text('nlWISELESS'), findsNothing);
+    expect(find.text('autoWISELESS-2 (HYSTERIA)'), findsWidgets, reason: 'the node in use stays');
+    expect(find.text('autoWISELESS-1'), findsOneWidget, reason: 'unchecked nodes stay');
+    await unmount(tester);
+  });
+
   testWidgets('many subscriptions: search by claimed country, fold one away', (tester) async {
     await pumpApp(
       tester,
