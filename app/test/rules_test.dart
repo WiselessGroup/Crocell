@@ -20,6 +20,20 @@ void main() {
     ]);
   });
 
+  test('v2ray lists paste as they are, whole zones included', () {
+    final r = parseRuleInput('domain:ru\nDomain:xn--p1ai\ndomain:mail.ru\nfull:ya.ru');
+    expect(r.error, isNull);
+    expect([for (final x in r.rules) (x.kind, x.value)], [
+      (RuleKind.RULE_KIND_DOMAIN_SUFFIX, 'ru'),
+      (RuleKind.RULE_KIND_DOMAIN_SUFFIX, 'xn--p1ai'),
+      (RuleKind.RULE_KIND_DOMAIN_SUFFIX, 'mail.ru'),
+      (RuleKind.RULE_KIND_DOMAIN, 'ya.ru'),
+    ]);
+    // A zone on its own is still a typo, not "the domain ru".
+    expect(parseRuleInput('ru').error, isNotNull);
+    expect(parseRuleInput('full:ru').error, isNotNull);
+  });
+
   test('nonsense is named in the error', () {
     for (final bad in ['not a domain', '10.0.0.0/40', 'geosite:', 'localhost', '*.']) {
       final r = parseRuleInput(bad);

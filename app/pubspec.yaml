@@ -41,6 +41,7 @@ dependencies:
   fixnum: ^1.1.1
   country_flags: ^4.1.2
   flutter_local_notifications: ^22.3.3
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:

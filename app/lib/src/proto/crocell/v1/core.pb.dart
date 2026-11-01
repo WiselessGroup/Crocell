@@ -35,6 +35,7 @@ class Status extends $pb.GeneratedMessage {
     $core.int? mixedPort,
     ProbeResult? liveCheck,
     $core.bool? checking,
+    $core.String? coreVersion,
   }) {
     final result = Status._();
     if (state != null) result.state = state;
@@ -47,6 +48,7 @@ class Status extends $pb.GeneratedMessage {
     if (mixedPort != null) result.mixedPort = mixedPort;
     if (liveCheck != null) result.liveCheck = liveCheck;
     if (checking != null) result.checking = checking;
+    if (coreVersion != null) result.coreVersion = coreVersion;
     return result;
   }
 
@@ -78,6 +80,7 @@ class Status extends $pb.GeneratedMessage {
     ..aOM<ProbeResult>(9, _omitFieldNames ? '' : 'liveCheck',
         subBuilder: ProbeResult.$_createMessage)
     ..aOB(10, _omitFieldNames ? '' : 'checking')
+    ..aOS(11, _omitFieldNames ? '' : 'coreVersion')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -203,6 +206,18 @@ class Status extends $pb.GeneratedMessage {
   $core.bool hasChecking() => $_has(9);
   @$pb.TagNumber(10)
   void clearChecking() => $_clearField(10);
+
+  /// The service's own version. After an app update the service may still be
+  /// the old one (Linux and macOS keep a copy of it outside the app), and the
+  /// client offers to reinstall it when this differs from its own.
+  @$pb.TagNumber(11)
+  $core.String get coreVersion => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set coreVersion($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasCoreVersion() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearCoreVersion() => $_clearField(11);
 }
 
 class Traffic extends $pb.GeneratedMessage {

@@ -123,9 +123,17 @@ func normalize(r Rule) (string, error) {
 	switch r.Kind {
 	case ProcessPath, ProcessName:
 		return v, nil
-	case Domain, DomainSuffix:
-		v = strings.ToLower(strings.TrimPrefix(v, "+."))
+	case Domain:
+		v = strings.ToLower(v)
 		if !validDomain(v) {
+			return "", fmt.Errorf("engine: %q is not a domain", r.Value)
+		}
+		return v, nil
+	case DomainSuffix:
+		// A whole zone is fine here: domain:ru from v2ray lists means
+		// everything under .ru.
+		v = strings.ToLower(strings.TrimPrefix(v, "+."))
+		if !validDomain(v) && !validLabel(v) {
 			return "", fmt.Errorf("engine: %q is not a domain", r.Value)
 		}
 		return v, nil
@@ -154,6 +162,19 @@ func normalize(r Rule) (string, error) {
 		return v, nil
 	}
 	return "", fmt.Errorf("engine: unknown rule kind %d", r.Kind)
+}
+
+// validLabel: one name without dots, like a top-level domain (ru, xn--p1ai).
+func validLabel(l string) bool {
+	if len(l) < 2 || len(l) > 63 || strings.HasPrefix(l, "-") || strings.HasSuffix(l, "-") {
+		return false
+	}
+	for _, c := range l {
+		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-' || c > 127) {
+			return false
+		}
+	}
+	return true
 }
 
 func validDomain(d string) bool {

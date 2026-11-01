@@ -13,7 +13,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -38,7 +37,14 @@ func main() {
 			exit(uninstall())
 		}
 	}
-	exit(serve(os.Args[1:]))
+	// Under the Windows service manager the stop comes from it, not from
+	// a signal.
+	if handled, err := runService(os.Args[1:]); handled {
+		exit(err)
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	exit(serve(ctx, os.Args[1:]))
 }
 
 func exit(err error) {
@@ -63,17 +69,26 @@ func (u *uidList) Set(s string) error {
 	return nil
 }
 
-func serve(args []string) error {
+func serve(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("crocelld", flag.ExitOnError)
 	socket := fs.String("socket", paths.Socket, "API socket path")
 	stateDir := fs.String("state-dir", paths.StateDir, "where subscriptions and settings live")
 	var allow uidList
 	fs.Var(&allow, "allow-uid", "uids allowed to use the API besides root, comma-separated (Linux, macOS)")
+	logFile := fs.String("log", defaultLog, "write the log here instead of stderr")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
+	if *logFile != "" {
+		if err := logTo(*logFile); err != nil {
+			return err
+		}
+	}
 	if err := os.MkdirAll(*stateDir, 0o700); err != nil {
+		return err
+	}
+	if err := secureStateDir(*stateDir); err != nil {
 		return err
 	}
 	svc, err := daemon.New(daemon.Config{StateDir: *stateDir})
@@ -82,16 +97,14 @@ func serve(args []string) error {
 	}
 	defer svc.Close()
 
-	lis, err := listen(*socket, allow)
+	lis, opts, err := listen(*socket, allow)
 	if err != nil {
 		return err
 	}
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(opts...)
 	pb.RegisterCoreServer(srv, svc)
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 	// Connect-on-start and keeping geo databases fresh.
 	go svc.Run(ctx)
 
@@ -117,55 +130,19 @@ func serve(args []string) error {
 	return nil
 }
 
-// listen opens the API socket. Anyone may connect at the file level; who
-// actually gets served is decided per connection by the peer's uid.
-func listen(path string, allow uidList) (net.Listener, error) {
-	// sun_path is 108 bytes on Linux, 104 on macOS; longer paths fail with a
-	// bare "bind: invalid argument".
-	if len(path) > 100 {
-		return nil, fmt.Errorf("socket path is %d bytes, unix sockets allow about 100: %s", len(path), path)
-	}
+// logTo sends the log to a file, for services nobody watches the stderr of.
+// A log past a few megabytes starts over rather than growing forever.
+func logTo(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return nil, err
+		return err
 	}
-	_ = os.Remove(path) // stale socket from a crash
-	lis, err := net.Listen("unix", path)
+	if fi, err := os.Stat(path); err == nil && fi.Size() > 4<<20 {
+		_ = os.Rename(path, path+".old")
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if err := os.Chmod(path, 0o666); err != nil {
-		lis.Close()
-		return nil, err
-	}
-	return &peerListener{Listener: lis, allow: allow}, nil
-}
-
-// peerListener drops connections from users that are not allowed.
-type peerListener struct {
-	net.Listener
-	allow uidList
-}
-
-func (l *peerListener) Accept() (net.Conn, error) {
-	for {
-		c, err := l.Listener.Accept()
-		if err != nil {
-			return nil, err
-		}
-		uid, err := peerUID(c)
-		if err == nil && (uid == 0 || uid == uint32(os.Geteuid()) || contains(l.allow, uid)) {
-			return c, nil
-		}
-		log.Printf("crocelld: refused API connection from uid %d (%v)", uid, err)
-		c.Close()
-	}
-}
-
-func contains(list uidList, uid uint32) bool {
-	for _, u := range list {
-		if u == uid {
-			return true
-		}
-	}
-	return false
+	log.SetOutput(f)
+	return nil
 }

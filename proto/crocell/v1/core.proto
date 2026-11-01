@@ -74,6 +74,10 @@ message Status {
   // Not "check": that name collides with GeneratedMessage.check() in Dart.
   ProbeResult live_check = 9;
   bool checking = 10;
+  // The service's own version. After an app update the service may still be
+  // the old one (Linux and macOS keep a copy of it outside the app), and the
+  // client offers to reinstall it when this differs from its own.
+  string core_version = 11;
 }
 
 message Traffic {

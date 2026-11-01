@@ -25,6 +25,7 @@ import (
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/engine"
 	"git.wiseless.net/fureunoir/crocell/core/geo"
+	"git.wiseless.net/fureunoir/crocell/core/internal/version"
 	"git.wiseless.net/fureunoir/crocell/core/probe"
 	"git.wiseless.net/fureunoir/crocell/core/subscription"
 )
@@ -304,6 +305,7 @@ func (s *Service) statusLocked() *pb.Status {
 		TunnelMode:     c.mode,
 		LiveCheck:      c.check,
 		Checking:       c.checking,
+		CoreVersion:    version.Version,
 	}
 	if c.state == pb.ConnectionState_CONNECTION_STATE_CONNECTED {
 		st.ConnectedSince = timestamppb.New(c.since)

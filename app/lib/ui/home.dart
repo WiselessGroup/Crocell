@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/state.dart';
+import '../update/how_to_update.dart';
 import 'add_subscription.dart';
 import 'connect_panel.dart';
 import 'daemon_missing.dart';
@@ -35,6 +36,7 @@ class HomeScreen extends ConsumerWidget {
           return Scaffold(
             appBar: AppBar(
               actions: [
+                const UpdateButton(),
                 if (wide && reachable == true)
                   IconButton(
                     tooltip: 'Добавить подписку',

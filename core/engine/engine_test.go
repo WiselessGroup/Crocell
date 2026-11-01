@@ -260,3 +260,22 @@ func TestAndroidBypassSkipsTunnel(t *testing.T) {
 		t.Errorf("exclude-package = %v", cfg.General.Tun.ExcludePackage)
 	}
 }
+
+// v2ray lists carry whole zones: domain:ru is everything under .ru. As a
+// suffix that is fine; as one exact domain it is a typo.
+func TestZonesAsSuffix(t *testing.T) {
+	cfg := parse(t, Options{Nodes: testNodes(), Rules: []Rule{
+		{Kind: DomainSuffix, Value: "ru", Action: Direct},
+		{Kind: DomainSuffix, Value: "xn--p1ai", Action: Direct},
+	}})
+	var got []string
+	for _, r := range cfg.Rules[len(privateNets):] {
+		got = append(got, r.RuleType().String()+","+r.Payload())
+	}
+	if len(got) < 2 || got[0] != "DomainSuffix,ru" || got[1] != "DomainSuffix,xn--p1ai" {
+		t.Errorf("rules = %v", got)
+	}
+	if _, err := buildRules([]Rule{{Kind: Domain, Value: "ru"}}, Proxy); err == nil {
+		t.Error("a bare zone accepted as one exact domain")
+	}
+}

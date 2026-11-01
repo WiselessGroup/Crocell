@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:crocell/data/core_api.dart';
 import 'package:crocell/data/state.dart';
 import 'package:crocell/main.dart';
@@ -8,6 +10,7 @@ import 'package:crocell/widgets/connect_button.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_core.dart';
@@ -16,7 +19,10 @@ import 'support/fake_core.dart';
 class RecordingNotifications implements Notifications {
   final shown = <String>[];
   @override
-  Future<void> show(String title, String body) async => shown.add(title);
+  Future<void> show(String title, String body, {String? payload}) async => shown.add(title);
+  final tapped = StreamController<String>.broadcast();
+  @override
+  Stream<String> get taps => tapped.stream;
 }
 
 /// A system proxy that records instead of touching the desktop.
@@ -37,6 +43,7 @@ Future<FakeCore> pumpApp(
   Size size = const Size(420, 860),
   RecordingProxy? proxy,
   RecordingNotifications? notifications,
+  List<Override> overrides = const [],
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -49,6 +56,7 @@ Future<FakeCore> pumpApp(
       coreApiProvider.overrideWithValue(core),
       systemProxyProvider.overrideWithValue(proxy ?? RecordingProxy()),
       notificationsProvider.overrideWithValue(notifications ?? RecordingNotifications()),
+      ...overrides,
     ],
     child: const CrocellApp(),
   ));
@@ -166,8 +174,10 @@ void main() {
     final core = await pumpApp(tester, FakeCore(subs: [sampleSubscription()]), size: const Size(1200, 900));
     await tester.tap(find.byTooltip('Настройки'));
     await tester.pumpAndSettle();
-    expect(find.text('Пока пусто'), findsNWidgets(3));
+    expect(find.text('Пока пусто'), findsOneWidget);
 
+    await tester.tap(find.text('Напрямую  0'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Добавить в «Напрямую»'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Программа'));
@@ -177,6 +187,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(core.calls.last, 'settings TUNNEL_MODE_SYSTEM_PROXY steam=ROUTE_ACTION_DIRECT');
 
+    await tester.tap(find.text('Через VPN  0'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Добавить в «Через VPN»'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'Сайты, адреса или наборы'), '*.wiseless.net\ngeosite:ru-blocked');
@@ -187,9 +199,43 @@ void main() {
     expect(core.calls.last, endsWith('*.wiseless.net=ROUTE_ACTION_PROXY,ru-blocked=ROUTE_ACTION_PROXY'));
     expect(find.text('geosite:ru-blocked'), findsOneWidget);
 
+    await tester.tap(find.text('Напрямую  1'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Убрать steam'));
     await tester.pumpAndSettle();
     expect(core.calls.last, isNot(contains('steam')));
+    await unmount(tester);
+  });
+
+  testWidgets('a long pasted list folds, searches, and moves a rule between lists', (tester) async {
+    final core = FakeCore(subs: [sampleSubscription()]);
+    core.settings.rules.addAll([
+      for (var i = 0; i < 40; i++)
+        RouteRule(kind: RuleKind.RULE_KIND_DOMAIN_SUFFIX, value: 'site$i.ru', action: RouteAction.ROUTE_ACTION_DIRECT),
+      RouteRule(kind: RuleKind.RULE_KIND_GEOSITE, value: 'category-ru', action: RouteAction.ROUTE_ACTION_DIRECT),
+    ]);
+    await pumpApp(tester, core, size: const Size(1200, 1400));
+    await tester.tap(find.byTooltip('Настройки'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Напрямую  41'), findsOneWidget, reason: 'opens on the list that has rules');
+    expect(find.text('Сайты · 40'), findsOneWidget);
+    expect(find.text('Ещё 16'), findsOneWidget);
+    await tester.tap(find.text('Ещё 16'));
+    await tester.pumpAndSettle();
+    expect(find.text('+.site39.ru'), findsOneWidget);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Найти в «Напрямую»'), 'site3');
+    await tester.pumpAndSettle();
+    expect(find.text('Сайты · 11'), findsOneWidget);
+    expect(find.text('Наборы · 1'), findsNothing);
+
+    await tester.tap(find.text('+.site30.ru'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Перенести в «Через VPN»'));
+    await tester.pumpAndSettle();
+    expect(core.settings.rules.firstWhere((r) => r.value == 'site30.ru').action, RouteAction.ROUTE_ACTION_PROXY);
+    expect(find.text('Через VPN  1'), findsOneWidget);
     await unmount(tester);
   });
 
@@ -255,10 +301,16 @@ void main() {
     await pumpApp(tester, core, size: const Size(360, 1600));
     await tester.tap(find.byTooltip('Настройки'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Дополнительно'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Дополнительно'));
     await tester.pumpAndSettle();
     expect(find.text('DNS-серверы'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Блокировать  0'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Блокировать  0'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Добавить в «Блокировать»'));
     await tester.pumpAndSettle();
     for (final tab in ['Программа', 'Набор', 'Сайт или IP']) {

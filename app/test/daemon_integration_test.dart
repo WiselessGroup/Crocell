@@ -14,7 +14,7 @@ void main() {
   final skip = socket == null || sub == null ? 'set CROCELL_SOCKET and CROCELL_TEST_SUB' : null;
 
   test('gRPC over the unix socket: status, add, list, settings', () async {
-    final api = GrpcCoreApi(socket!);
+    final api = GrpcCoreApi(CoreEndpoint.unix(socket!));
     try {
       final first = await api.watchStatus().first;
       expect(first.state, ConnectionState.CONNECTION_STATE_DISCONNECTED);
@@ -42,7 +42,7 @@ void main() {
   }, skip: skip);
 
   test('a missing daemon is reported as unavailable', () async {
-    final api = GrpcCoreApi('/nonexistent/crocelld.sock');
+    final api = GrpcCoreApi(const CoreEndpoint.unix('/nonexistent/crocelld.sock'));
     try {
       await expectLater(api.getSettings(), throwsA(isA<CoreError>().having((e) => e.unavailable, 'unavailable', isTrue)));
     } finally {

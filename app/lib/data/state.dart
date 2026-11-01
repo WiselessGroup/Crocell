@@ -4,9 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core_api.dart';
 
+/// Where the core listens. Android overrides it with the socket of the core
+/// inside the app.
+final coreEndpointProvider = Provider<CoreEndpoint>((ref) => defaultEndpoint());
+
 /// The connection to crocelld. Overridden in tests.
 final coreApiProvider = Provider<CoreApi>((ref) {
-  final api = GrpcCoreApi(defaultSocketPath());
+  final api = GrpcCoreApi(ref.watch(coreEndpointProvider));
   ref.onDispose(api.close);
   return api;
 });
@@ -148,8 +152,13 @@ class SettingsNotifier extends AsyncNotifier<Settings> {
         }
       });
 
-  Future<void> removeRule(RouteRule rule) =>
-      _update((s) => s.rules.removeWhere((x) => x.kind == rule.kind && x.value == rule.value));
+  Future<void> removeRule(RouteRule rule) => removeRules([rule]);
+
+  Future<void> removeRules(Iterable<RouteRule> rules) => _update((s) {
+        for (final rule in rules) {
+          s.rules.removeWhere((x) => x.kind == rule.kind && x.value == rule.value);
+        }
+      });
 
   Future<void> setFinal(RouteAction action) => _update((s) => s.finalAction = action);
 

@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/core_api.dart';
-import '../data/rules.dart';
 import '../data/state.dart';
 import '../theme.dart';
 import '../version.dart';
-import 'add_rule.dart';
 import 'common.dart';
+import 'routing_panel.dart';
 
 /// Routing first (what goes where), then the geo databases, then the few
 /// advanced knobs people actually touch. The tunnel mode lives on the home
@@ -36,12 +35,12 @@ class SettingsScreen extends ConsumerWidget {
                       const _Heading('Маршрутизация'),
                       Text(
                         'Что куда идёт, пока VPN включён. Точное правило важнее общего: '
-                        'сайт из списка победит набор geosite, программа — любой сайт. '
-                        'Локальная сеть всегда идёт напрямую.',
+                        'сайт победит набор, в который входит, программа — любой сайт. '
+                        'Локальная сеть всегда идёт напрямую. Нажмите на правило, чтобы перенести его в другой список.',
                         style: theme.textTheme.bodyMedium?.copyWith(color: t.muted),
                       ),
                       const SizedBox(height: 16),
-                      _RouteBlocks(rules: value.rules),
+                      RoutingPanel(rules: value.rules),
                       const SizedBox(height: 16),
                       _FinalPicker(action: value.finalAction),
                       const SizedBox(height: 32),
@@ -78,112 +77,6 @@ class _Heading extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(text, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
       );
-}
-
-const _blocks = [
-  (action: RouteAction.ROUTE_ACTION_PROXY, title: 'Через VPN', icon: Icons.shield_outlined),
-  (action: RouteAction.ROUTE_ACTION_DIRECT, title: 'Напрямую', icon: Icons.north_east_rounded),
-  (action: RouteAction.ROUTE_ACTION_BLOCK, title: 'Блокировать', icon: Icons.block_rounded),
-];
-
-/// Three lists side by side on a wide window, stacked on a narrow one.
-class _RouteBlocks extends StatelessWidget {
-  const _RouteBlocks({required this.rules});
-
-  final List<RouteRule> rules;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, c) {
-      final cards = [
-        for (final b in _blocks)
-          _RouteBlock(
-            action: b.action,
-            title: b.title,
-            icon: b.icon,
-            rules: [for (final r in rules) if (r.action == b.action) r],
-          ),
-      ];
-      if (c.maxWidth < 900) {
-        return Column(children: [for (final card in cards) Padding(padding: const EdgeInsets.only(bottom: 12), child: card)]);
-      }
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final (i, card) in cards.indexed) ...[
-            if (i > 0) const SizedBox(width: 12),
-            Expanded(child: card),
-          ],
-        ],
-      );
-    });
-  }
-}
-
-class _RouteBlock extends ConsumerWidget {
-  const _RouteBlock({required this.action, required this.title, required this.icon, required this.rules});
-
-  final RouteAction action;
-  final String title;
-  final IconData icon;
-  final List<RouteRule> rules;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final t = context.tokens;
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 4, 8),
-            child: Row(
-              children: [
-                Icon(icon, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                ),
-                if (rules.isNotEmpty) Text('${rules.length}', style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
-                IconButton(
-                  tooltip: 'Добавить в «$title»',
-                  icon: const Icon(Icons.add_rounded),
-                  onPressed: () => showAddRule(context, action, title),
-                ),
-              ],
-            ),
-          ),
-          const Divider(),
-          if (rules.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('Пока пусто', style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
-            ),
-          for (final r in rules)
-            ListTile(
-              dense: true,
-              leading: Icon(ruleIcon(r), size: 20, color: t.muted),
-              title: Text(ruleTitle(r), overflow: TextOverflow.ellipsis),
-              subtitle: Text(ruleKindLabel(r), overflow: TextOverflow.ellipsis),
-              trailing: IconButton(
-                tooltip: 'Убрать ${ruleTitle(r)}',
-                icon: const Icon(Icons.close_rounded, size: 18),
-                onPressed: () async {
-                  try {
-                    await ref.read(settingsProvider.notifier).removeRule(r);
-                  } catch (e) {
-                    if (context.mounted) showError(context, e);
-                  }
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 class _FinalPicker extends ConsumerWidget {

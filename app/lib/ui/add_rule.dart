@@ -182,7 +182,8 @@ class _SiteTab extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'По одному в строке. wiseless.net — только этот домен, *.wiseless.net — его поддомены, '
-          '+.wiseless.net — и то и другое. Ещё подходят IP и подсети (10.0.0.0/8), '
+          '+.wiseless.net — и то и другое. Списки из v2ray тоже читаются: domain:ru — вся зона .ru, '
+          'full:wiseless.net — только этот домен. Ещё подходят IP и подсети (10.0.0.0/8), '
           'geosite:ru-blocked и geoip:telegram.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: t.muted),
         ),

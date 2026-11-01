@@ -277,8 +277,12 @@ type Status struct {
 	// connecting and every couple of minutes while connected, along the path
 	// the system uses (TUN or the mixed port). Unset until the first check.
 	// Not "check": that name collides with GeneratedMessage.check() in Dart.
-	LiveCheck     *ProbeResult `protobuf:"bytes,9,opt,name=live_check,json=liveCheck,proto3" json:"live_check,omitempty"`
-	Checking      bool         `protobuf:"varint,10,opt,name=checking,proto3" json:"checking,omitempty"`
+	LiveCheck *ProbeResult `protobuf:"bytes,9,opt,name=live_check,json=liveCheck,proto3" json:"live_check,omitempty"`
+	Checking  bool         `protobuf:"varint,10,opt,name=checking,proto3" json:"checking,omitempty"`
+	// The service's own version. After an app update the service may still be
+	// the old one (Linux and macOS keep a copy of it outside the app), and the
+	// client offers to reinstall it when this differs from its own.
+	CoreVersion   string `protobuf:"bytes,11,opt,name=core_version,json=coreVersion,proto3" json:"core_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -381,6 +385,13 @@ func (x *Status) GetChecking() bool {
 		return x.Checking
 	}
 	return false
+}
+
+func (x *Status) GetCoreVersion() string {
+	if x != nil {
+		return x.CoreVersion
+	}
+	return ""
 }
 
 type Traffic struct {
@@ -1943,7 +1954,7 @@ var File_crocell_v1_core_proto protoreflect.FileDescriptor
 const file_crocell_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"\x15crocell/v1/core.proto\x12\n" +
-	"crocell.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb3\x03\n" +
+	"crocell.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd6\x03\n" +
 	"\x06Status\x121\n" +
 	"\x05state\x18\x01 \x01(\x0e2\x1b.crocell.v1.ConnectionStateR\x05state\x12'\n" +
 	"\x0fsubscription_id\x18\x02 \x01(\tR\x0esubscriptionId\x12\x17\n" +
@@ -1958,7 +1969,8 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"live_check\x18\t \x01(\v2\x17.crocell.v1.ProbeResultR\tliveCheck\x12\x1a\n" +
 	"\bchecking\x18\n" +
-	" \x01(\bR\bchecking\"y\n" +
+	" \x01(\bR\bchecking\x12!\n" +
+	"\fcore_version\x18\v \x01(\tR\vcoreVersion\"y\n" +
 	"\aTraffic\x12\x19\n" +
 	"\bup_bytes\x18\x01 \x01(\x04R\aupBytes\x12\x1d\n" +
 	"\n" +

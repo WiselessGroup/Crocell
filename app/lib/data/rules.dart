@@ -15,6 +15,8 @@ class ParsedRule {
 ///   wiseless.net        exactly this domain
 ///   *.wiseless.net      its subdomains, not the domain itself
 ///   +.wiseless.net      the domain and all subdomains
+///   domain:ru           the same, as v2ray lists write it; zones allowed
+///   full:wiseless.net   exactly this domain, v2ray style
 ///   10.0.0.0/8, 1.1.1.1 a subnet or one address (IPv6 too)
 ///   geosite:ru-blocked  a geosite.dat set
 ///   geoip:telegram      a geoip.dat set
@@ -49,9 +51,15 @@ ParsedRule? _parseOne(String s) {
     final host = uri?.host.toLowerCase() ?? '';
     return _isDomain(host) ? ParsedRule(RuleKind.RULE_KIND_DOMAIN, host) : null;
   }
-  if (lower.startsWith('+.')) {
-    final d = lower.substring(2);
-    return _isDomain(d) ? ParsedRule(RuleKind.RULE_KIND_DOMAIN_SUFFIX, d) : null;
+  for (final prefix in ['+.', 'domain:']) {
+    if (lower.startsWith(prefix)) {
+      final d = lower.substring(prefix.length).trim();
+      return _isDomain(d) || _isZone(d) ? ParsedRule(RuleKind.RULE_KIND_DOMAIN_SUFFIX, d) : null;
+    }
+  }
+  if (lower.startsWith('full:')) {
+    final d = lower.substring(5).trim();
+    return _isDomain(d) ? ParsedRule(RuleKind.RULE_KIND_DOMAIN, d) : null;
   }
   if (lower.contains('*') || lower.contains('?')) {
     return _isDomain(lower.replaceAll(RegExp(r'[*?]'), 'a')) ? ParsedRule(RuleKind.RULE_KIND_DOMAIN_WILDCARD, lower) : null;
@@ -72,6 +80,19 @@ bool _isIpOrCidr(String s) {
 
 bool _isDomain(String d) =>
     d.length <= 253 && RegExp(r'^([a-z0-9¡-￿]([a-z0-9¡-￿-]*[a-z0-9¡-￿])?\.)+[a-z¡-￿0-9-]{2,}$').hasMatch(d);
+
+/// A whole zone, like ru or xn--p1ai: only as "everything under it".
+bool _isZone(String d) => RegExp(r'^[a-z0-9¡-￿]([a-z0-9¡-￿-]{0,61}[a-z0-9¡-￿])$').hasMatch(d);
+
+/// A rule as it would be typed, so a copied list pastes back as the same
+/// rules (programs in the CLI's proc: form).
+String ruleInput(RouteRule r) => switch (r.kind) {
+      RuleKind.RULE_KIND_DOMAIN_SUFFIX => '+.${r.value}',
+      RuleKind.RULE_KIND_GEOSITE => 'geosite:${r.value}',
+      RuleKind.RULE_KIND_GEOIP => 'geoip:${r.value}',
+      RuleKind.RULE_KIND_PROCESS_NAME => 'proc:${r.value}',
+      _ => r.value,
+    };
 
 /// How a rule reads back in the list.
 String ruleTitle(RouteRule r) => switch (r.kind) {

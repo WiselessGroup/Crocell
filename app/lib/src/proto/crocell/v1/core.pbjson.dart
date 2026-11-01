@@ -140,6 +140,7 @@ const Status$json = {
       '10': 'liveCheck'
     },
     {'1': 'checking', '3': 10, '4': 1, '5': 8, '10': 'checking'},
+    {'1': 'core_version', '3': 11, '4': 1, '5': 9, '10': 'coreVersion'},
   ],
 };
 
@@ -152,7 +153,8 @@ final $typed_data.Uint8List statusDescriptor = $convert.base64Decode(
     'djEuVHJhZmZpY1IHdHJhZmZpYxIUCgVlcnJvchgGIAEoCVIFZXJyb3ISNwoLdHVubmVsX21vZG'
     'UYByABKA4yFi5jcm9jZWxsLnYxLlR1bm5lbE1vZGVSCnR1bm5lbE1vZGUSHQoKbWl4ZWRfcG9y'
     'dBgIIAEoDVIJbWl4ZWRQb3J0EjYKCmxpdmVfY2hlY2sYCSABKAsyFy5jcm9jZWxsLnYxLlByb2'
-    'JlUmVzdWx0UglsaXZlQ2hlY2sSGgoIY2hlY2tpbmcYCiABKAhSCGNoZWNraW5n');
+    'JlUmVzdWx0UglsaXZlQ2hlY2sSGgoIY2hlY2tpbmcYCiABKAhSCGNoZWNraW5nEiEKDGNvcmVf'
+    'dmVyc2lvbhgLIAEoCVILY29yZVZlcnNpb24=');
 
 @$core.Deprecated('Use trafficDescriptor instead')
 const Traffic$json = {

@@ -14,7 +14,7 @@ func TestPeerUIDIsTheCaller(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	lis, err := listen(filepath.Join(dir, "d.sock"), nil)
+	lis, _, err := listen(filepath.Join(dir, "d.sock"), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestPeerUIDIsTheCaller(t *testing.T) {
 
 func TestLongSocketPathIsExplained(t *testing.T) {
 	long := "/tmp/" + string(make([]byte, 120))
-	if _, err := listen(long, nil); err == nil {
+	if _, _, err := listen(long, nil); err == nil {
 		t.Fatal("want a clear error for an over-long socket path")
 	}
 }

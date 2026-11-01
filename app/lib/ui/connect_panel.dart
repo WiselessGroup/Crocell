@@ -5,6 +5,7 @@ import '../data/core_api.dart';
 import '../data/state.dart';
 import '../sysproxy/controller.dart';
 import '../theme.dart';
+import '../update/how_to_update.dart';
 import '../widgets/connect_button.dart';
 import '../widgets/elapsed_text.dart';
 import 'add_subscription.dart';
@@ -34,7 +35,13 @@ class ConnectPanel extends ConsumerWidget {
         if (connected) {
           await ref.read(connectionProvider).disconnect();
         } else {
-          await ref.read(connectionProvider).connect();
+          // Checked after connecting, so it goes through the VPN like
+          // everything else and works where GitHub is blocked.
+          try {
+            await ref.read(connectionProvider).connect();
+          } finally {
+            checkForUpdate(ref);
+          }
         }
       } catch (e) {
         if (context.mounted) showError(context, e);
@@ -62,6 +69,7 @@ class ConnectPanel extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const ServiceOutdatedBanner(),
                   ConnectButton(
                     connected: connected,
                     onPressed: onPressed,

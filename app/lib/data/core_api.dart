@@ -44,28 +44,61 @@ class CoreError implements Exception {
   String toString() => message;
 }
 
-/// Where crocelld listens. CROCELL_SOCKET overrides it for development.
-String defaultSocketPath() {
+/// Where crocelld listens: a unix socket, or on Windows loopback TCP with a
+/// token, since Dart has no unix sockets there.
+class CoreEndpoint {
+  const CoreEndpoint.unix(this.path)
+      : host = '',
+        port = 0,
+        tokenFile = '';
+  const CoreEndpoint.tcp(this.host, this.port, this.tokenFile) : path = '';
+
+  final String path;
+  final String host;
+  final int port;
+
+  /// Holds the token every call must carry. Readable by local users only.
+  final String tokenFile;
+
+  bool get isUnix => path.isNotEmpty;
+}
+
+/// The service's address here. CROCELL_SOCKET overrides it for development.
+/// On Android the core lives in the app and the platform says where.
+CoreEndpoint defaultEndpoint() {
   final override = Platform.environment['CROCELL_SOCKET'];
-  if (override != null && override.isNotEmpty) return override;
-  if (Platform.isMacOS) return '/var/run/crocell/crocelld.sock';
-  if (Platform.isWindows) return r'C:\ProgramData\Crocell\crocelld.sock';
-  return '/run/crocell/crocelld.sock';
+  if (override != null && override.isNotEmpty) return CoreEndpoint.unix(override);
+  if (Platform.isMacOS) return const CoreEndpoint.unix('/var/run/crocell/crocelld.sock');
+  if (Platform.isWindows) {
+    return const CoreEndpoint.tcp('127.0.0.1', 41890, r'C:\ProgramData\Crocell\client-token');
+  }
+  return const CoreEndpoint.unix('/run/crocell/crocelld.sock');
 }
 
 class GrpcCoreApi implements CoreApi {
-  GrpcCoreApi(String socketPath)
+  GrpcCoreApi(CoreEndpoint endpoint)
       : _channel = ClientChannel(
-          InternetAddress(socketPath, type: InternetAddressType.unix),
-          port: 0,
+          endpoint.isUnix ? InternetAddress(endpoint.path, type: InternetAddressType.unix) : endpoint.host,
+          port: endpoint.port,
           options: const ChannelOptions(
             credentials: ChannelCredentials.insecure(),
             // The daemon is local: fail fast and let the UI say so.
             connectTimeout: Duration(seconds: 2),
           ),
         ) {
-    _client = CoreClient(_channel);
+    _client = CoreClient(_channel,
+        options: endpoint.isUnix ? null : CallOptions(providers: [_tokenFrom(endpoint.tokenFile)]));
   }
+
+  /// Read on every call: the service writes it on its first start, which
+  /// may come after the app has started.
+  static MetadataProvider _tokenFrom(String path) => (metadata, _) async {
+        try {
+          metadata['authorization'] = 'Bearer ${(await File(path).readAsString()).trim()}';
+        } on FileSystemException {
+          // No service yet: the call fails as unavailable anyway.
+        }
+      };
 
   final ClientChannel _channel;
   late final CoreClient _client;
@@ -84,7 +117,10 @@ class GrpcCoreApi implements CoreApi {
   }
 
   static CoreError _map(GrpcError e) {
-    if (e.code == StatusCode.unavailable || e.code == StatusCode.deadlineExceeded) {
+    // A missing token means the service was never installed here.
+    if (e.code == StatusCode.unavailable ||
+        e.code == StatusCode.deadlineExceeded ||
+        e.code == StatusCode.unauthenticated) {
       return const CoreError('Служба Crocell не отвечает', unavailable: true);
     }
     return CoreError(e.message ?? e.codeName);

@@ -462,6 +462,12 @@ func parseRuleInput(in string) (pb.RuleKind, string) {
 		return pb.RuleKind_RULE_KIND_PROCESS_PATH, in
 	case strings.HasPrefix(in, "+."):
 		return pb.RuleKind_RULE_KIND_DOMAIN_SUFFIX, strings.TrimPrefix(in, "+.")
+	// v2ray's notation, as in lists people copy from: domain: is the domain
+	// with its subdomains, full: the domain alone.
+	case strings.HasPrefix(in, "domain:"):
+		return pb.RuleKind_RULE_KIND_DOMAIN_SUFFIX, strings.TrimPrefix(in, "domain:")
+	case strings.HasPrefix(in, "full:"):
+		return pb.RuleKind_RULE_KIND_DOMAIN, strings.TrimPrefix(in, "full:")
 	case strings.ContainsAny(in, "*?"):
 		return pb.RuleKind_RULE_KIND_DOMAIN_WILDCARD, in
 	}

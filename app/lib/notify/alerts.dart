@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,39 +11,100 @@ import '../ui/format.dart';
 
 /// Where alerts go. System notifications in the app, a list in tests.
 abstract interface class Notifications {
-  Future<void> show(String title, String body);
+  /// A [payload] makes the notification clickable: [taps] reports it.
+  Future<void> show(String title, String body, {String? payload});
+
+  /// Payloads of notifications the person clicked, also the one that
+  /// launched the app.
+  Stream<String> get taps;
 }
 
 class SystemNotifications implements Notifications {
   final _plugin = FlutterLocalNotificationsPlugin();
+  final _taps = StreamController<String>.broadcast();
   Future<bool?>? _ready;
 
-  Future<bool?> _init() => _ready ??= _plugin.initialize(
-        settings: const InitializationSettings(
-          linux: LinuxInitializationSettings(defaultActionName: 'Открыть Crocell'),
-          macOS: DarwinInitializationSettings(),
-          windows: WindowsInitializationSettings(
-            appName: 'Crocell',
-            appUserModelId: 'net.wiseless.crocell',
-            guid: '6f3d2a8e-9b41-4c7e-8a55-2f1c0d7e4b93',
-          ),
-        ),
-      );
+  static bool get supported => Platform.isLinux || Platform.isMacOS || Platform.isWindows || Platform.isAndroid;
 
-  @override
-  Future<void> show(String title, String body) async {
-    if (!(Platform.isLinux || Platform.isMacOS || Platform.isWindows)) return;
+  Future<bool?> _init() => _ready ??= () async {
+        final ok = await _plugin.initialize(
+          settings: const InitializationSettings(
+            android: AndroidInitializationSettings('ic_notification'),
+            linux: LinuxInitializationSettings(defaultActionName: 'Открыть Crocell'),
+            macOS: DarwinInitializationSettings(),
+            windows: WindowsInitializationSettings(
+              appName: 'Crocell',
+              appUserModelId: 'net.wiseless.crocell',
+              guid: '6f3d2a8e-9b41-4c7e-8a55-2f1c0d7e4b93',
+            ),
+          ),
+          onDidReceiveNotificationResponse: (r) => _tapped(r.payload),
+        );
+        final launch = await _plugin.getNotificationAppLaunchDetails();
+        if (launch?.didNotificationLaunchApp ?? false) _tapped(launch!.notificationResponse?.payload);
+        // Android 13+ shows nothing until the person allows it.
+        await _plugin
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestNotificationsPermission();
+        return ok;
+      }();
+
+  void _tapped(String? payload) {
+    if (payload == null || payload.isEmpty) return;
+    presentWindow();
+    _taps.add(payload);
+  }
+
+  /// Starts listening for clicks, including the click that launched the app.
+  Future<void> start() async {
+    if (!supported) return;
     try {
       await _init();
-      // One id: a new alert replaces the previous one instead of piling up.
-      await _plugin.show(id: 1, title: title, body: body);
+    } catch (_) {}
+  }
+
+  @override
+  Stream<String> get taps => _taps.stream;
+
+  @override
+  Future<void> show(String title, String body, {String? payload}) async {
+    if (!supported) return;
+    try {
+      await _init();
+      await _plugin.show(
+        // One id per kind: a new alert replaces the previous one instead
+        // of piling up, and an update notice does not wipe out an alert.
+        id: payload == null ? 1 : 2,
+        title: title,
+        body: body,
+        payload: payload,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails('alerts', 'Состояние VPN',
+              channelDescription: 'Сбои подключения и новые версии Crocell'),
+        ),
+      );
     } catch (_) {
       // No notification daemon (bare WM, CI): the in-app warning still shows.
     }
   }
 }
 
-final notificationsProvider = Provider<Notifications>((ref) => SystemNotifications());
+const _window = MethodChannel('crocell/window');
+
+/// Brings the Crocell window to the front, as a notification click should.
+Future<void> presentWindow() async {
+  try {
+    await _window.invokeMethod<void>('present');
+  } catch (_) {
+    // Not implemented here (Android opens the activity by itself).
+  }
+}
+
+final notificationsProvider = Provider<Notifications>((ref) {
+  final n = SystemNotifications();
+  n.start();
+  return n;
+});
 
 /// What went wrong, in words, or null when nothing worth interrupting for.
 /// Pure, so the rules are testable without a notification server.
