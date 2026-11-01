@@ -1,0 +1,12 @@
+# Dart client for crocelld. Regenerate with `make proto` in core/, which runs
+# buf with this template.
+# Needs: dart pub global activate protoc_plugin
+version: v2
+inputs:
+  - directory: ../proto
+plugins:
+  - local: protoc-gen-dart
+    out: lib/src/proto
+    opt: grpc
+    include_imports: true
+    include_wkt: true

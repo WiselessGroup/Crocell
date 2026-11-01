@@ -13,11 +13,17 @@ class ConnectButton extends StatefulWidget {
     required this.connected,
     required this.onPressed,
     this.size = 240,
+    this.label,
   });
 
   final bool connected;
-  final VoidCallback onPressed;
+
+  /// Null disables the button (busy, or nothing to connect to).
+  final VoidCallback? onPressed;
   final double size;
+
+  /// What a screen reader announces. Defaults to connect/disconnect.
+  final String? label;
 
   @override
   State<ConnectButton> createState() => _ConnectButtonState();
@@ -69,27 +75,42 @@ class _ConnectButtonState extends State<ConnectButton>
 
     return Semantics(
       button: true,
+      enabled: widget.onPressed != null,
       toggled: widget.connected,
-      label: widget.connected ? 'Отключить VPN' : 'Подключить VPN',
-      child: GestureDetector(
-        onTap: widget.onPressed,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox.square(
-          dimension: size,
-          child: AnimatedBuilder(
-            animation: _spread,
-            builder: (context, _) {
-              final t = _spread.value;
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  _Glow(intensity: t.clamp(0, 1)),
-                  _wing('wing-left', _leftPivot, t, sign: 1),
-                  _wing('wing-right', _rightPivot, t, sign: -1),
-                  SvgPicture.asset('assets/brand/figure.svg'),
-                ],
-              );
-            },
+      label: widget.label ?? (widget.connected ? 'Отключить VPN' : 'Подключить VPN'),
+      excludeSemantics: true,
+      child: SizedBox.square(
+        dimension: size,
+        child: Material(
+          type: MaterialType.transparency,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          // InkWell, not a bare GestureDetector: keyboard focus, Enter/Space,
+          // hover and the pressed state come with it.
+          child: InkWell(
+            onTap: widget.onPressed,
+            customBorder: const CircleBorder(),
+            focusColor: CrocellColors.primary.withValues(alpha: 0.18),
+            hoverColor: CrocellColors.accent.withValues(alpha: 0.10),
+            child: AnimatedOpacity(
+              opacity: widget.onPressed == null && !widget.connected ? 0.6 : 1,
+              duration: const Duration(milliseconds: 150),
+              child: AnimatedBuilder(
+                animation: _spread,
+                builder: (context, _) {
+                  final t = _spread.value;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _Glow(intensity: t.clamp(0, 1)),
+                      _wing('wing-left', _leftPivot, t, sign: 1),
+                      _wing('wing-right', _rightPivot, t, sign: -1),
+                      SvgPicture.asset('assets/brand/figure.svg'),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),

@@ -142,6 +142,11 @@ func (s *Service) GetStatus(context.Context, *pb.GetStatusRequest) (*pb.Status, 
 
 func (s *Service) statusLocked() *pb.Status {
 	c := s.conn
+	// Disconnected: report the node that Connect would resume, so the client
+	// can show what is selected before anything runs.
+	if c.state == pb.ConnectionState_CONNECTION_STATE_DISCONNECTED && c.subID == "" {
+		c.subID, c.nodeID = s.st.Last.SubscriptionID, s.st.Last.NodeID
+	}
 	st := &pb.Status{
 		State:          c.state,
 		SubscriptionId: c.subID,
@@ -317,6 +322,7 @@ func (s *Service) SelectNode(ctx context.Context, req *pb.SelectNodeRequest) (*p
 			if err := s.store.save(s.st); err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
+			s.notifyLocked() // the client shows the selection before connecting
 			return s.statusLocked(), nil
 		}
 		return s.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.ID, NodeId: node.ID})

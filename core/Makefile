@@ -26,6 +26,8 @@ setcap: build
 proto:
 	go tool -modfile=tools/go.mod buf lint ../proto
 	go tool -modfile=tools/go.mod buf generate
+	# Dart client for the app; needs `dart pub global activate protoc_plugin`.
+	PATH="$$PATH:$$HOME/.pub-cache/bin" go tool -modfile=tools/go.mod buf generate --template ../app/buf.gen.yaml -o ../app
 
 # Installs crocelld as a systemd service controlled by the current user.
 install-daemon: build

@@ -187,6 +187,9 @@ func TestConnectSelectDisconnect(t *testing.T) {
 	if st.State != pb.ConnectionState_CONNECTION_STATE_DISCONNECTED || h.eng.stopped != 1 {
 		t.Errorf("after disconnect: %v, stopped %d", st.State, h.eng.stopped)
 	}
+	if st.NodeId != sub.Nodes[0].Id {
+		t.Errorf("disconnected status should show the node to resume, got %q", st.NodeId)
+	}
 
 	// Connect with no ids resumes the last node.
 	if _, err := h.client.Connect(ctx, &pb.ConnectRequest{}); err != nil {

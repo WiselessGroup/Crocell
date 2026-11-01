@@ -50,6 +50,7 @@ enum ConnectionState {
 
 message Status {
   ConnectionState state = 1;
+  // While disconnected: the node Connect would resume.
   string subscription_id = 2;
   string node_id = 3;
   google.protobuf.Timestamp connected_since = 4;

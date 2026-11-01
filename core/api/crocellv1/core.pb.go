@@ -191,8 +191,9 @@ func (AppMode) EnumDescriptor() ([]byte, []int) {
 }
 
 type Status struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	State          ConnectionState        `protobuf:"varint,1,opt,name=state,proto3,enum=crocell.v1.ConnectionState" json:"state,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	State ConnectionState        `protobuf:"varint,1,opt,name=state,proto3,enum=crocell.v1.ConnectionState" json:"state,omitempty"`
+	// While disconnected: the node Connect would resume.
 	SubscriptionId string                 `protobuf:"bytes,2,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
 	NodeId         string                 `protobuf:"bytes,3,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
 	ConnectedSince *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=connected_since,json=connectedSince,proto3" json:"connected_since,omitempty"`
