@@ -6,39 +6,53 @@ import 'format.dart';
 
 /// Two-letter country code in a rounded box. Text, so it reads on every
 /// platform and to a screen reader; the full name goes in the label.
+///
+/// [claimed] marks a country taken from the node's name, not measured: it is
+/// drawn quieter (outline, muted text) until a probe confirms the exit.
 class CountryBadge extends StatelessWidget {
-  const CountryBadge({super.key, required this.code, this.size = 36});
+  const CountryBadge({super.key, required this.code, this.claimed = false, this.size = 36});
 
   /// ISO code, or empty when unknown.
   final String code;
+  final bool claimed;
   final double size;
+
+  /// The measured exit country if probed, else the claimed one.
+  factory CountryBadge.forNode(Node node, {double size = 36}) {
+    final exit = node.hasLastProbe() ? node.lastProbe.exitCountry : '';
+    if (exit.isNotEmpty) return CountryBadge(code: exit, size: size);
+    return CountryBadge(code: claimedCountry(node.name), claimed: true, size: size);
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
     final known = code.isNotEmpty;
     return Semantics(
-      label: known ? countryName(code) : null,
+      label: known ? (claimed ? 'По названию ${countryName(code)}' : 'Выход: ${countryName(code)}') : null,
       excludeSemantics: true,
-      child: Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: t.raised,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: t.outline),
+      child: Tooltip(
+        message: known ? (claimed ? '${countryName(code)}, по названию ноды' : 'Выход: ${countryName(code)}') : '',
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: claimed ? null : t.raised,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: t.outline),
+          ),
+          child: known
+              ? Text(
+                  code.toUpperCase(),
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: claimed ? FontWeight.w500 : FontWeight.w700,
+                        color: claimed ? t.muted : null,
+                        letterSpacing: 0.5,
+                      ),
+                )
+              : Icon(Icons.public, size: size * 0.5, color: t.muted),
         ),
-        child: known
-            ? Text(
-                code.toUpperCase(),
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-              )
-            : Icon(Icons.public, size: size * 0.5, color: t.muted),
       ),
     );
   }

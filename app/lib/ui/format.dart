@@ -114,3 +114,43 @@ String? quota(Subscription s) {
   }
   return parts.isEmpty ? null : parts.join(' · ');
 }
+
+/// The country a node claims in its name, from a flag emoji ("🇨🇭 Reducto
+/// VPN"). A claim, not a fact: the probe tells where it really exits.
+String claimedCountry(String name) {
+  final runes = name.runes.toList();
+  for (var i = 0; i + 1 < runes.length; i++) {
+    final a = runes[i], b = runes[i + 1];
+    if (_isRegional(a) && _isRegional(b)) {
+      return String.fromCharCodes([a - 0x1F1E6 + 0x41, b - 0x1F1E6 + 0x41]);
+    }
+  }
+  return '';
+}
+
+bool _isRegional(int r) => r >= 0x1F1E6 && r <= 0x1F1FF;
+
+/// The name without a leading flag: the badge already shows the country,
+/// and Windows would draw the flag as two letters anyway.
+String displayName(String name) {
+  final runes = name.runes.toList();
+  if (runes.length > 2 && _isRegional(runes[0]) && _isRegional(runes[1])) {
+    return String.fromCharCodes(runes.skip(2)).trimLeft();
+  }
+  return name;
+}
+
+/// Matches a node by name, claimed or exit country, or protocol.
+bool nodeMatches(Node n, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return true;
+  final probe = n.hasLastProbe() ? n.lastProbe : null;
+  final claimed = claimedCountry(n.name);
+  return [
+    n.name,
+    nodeKind(n),
+    if (claimed.isNotEmpty) countryName(claimed),
+    if (probe != null && probe.exitCountry.isNotEmpty) countryName(probe.exitCountry),
+    if (probe != null) coloCity(probe.exitColo) ?? '',
+  ].any((s) => s.toLowerCase().contains(q));
+}

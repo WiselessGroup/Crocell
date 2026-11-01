@@ -81,10 +81,10 @@ class _ConnectButtonState extends State<ConnectButton>
       excludeSemantics: true,
       child: SizedBox.square(
         dimension: size,
+        // No clipping: the wing tips reach into the corners of the square,
+        // a circular clip cut them off. Only the ink is circular.
         child: Material(
           type: MaterialType.transparency,
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
           // InkWell, not a bare GestureDetector: keyboard focus, Enter/Space,
           // hover and the pressed state come with it.
           child: InkWell(

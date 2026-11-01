@@ -10,53 +10,158 @@ import 'format.dart';
 
 /// Subscriptions and their nodes. Picking a node switches to it right away
 /// when connected, or makes it the one the big button will use.
-class NodesView extends ConsumerWidget {
+///
+/// Built lazily with slivers: a single subscription can carry 150+ nodes.
+/// A search field appears once there is enough to search through, and each
+/// subscription folds away.
+class NodesView extends ConsumerStatefulWidget {
   const NodesView({super.key});
 
+  /// Below this many nodes in total a search field is clutter.
+  static const searchThreshold = 12;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NodesView> createState() => _NodesViewState();
+}
+
+class _NodesViewState extends ConsumerState<NodesView> {
+  final _query = TextEditingController();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final subs = ref.watch(subscriptionsProvider);
     final status = ref.watch(statusProvider).value;
+    final collapsed = ref.watch(collapsedProvider);
+    final t = context.tokens;
 
     return switch (subs) {
       AsyncData(:final value) when value.isEmpty => _Empty(onAdd: () => showAddSubscription(context)),
-      AsyncData(:final value) => ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            for (final sub in value) ...[
-              _SubscriptionHeader(sub: sub),
-              const SizedBox(height: 8),
-              Card(
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    for (final (i, node) in sub.nodes.indexed) ...[
-                      if (i > 0) const Divider(indent: 66),
-                      _NodeRow(
-                        sub: sub,
-                        node: node,
-                        selected: status?.subscriptionId == sub.id && status?.nodeId == node.id,
-                      ),
-                    ],
-                  ],
+      AsyncData(:final value) => () {
+        final total = value.fold<int>(0, (n, s) => n + s.nodes.length);
+        final query = _query.text;
+        var anyMatch = false;
+
+        final slivers = <Widget>[
+          if (total > NodesView.searchThreshold)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: TextField(
+                  controller: _query,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Найти ноду или страну',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: query.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Очистить',
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => setState(_query.clear),
+                          ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 24),
-            ],
+            ),
+        ];
+
+        for (final sub in value) {
+          final nodes = [
+            for (final n in sub.nodes)
+              if (nodeMatches(n, query)) n,
+          ];
+          if (query.isNotEmpty && nodes.isEmpty) continue;
+          anyMatch = true;
+          // Searching unfolds everything: hidden matches help nobody.
+          final folded = query.isEmpty && collapsed.contains(sub.id);
+
+          slivers.add(
+            SliverToBoxAdapter(
+              child: _SubscriptionHeader(sub: sub, shown: nodes.length, folded: folded),
+            ),
+          );
+          slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 8)));
+          if (!folded) {
+            slivers.add(
+              DecoratedSliver(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: t.outline),
+                ),
+                sliver: SliverList.separated(
+                  itemCount: nodes.length,
+                  separatorBuilder: (_, _) => const Divider(indent: 66),
+                  itemBuilder: (_, i) => _NodeRow(
+                    sub: sub,
+                    node: nodes[i],
+                    selected: status?.subscriptionId == sub.id && status?.nodeId == nodes[i].id,
+                  ),
+                ),
+              ),
+            );
+          }
+          slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
+        }
+
+        if (!anyMatch) {
+          slivers.add(
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: Text(
+                  'Ничего не нашлось по «$query»',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: t.muted),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              sliver: SliverMainAxisGroup(slivers: slivers),
+            ),
           ],
-        ),
+        );
+      }(),
       AsyncError(:final error) => Center(
-          child: Padding(padding: const EdgeInsets.all(24), child: Text('$error', textAlign: TextAlign.center)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('$error', textAlign: TextAlign.center),
         ),
+      ),
       _ => const Center(child: CircularProgressIndicator()),
     };
   }
 }
 
+/// Folded subscriptions. In memory: a fresh start shows everything.
+final collapsedProvider = NotifierProvider<_CollapsedNotifier, Set<String>>(_CollapsedNotifier.new);
+
+class _CollapsedNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => {};
+  void toggle(String id) => state = state.contains(id) ? ({...state}..remove(id)) : {...state, id};
+}
+
 class _SubscriptionHeader extends ConsumerWidget {
-  const _SubscriptionHeader({required this.sub});
+  const _SubscriptionHeader({required this.sub, required this.shown, required this.folded});
 
   final Subscription sub;
+
+  /// Nodes left after the search filter.
+  final int shown;
+  final bool folded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -74,54 +179,58 @@ class _SubscriptionHeader extends ConsumerWidget {
       }
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  sub.title.isNotEmpty ? sub.title : sub.urlMasked,
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  [
-                    '${sub.nodes.length} ${_plural(sub.nodes.length, 'нода', 'ноды', 'нод')}',
-                    ?q,
-                  ].join(' · '),
-                  style: theme.textTheme.bodySmall?.copyWith(color: t.muted),
-                ),
-              ],
-            ),
+    final count = shown == sub.nodes.length
+        ? '${sub.nodes.length} ${_plural(sub.nodes.length, 'нода', 'ноды', 'нод')}'
+        : '$shown из ${sub.nodes.length}';
+
+    return Row(
+      children: [
+        IconButton(
+          tooltip: folded ? 'Развернуть' : 'Свернуть',
+          icon: AnimatedRotation(
+            turns: folded ? -0.25 : 0,
+            duration: const Duration(milliseconds: 150),
+            child: const Icon(Icons.expand_more_rounded),
           ),
-          TextButton.icon(
-            onPressed: probing ? null : () => run(() => notifier.probe(sub.id)),
-            icon: probing
-                ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.travel_explore_rounded, size: 18),
-            label: Text(probing ? 'Проверяю…' : 'Проверить'),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Ещё',
-            icon: const Icon(Icons.more_horiz_rounded),
-            onSelected: (v) async {
-              switch (v) {
-                case 'refresh':
-                  await run(() => notifier.refresh(sub.id));
-                case 'remove':
-                  if (await _confirmRemove(context, sub)) await run(() => notifier.remove(sub.id));
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'refresh', child: Text('Обновить подписку')),
-              PopupMenuItem(value: 'remove', child: Text('Удалить подписку…')),
+          onPressed: () => ref.read(collapsedProvider.notifier).toggle(sub.id),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                sub.title.isNotEmpty ? sub.title : sub.urlMasked,
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text([count, ?q].join(' · '), style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
             ],
           ),
-        ],
-      ),
+        ),
+        TextButton.icon(
+          onPressed: probing ? null : () => run(() => notifier.probe(sub.id)),
+          icon: probing
+              ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.travel_explore_rounded, size: 18),
+          label: Text(probing ? 'Проверяю…' : 'Проверить'),
+        ),
+        PopupMenuButton<String>(
+          tooltip: 'Ещё',
+          icon: const Icon(Icons.more_horiz_rounded),
+          onSelected: (v) async {
+            switch (v) {
+              case 'refresh':
+                await run(() => notifier.refresh(sub.id));
+              case 'remove':
+                if (await _confirmRemove(context, sub)) await run(() => notifier.remove(sub.id));
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'refresh', child: Text('Обновить подписку')),
+            PopupMenuItem(value: 'remove', child: Text('Удалить подписку…')),
+          ],
+        ),
+      ],
     );
   }
 
@@ -130,8 +239,10 @@ class _SubscriptionHeader extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Удалить «${sub.title.isNotEmpty ? sub.title : sub.urlMasked}»?'),
-        content: const Text('Ноды из неё пропадут. Если VPN подключён через неё, он отключится. '
-            'Вернуть можно, снова добавив ссылку.'),
+        content: const Text(
+          'Ноды из неё пропадут. Если VPN подключён через неё, он отключится. '
+          'Вернуть можно, снова добавив ссылку.',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Удалить')),
@@ -172,14 +283,14 @@ class _NodeRow extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              CountryBadge(code: probe?.exitCountry ?? ''),
+              CountryBadge.forNode(node),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      node.name,
+                      displayName(node.name),
                       style: theme.textTheme.bodyLarge?.copyWith(fontWeight: selected ? FontWeight.w600 : null),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -192,9 +303,7 @@ class _NodeRow extends ConsumerWidget {
               Text(nodeKind(node), style: theme.textTheme.labelSmall?.copyWith(color: t.muted)),
               SizedBox(
                 width: 36,
-                child: selected
-                    ? Icon(Icons.check_rounded, color: t.brandText, semanticLabel: 'Выбрана')
-                    : null,
+                child: selected ? Icon(Icons.check_rounded, color: t.brandText, semanticLabel: 'Выбрана') : null,
               ),
             ],
           ),
@@ -228,7 +337,11 @@ class _Empty extends StatelessWidget {
               style: theme.textTheme.bodyMedium?.copyWith(color: context.tokens.muted),
             ),
             const SizedBox(height: 16),
-            FilledButton.icon(onPressed: onAdd, icon: const Icon(Icons.add_link_rounded), label: const Text('Добавить подписку')),
+            FilledButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add_link_rounded),
+              label: const Text('Добавить подписку'),
+            ),
           ],
         ),
       ),

@@ -104,3 +104,26 @@ Subscription sampleSubscription() => Subscription(
         Node(id: 'n3', name: 'autoWISELESS-2 (HYSTERIA)', type: 'hysteria2', server: 'hy.example.com', port: 443),
       ],
     );
+
+/// A big provider-style subscription: flag-prefixed names, 150 nodes.
+Subscription bigSubscription() {
+  const flags = {'CH': '🇨🇭', 'FI': '🇫🇮', 'FR': '🇫🇷', 'GB': '🇬🇧'};
+  const names = {'CH': 'Швейцария', 'FI': 'Финляндия', 'FR': 'Франция', 'GB': 'Великобритания'};
+  final codes = flags.keys.toList();
+  return Subscription(
+    id: 'sub2',
+    title: 'ALLVPN',
+    urlMasked: 'https://ftn.example.net/sub/…f9dbca',
+    nodes: [
+      for (var i = 0; i < 150; i++)
+        Node(
+          id: 'b$i',
+          name: '${flags[codes[i % 4]]} Provider $i | ${names[codes[i % 4]]}',
+          type: 'vless',
+          network: i.isEven ? 'grpc' : 'tcp',
+          server: 'n$i.example.com',
+          port: 443,
+        ),
+    ],
+  );
+}

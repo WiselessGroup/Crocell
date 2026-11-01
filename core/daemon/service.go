@@ -441,7 +441,9 @@ func (s *Service) ProbeNodes(req *pb.ProbeNodesRequest, stream grpc.ServerStream
 
 	ctx := stream.Context()
 	results := make(chan *pb.ProbeResult)
-	sem := make(chan struct{}, 8)
+	// Probes mostly wait on the network; 16 at once keeps a big subscription
+	// to a few rounds of probe.Timeout at worst.
+	sem := make(chan struct{}, 16)
 	var wg sync.WaitGroup
 	for _, n := range nodes {
 		wg.Add(1)

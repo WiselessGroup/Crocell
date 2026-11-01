@@ -128,10 +128,15 @@ void main() {
 
   testWidgets('mode picker switches to the whole system', (tester) async {
     final core = await pumpApp(tester, FakeCore(subs: [sampleSubscription()], status: connectedTo('n1')));
-    await tester.tap(find.text('Вся система'));
+    await tester.tap(find.text('Туннель'));
     await tester.pumpAndSettle();
     expect(core.calls.last, startsWith('settings TUNNEL_MODE_TUN'));
+
+    await tester.tap(find.byTooltip('Чем отличаются режимы'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('игры, Telegram'), findsOneWidget);
+    await tester.tap(find.text('Понятно'));
+    await tester.pumpAndSettle();
     await unmount(tester);
   });
 
@@ -157,6 +162,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(core.calls.last, 'settings TUNNEL_MODE_SYSTEM_PROXY steam=APP_MODE_BYPASS');
     expect(find.text('Напрямую'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('many subscriptions: search by claimed country, fold one away', (tester) async {
+    await pumpApp(
+      tester,
+      FakeCore(subs: [sampleSubscription(), bigSubscription()], status: connectedTo('n1')),
+      size: const Size(1200, 800),
+    );
+
+    expect(find.text('150 нод'), findsOneWidget);
+    expect(find.text('Provider 0 | Швейцария'), findsOneWidget, reason: 'leading flag stripped from the name');
+    expect(find.text('CH'), findsWidgets, reason: 'claimed country shown before any probe');
+
+    await tester.enterText(find.widgetWithText(TextField, 'Найти ноду или страну'), 'финляндия');
+    await tester.pumpAndSettle();
+    expect(find.text('38 из 150'), findsOneWidget);
+    expect(find.text('WISELESS'), findsNothing, reason: 'subscriptions without matches hide');
+
+    await tester.enterText(find.widgetWithText(TextField, 'Найти ноду или страну'), 'zzz');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Ничего не нашлось'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Очистить'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Свернуть').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Provider 0 | Швейцария'), findsNothing);
+    expect(find.byTooltip('Развернуть'), findsOneWidget);
     await unmount(tester);
   });
 }

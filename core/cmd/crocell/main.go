@@ -107,7 +107,7 @@ func cmdNodes(ctx context.Context, args []string) error {
 	results := make([]probe.Result, len(sub.Nodes))
 	if *doProbe {
 		var wg sync.WaitGroup
-		sem := make(chan struct{}, 8)
+		sem := make(chan struct{}, 16)
 		for i, n := range sub.Nodes {
 			wg.Add(1)
 			go func() {

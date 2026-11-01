@@ -48,7 +48,9 @@ class ConnectPanel extends ConsumerWidget {
     };
 
     return LayoutBuilder(builder: (context, c) {
-      final buttonSize = (c.maxHeight * 0.36).clamp(160.0, 260.0);
+      // The figure is the point of the screen: as large as the height
+      // allows while the status, node and mode still fit below it.
+      final buttonSize = (c.maxHeight * 0.46).clamp(200.0, 360.0).clamp(0.0, c.maxWidth - 32);
       return SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: ConstrainedBox(
@@ -170,14 +172,14 @@ class _NodeCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              CountryBadge(code: sel?.node.lastProbe.exitCountry ?? ''),
+              if (sel != null) CountryBadge.forNode(sel.node) else const CountryBadge(code: ''),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      sel?.node.name ?? 'Нода не выбрана',
+                      sel == null ? 'Нода не выбрана' : displayName(sel.node.name),
                       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -243,22 +245,21 @@ class _ModePicker extends ConsumerWidget {
         ? TunnelMode.TUNNEL_MODE_TUN
         : TunnelMode.TUNNEL_MODE_SYSTEM_PROXY;
 
-    return Column(
+    return Row(
       children: [
-        SizedBox(
-          width: double.infinity,
+        Expanded(
           child: SegmentedButton<TunnelMode>(
             showSelectedIcon: false,
             segments: const [
               ButtonSegment(
                 value: TunnelMode.TUNNEL_MODE_SYSTEM_PROXY,
                 icon: Icon(Icons.public_rounded),
-                label: Text('Системный прокси'),
+                label: Text('Прокси'),
               ),
               ButtonSegment(
                 value: TunnelMode.TUNNEL_MODE_TUN,
                 icon: Icon(Icons.shield_outlined),
-                label: Text('Вся система'),
+                label: Text('Туннель'),
               ),
             ],
             selected: {mode},
@@ -271,15 +272,69 @@ class _ModePicker extends ConsumerWidget {
             },
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          mode == TunnelMode.TUNNEL_MODE_TUN
-              ? 'Через VPN идут все программы, даже те, что не умеют прокси: игры, Telegram, терминал.'
-              : 'Через VPN идут браузеры и программы, которые слушают системный прокси.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: t.muted),
+        const SizedBox(width: 4),
+        IconButton(
+          tooltip: 'Чем отличаются режимы',
+          icon: Icon(Icons.info_outline_rounded, color: t.muted),
+          onPressed: () => showDialog<void>(context: context, builder: (_) => const _ModesInfo()),
         ),
       ],
+    );
+  }
+}
+
+/// Written for people who don't know what a proxy is, and edited with the
+/// humanizer skill so it reads like a person explaining, not a spec.
+class _ModesInfo extends StatelessWidget {
+  const _ModesInfo();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final heading = theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600);
+    final body = theme.textTheme.bodyMedium;
+
+    Widget mode(IconData icon, String title, String text) => Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(padding: const EdgeInsets.only(top: 2), child: Icon(icon, size: 20)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [Text(title, style: heading), const SizedBox(height: 4), Text(text, style: body)],
+              ),
+            ),
+          ],
+        );
+
+    return AlertDialog(
+      title: const Text('Прокси или туннель'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            mode(
+              Icons.public_rounded,
+              'Прокси',
+              'Crocell прописывает себя в системные настройки прокси, и браузер с большинством программ '
+                  'идут через VPN. Некоторые программы эти настройки игнорируют, им VPN не достанется.',
+            ),
+            const SizedBox(height: 16),
+            mode(
+              Icons.shield_outlined,
+              'Туннель',
+              'Через VPN идёт весь трафик устройства: игры, Telegram, терминал. Пригодится, когда '
+                  'программа не видит прокси или не даёт его настроить.',
+            ),
+            const SizedBox(height: 16),
+            Text('Если не знаете, что выбрать, начните с прокси.', style: body?.copyWith(color: context.tokens.muted)),
+          ],
+        ),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Понятно'))],
     );
   }
 }

@@ -30,6 +30,9 @@ var traceURLs = []string{
 	"https://www.cloudflare.com/cdn-cgi/trace",
 }
 
+// Timeout caps one node's probe, entry lookup and both attempts together.
+const Timeout = 10 * time.Second
+
 // Result is what one probe found. Exit fields are empty when Err is set.
 type Result struct {
 	EntryIPs []string // where the node's server name resolves locally
@@ -55,6 +58,11 @@ func Node(ctx context.Context, proxy map[string]any) Result {
 // Proxy probes an already parsed adapter. server is the node's address, used
 // only for the entry side.
 func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
+	// One budget for the whole probe, both trace URLs included: a dead node
+	// must not hold a subscription of 150 nodes hostage for minutes.
+	ctx, cancel := context.WithTimeout(ctx, Timeout)
+	defer cancel()
+
 	var res Result
 	res.EntryIPs = resolveEntry(ctx, server)
 
@@ -70,7 +78,6 @@ func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
 			// One connection per probe: we measure the node, not a warm pool.
 			DisableKeepAlives: true,
 		},
-		Timeout: 15 * time.Second,
 	}
 
 	var resp *http.Response
@@ -84,8 +91,8 @@ func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
 		}
 		start = time.Now()
 		resp, err = client.Do(req)
-		if err == nil {
-			break
+		if err == nil || ctx.Err() != nil {
+			break // success, or the budget is spent: no point in the fallback
 		}
 	}
 	if err != nil {
