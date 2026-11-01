@@ -59,6 +59,15 @@ type harness struct {
 	eng    *fakeEngine
 	subURL string
 	dir    string
+
+	checkMu  sync.Mutex
+	checkErr error // what the live check reports next
+}
+
+func (h *harness) setCheckErr(err error) {
+	h.checkMu.Lock()
+	h.checkErr = err
+	h.checkMu.Unlock()
 }
 
 func newHarness(t *testing.T) *harness {
@@ -82,6 +91,16 @@ func newHarness(t *testing.T) *harness {
 		Engine:   h.eng,
 		Probe: func(ctx context.Context, proxy map[string]any) probe.Result {
 			return probe.Result{ExitIP: "203.0.113.7", ExitCountry: "NL", ExitColo: "AMS", Latency: 140 * time.Millisecond}
+		},
+		// Never the real check here: it would dial 127.0.0.1:7890, where
+		// the developer's own VPN client may well be listening.
+		Check: func(ctx context.Context, mode pb.TunnelMode, port int) probe.Result {
+			h.checkMu.Lock()
+			defer h.checkMu.Unlock()
+			if h.checkErr != nil {
+				return probe.Result{Err: h.checkErr}
+			}
+			return probe.Result{ExitIP: "203.0.113.8", ExitCountry: "DE", ExitColo: "FRA", Latency: 90 * time.Millisecond}
 		},
 	})
 	if err != nil {
@@ -252,7 +271,9 @@ func TestStatePersists(t *testing.T) {
 	h := newHarness(t)
 	sub := h.add(t)
 
-	svc, err := New(Config{StateDir: h.dir, Engine: &fakeEngine{}})
+	svc, err := New(Config{StateDir: h.dir, Engine: &fakeEngine{}, Check: func(context.Context, pb.TunnelMode, int) probe.Result {
+		return probe.Result{}
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -323,4 +344,75 @@ func TestWatchStatusSeesChanges(t *testing.T) {
 			return
 		}
 	}
+}
+
+// waitStatus follows WatchStatus until ok accepts a status.
+func waitStatus(t *testing.T, h *harness, ok func(*pb.Status) bool) *pb.Status {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	stream, err := h.client.WatchStatus(ctx, &pb.WatchStatusRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for {
+		st, err := stream.Recv()
+		if err != nil {
+			t.Fatalf("waiting for status: %v", err)
+		}
+		if ok(st) {
+			return st
+		}
+	}
+}
+
+func TestLiveCheckAfterConnect(t *testing.T) {
+	h := newHarness(t)
+	sub := h.add(t)
+	if _, err := h.client.Connect(context.Background(), &pb.ConnectRequest{SubscriptionId: sub.Id}); err != nil {
+		t.Fatal(err)
+	}
+	st := waitStatus(t, h, func(s *pb.Status) bool { return s.LiveCheck != nil && !s.Checking })
+	if st.LiveCheck.ExitCountry != "DE" || st.LiveCheck.Error != "" {
+		t.Errorf("check = %v", st.LiveCheck)
+	}
+}
+
+func TestBrokenConnectionIsReported(t *testing.T) {
+	h := newHarness(t)
+	sub := h.add(t)
+	h.setCheckErr(errors.New("probe: context deadline exceeded"))
+	if _, err := h.client.Connect(context.Background(), &pb.ConnectRequest{SubscriptionId: sub.Id}); err != nil {
+		t.Fatal(err)
+	}
+	st := waitStatus(t, h, func(s *pb.Status) bool { return s.LiveCheck != nil && !s.Checking })
+	if st.State != pb.ConnectionState_CONNECTION_STATE_CONNECTED || st.LiveCheck.Error == "" {
+		t.Errorf("want connected with a failed check, got %v / %v", st.State, st.LiveCheck)
+	}
+
+	// Disconnecting forgets the check.
+	st, err := h.client.Disconnect(context.Background(), &pb.DisconnectRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.LiveCheck != nil {
+		t.Errorf("check survived disconnect: %v", st.LiveCheck)
+	}
+}
+
+func TestRecheckOnInterval(t *testing.T) {
+	old := CheckInterval
+	CheckInterval = 50 * time.Millisecond
+	t.Cleanup(func() { CheckInterval = old })
+
+	h := newHarness(t)
+	sub := h.add(t)
+	if _, err := h.client.Connect(context.Background(), &pb.ConnectRequest{SubscriptionId: sub.Id}); err != nil {
+		t.Fatal(err)
+	}
+	waitStatus(t, h, func(s *pb.Status) bool { return s.LiveCheck != nil && s.LiveCheck.Error == "" })
+
+	// The node dies later: the next round must notice.
+	h.setCheckErr(errors.New("probe: connection reset"))
+	waitStatus(t, h, func(s *pb.Status) bool { return s.LiveCheck != nil && s.LiveCheck.Error != "" })
 }

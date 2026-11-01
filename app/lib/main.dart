@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'notify/alerts.dart';
 import 'sysproxy/controller.dart';
 import 'theme.dart';
 import 'ui/home.dart';
@@ -16,6 +17,8 @@ class CrocellApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Keeps the desktop proxy settings in step with the connection.
     ref.watch(systemProxyControllerProvider);
+    // System notifications when the connection fails or stops working.
+    ref.watch(connectionAlertsProvider);
 
     return MaterialApp(
       title: 'Crocell',

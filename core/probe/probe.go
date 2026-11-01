@@ -12,6 +12,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -79,13 +81,38 @@ func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
 			DisableKeepAlives: true,
 		},
 	}
+	trace(ctx, client, &res)
+	return res
+}
 
+// System checks the path the whole machine uses: with TUN up, a plain
+// request from this process goes through the tunnel like anyone else's.
+func System(ctx context.Context) Result {
+	ctx, cancel := context.WithTimeout(ctx, Timeout)
+	defer cancel()
+	var res Result
+	trace(ctx, &http.Client{Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}}, &res)
+	return res
+}
+
+// ViaProxy checks the path proxy-mode apps use: the local mixed port.
+func ViaProxy(ctx context.Context, port int) Result {
+	ctx, cancel := context.WithTimeout(ctx, Timeout)
+	defer cancel()
+	var res Result
+	proxy := &url.URL{Scheme: "http", Host: net.JoinHostPort("127.0.0.1", strconv.Itoa(port))}
+	trace(ctx, &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy), DisableKeepAlives: true}}, &res)
+	return res
+}
+
+// trace asks Cloudflare who we are, IPv4 first, and fills res.
+func trace(ctx context.Context, client *http.Client, res *Result) {
 	var resp *http.Response
 	var err error
 	var start time.Time
-	for _, url := range traceURLs {
+	for _, u := range traceURLs {
 		var req *http.Request
-		req, err = http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 		if err != nil {
 			break
 		}
@@ -97,21 +124,20 @@ func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
 	}
 	if err != nil {
 		res.Err = fmt.Errorf("probe: %w", err)
-		return res
+		return
 	}
 	defer resp.Body.Close()
 	res.Latency = time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
 		res.Err = fmt.Errorf("probe: trace returned HTTP %d", resp.StatusCode)
-		return res
+		return
 	}
 
-	trace := parseTrace(io.LimitReader(resp.Body, 4096))
-	res.ExitIP = trace["ip"]
-	res.ExitCountry = trace["loc"]
-	res.ExitColo = trace["colo"]
-	return res
+	t := parseTrace(io.LimitReader(resp.Body, 4096))
+	res.ExitIP = t["ip"]
+	res.ExitCountry = t["loc"]
+	res.ExitColo = t["colo"]
 }
 
 func resolveEntry(ctx context.Context, server string) []string {

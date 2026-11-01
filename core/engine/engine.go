@@ -92,11 +92,12 @@ func Start(opts Options) error {
 	running = true
 
 	// mihomo keeps going when TUN fails to start: it logs the reason and
-	// flips Enable off. Saying "connected" then would be a lie.
-	if opts.Tun != nil && !listener.GetTunConf().Enable {
-		executor.Shutdown()
+	// flips Enable off. Saying "connected" then would be a lie, so check
+	// both its record and, where we can, the interface itself.
+	if opts.Tun != nil && (!listener.GetTunConf().Enable || !tunInterfaceUp()) {
+		applyIdleLocked()
 		running = false
-		return errors.New("engine: TUN did not start, the reason is in the log above")
+		return errors.New("engine: TUN did not start, the reason is in the service log")
 	}
 
 	if opts.Selected != "" {
@@ -145,13 +146,45 @@ func Selected() string {
 	return ""
 }
 
-// Stop shuts listeners and connections down.
+// Stop closes the tunnel and the mixed port but keeps mihomo alive.
+//
+// Not executor.Shutdown: that closes TUN without forgetting its config, and
+// mihomo then skips recreating an "unchanged" TUN on the next Start, so the
+// second connect in a process ran with no tunnel at all while claiming to be
+// connected. Applying an idle config makes mihomo record TUN as disabled.
 func Stop() {
 	mu.Lock()
 	defer mu.Unlock()
 	if running {
-		executor.Shutdown()
+		applyIdleLocked()
 		running = false
+	}
+}
+
+// Shutdown is Stop plus mihomo's own teardown, for when the process exits.
+func Shutdown() {
+	Stop()
+	mu.Lock()
+	defer mu.Unlock()
+	executor.Shutdown()
+}
+
+func applyIdleLocked() {
+	idle, err := yaml.Marshal(map[string]any{
+		"mode":       "rule",
+		"log-level":  "warning",
+		"mixed-port": 0,
+		"tun":        map[string]any{"enable": false},
+		"dns":        map[string]any{"enable": false},
+		"rules":      []string{"MATCH,REJECT"},
+	})
+	if err == nil {
+		err = hub.Parse(idle)
+	}
+	if err != nil {
+		// Should never happen with a constant config; fall back to closing
+		// what we can.
+		executor.Shutdown()
 	}
 }
 
@@ -246,6 +279,7 @@ func tunConfig(t *TunOptions) map[string]any {
 	tun := map[string]any{
 		"enable": true,
 		"stack":  stack,
+		"device": tunDevice, // empty on macOS, which insists on utunN
 		"dns-hijack": []string{
 			"any:53",
 			"tcp://any:53",

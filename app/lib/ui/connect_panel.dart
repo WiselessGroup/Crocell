@@ -107,6 +107,8 @@ class _StatusText extends StatelessWidget {
 
     final (title, color) = switch (s) {
       null => ('Связываюсь со службой…', null),
+      _ when s.isConnected && s.hasLiveCheck() && s.liveCheck.error.isNotEmpty =>
+        ('Подключено, но не работает', theme.colorScheme.error),
       _ when s.isConnected => ('Подключено', t.brandText),
       _ when s.isConnecting => ('Подключаюсь…', null),
       _ when s.isDisconnecting => ('Отключаюсь…', null),
@@ -140,6 +142,26 @@ class _StatusText extends StatelessWidget {
           ],
         ),
       );
+      // What the live check found: where we exit, or that nothing gets out.
+      final check = s.hasLiveCheck() ? s.liveCheck : null;
+      final checkLine = switch (check) {
+        _ when check == null && s.checking => 'Проверяю, работает ли интернет…',
+        null => null,
+        _ when check.error.isNotEmpty => 'Интернет через VPN не идёт. Попробуйте другую ноду.',
+        _ => 'Выход: ${exitPlace(check)}',
+      };
+      if (checkLine != null) {
+        final broken = check != null && check.error.isNotEmpty;
+        detail = Column(children: [
+          detail,
+          const SizedBox(height: 4),
+          Text(
+            checkLine,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(color: broken ? theme.colorScheme.error : t.muted),
+          ),
+        ]);
+      }
     } else if (s != null && s.isFailed && s.error.isNotEmpty) {
       detail = SelectableText(s.error, textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: t.muted));
     } else if (s != null && s.isBusy) {

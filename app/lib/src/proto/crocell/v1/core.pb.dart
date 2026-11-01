@@ -33,6 +33,8 @@ class Status extends $pb.GeneratedMessage {
     $core.String? error,
     TunnelMode? tunnelMode,
     $core.int? mixedPort,
+    ProbeResult? liveCheck,
+    $core.bool? checking,
   }) {
     final result = Status._();
     if (state != null) result.state = state;
@@ -43,6 +45,8 @@ class Status extends $pb.GeneratedMessage {
     if (error != null) result.error = error;
     if (tunnelMode != null) result.tunnelMode = tunnelMode;
     if (mixedPort != null) result.mixedPort = mixedPort;
+    if (liveCheck != null) result.liveCheck = liveCheck;
+    if (checking != null) result.checking = checking;
     return result;
   }
 
@@ -71,6 +75,9 @@ class Status extends $pb.GeneratedMessage {
     ..aE<TunnelMode>(7, _omitFieldNames ? '' : 'tunnelMode',
         enumValues: TunnelMode.values)
     ..aI(8, _omitFieldNames ? '' : 'mixedPort', fieldType: $pb.PbFieldType.OU3)
+    ..aOM<ProbeResult>(9, _omitFieldNames ? '' : 'liveCheck',
+        subBuilder: ProbeResult.$_createMessage)
+    ..aOB(10, _omitFieldNames ? '' : 'checking')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -172,6 +179,30 @@ class Status extends $pb.GeneratedMessage {
   $core.bool hasMixedPort() => $_has(7);
   @$pb.TagNumber(8)
   void clearMixedPort() => $_clearField(8);
+
+  /// Does the internet actually work through the VPN? Checked right after
+  /// connecting and every couple of minutes while connected, along the path
+  /// the system uses (TUN or the mixed port). Unset until the first check.
+  /// Not "check": that name collides with GeneratedMessage.check() in Dart.
+  @$pb.TagNumber(9)
+  ProbeResult get liveCheck => $_getN(8);
+  @$pb.TagNumber(9)
+  set liveCheck(ProbeResult value) => $_setField(9, value);
+  @$pb.TagNumber(9)
+  $core.bool hasLiveCheck() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearLiveCheck() => $_clearField(9);
+  @$pb.TagNumber(9)
+  ProbeResult ensureLiveCheck() => $_ensure(8);
+
+  @$pb.TagNumber(10)
+  $core.bool get checking => $_getBF(9);
+  @$pb.TagNumber(10)
+  set checking($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasChecking() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearChecking() => $_clearField(10);
 }
 
 class Traffic extends $pb.GeneratedMessage {

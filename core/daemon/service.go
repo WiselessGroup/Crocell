@@ -47,6 +47,21 @@ type Config struct {
 	Engine   Engine                                                       // default: mihomo
 	Fetcher  *subscription.Fetcher                                        // default: plain HTTP
 	Probe    func(ctx context.Context, proxy map[string]any) probe.Result // default: probe.Node
+	// Check tests the live path while connected: through TUN or the mixed
+	// port. Default: probe.System / probe.ViaProxy.
+	Check func(ctx context.Context, mode pb.TunnelMode, port int) probe.Result
+}
+
+// CheckInterval is how often a live connection is re-checked. One small
+// HTTPS request: cheap, and it is how "it silently stopped working" turns
+// into a notification.
+var CheckInterval = 2 * time.Minute
+
+func realCheck(ctx context.Context, mode pb.TunnelMode, port int) probe.Result {
+	if mode == pb.TunnelMode_TUNNEL_MODE_TUN {
+		return probe.System(ctx)
+	}
+	return probe.ViaProxy(ctx, port)
 }
 
 type Service struct {
@@ -57,6 +72,7 @@ type Service struct {
 	eng     Engine
 	fetcher *subscription.Fetcher
 	probe   func(context.Context, map[string]any) probe.Result
+	check   func(context.Context, pb.TunnelMode, int) probe.Result
 
 	// op serialises connect/disconnect/reconfigure, which can take seconds
 	// (TUN setup). mu guards the fields below and is never held across them.
@@ -67,6 +83,8 @@ type Service struct {
 	conn    connection
 	probes  map[string]*pb.ProbeResult // by node id
 	changed chan struct{}              // closed and replaced on every change
+
+	stopChecks context.CancelFunc // ends the running check loop, if any
 }
 
 type connection struct {
@@ -77,6 +95,9 @@ type connection struct {
 	err    string
 	mode   pb.TunnelMode
 	port   int
+
+	check    *pb.ProbeResult
+	checking bool
 }
 
 // New loads saved state. Nothing connects until a client asks.
@@ -103,6 +124,10 @@ func New(cfg Config) (*Service, error) {
 	if s.probe == nil {
 		s.probe = probe.Node
 	}
+	s.check = cfg.Check
+	if s.check == nil {
+		s.check = realCheck
+	}
 
 	st, err := s.store.load()
 	if err != nil {
@@ -116,6 +141,9 @@ func New(cfg Config) (*Service, error) {
 func (s *Service) Close() {
 	s.op.Lock()
 	defer s.op.Unlock()
+	s.mu.Lock()
+	s.endChecksLocked()
+	s.mu.Unlock()
 	s.eng.Stop()
 }
 
@@ -127,9 +155,58 @@ func (s *Service) notifyLocked() {
 
 func (s *Service) setConn(c connection) {
 	s.mu.Lock()
+	s.endChecksLocked()
 	s.conn = c
 	s.notifyLocked()
 	s.mu.Unlock()
+}
+
+func (s *Service) endChecksLocked() {
+	if s.stopChecks != nil {
+		s.stopChecks()
+		s.stopChecks = nil
+	}
+}
+
+// startChecksLocked checks the live connection now and then every
+// CheckInterval, until the connection changes. Caller holds mu.
+func (s *Service) startChecksLocked() {
+	s.endChecksLocked()
+	ctx, cancel := context.WithCancel(context.Background())
+	s.stopChecks = cancel
+	mode, port, nodeID := s.conn.mode, s.conn.port, s.conn.nodeID
+
+	go func() {
+		ticker := time.NewTicker(CheckInterval)
+		defer ticker.Stop()
+		for {
+			s.mu.Lock()
+			if ctx.Err() != nil {
+				s.mu.Unlock()
+				return
+			}
+			s.conn.checking = true
+			s.notifyLocked()
+			s.mu.Unlock()
+
+			r := toProtoProbe(nodeID, s.check(ctx, mode, port))
+
+			s.mu.Lock()
+			if ctx.Err() != nil {
+				s.mu.Unlock()
+				return
+			}
+			s.conn.check, s.conn.checking = r, false
+			s.notifyLocked()
+			s.mu.Unlock()
+
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
 }
 
 // ---------- State ----------
@@ -153,6 +230,8 @@ func (s *Service) statusLocked() *pb.Status {
 		NodeId:         c.nodeID,
 		Error:          c.err,
 		TunnelMode:     c.mode,
+		LiveCheck:      c.check,
+		Checking:       c.checking,
 	}
 	if c.state == pb.ConnectionState_CONNECTION_STATE_CONNECTED {
 		st.ConnectedSince = timestamppb.New(c.since)
@@ -242,6 +321,9 @@ func (s *Service) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.Stat
 			state: pb.ConnectionState_CONNECTION_STATE_CONNECTED, subID: sub.ID, nodeID: node.ID,
 			mode: mode, port: opts.MixedPort, since: time.Now(),
 		})
+		s.mu.Lock()
+		s.startChecksLocked()
+		s.mu.Unlock()
 	}
 
 	s.mu.Lock()
@@ -337,6 +419,8 @@ func (s *Service) SelectNode(ctx context.Context, req *pb.SelectNodeRequest) (*p
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.conn.nodeID = node.ID
+	s.conn.check = nil
+	s.startChecksLocked() // a new node: check it right away
 	s.st.Last = selection{SubscriptionID: sub.ID, NodeID: node.ID}
 	s.notifyLocked()
 	if err := s.store.save(s.st); err != nil {

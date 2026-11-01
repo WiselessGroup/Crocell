@@ -61,6 +61,12 @@ message Status {
   // HTTP+SOCKS on 127.0.0.1 while connected, for the client to put into
   // the system proxy settings (that has to happen as the user, not root).
   uint32 mixed_port = 8;
+  // Does the internet actually work through the VPN? Checked right after
+  // connecting and every couple of minutes while connected, along the path
+  // the system uses (TUN or the mixed port). Unset until the first check.
+  // Not "check": that name collides with GeneratedMessage.check() in Dart.
+  ProbeResult live_check = 9;
+  bool checking = 10;
 }
 
 message Traffic {

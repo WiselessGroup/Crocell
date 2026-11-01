@@ -1,6 +1,7 @@
 import 'package:crocell/data/core_api.dart';
 import 'package:crocell/data/state.dart';
 import 'package:crocell/main.dart';
+import 'package:crocell/notify/alerts.dart';
 import 'package:crocell/sysproxy/controller.dart';
 import 'package:crocell/sysproxy/sysproxy.dart';
 import 'package:crocell/widgets/connect_button.dart';
@@ -10,6 +11,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_core.dart';
+
+/// Notifications that land in a list instead of on the desktop.
+class RecordingNotifications implements Notifications {
+  final shown = <String>[];
+  @override
+  Future<void> show(String title, String body) async => shown.add(title);
+}
 
 /// A system proxy that records instead of touching the desktop.
 class RecordingProxy extends SystemProxy {
@@ -28,6 +36,7 @@ Future<FakeCore> pumpApp(
   FakeCore core, {
   Size size = const Size(420, 860),
   RecordingProxy? proxy,
+  RecordingNotifications? notifications,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -39,6 +48,7 @@ Future<FakeCore> pumpApp(
     overrides: [
       coreApiProvider.overrideWithValue(core),
       systemProxyProvider.overrideWithValue(proxy ?? RecordingProxy()),
+      notificationsProvider.overrideWithValue(notifications ?? RecordingNotifications()),
     ],
     child: const CrocellApp(),
   ));
@@ -191,6 +201,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Provider 0 | Швейцария'), findsNothing);
     expect(find.byTooltip('Развернуть'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('a connection that stops working warns on screen and by notification', (tester) async {
+    final alerts = RecordingNotifications();
+    final core = await pumpApp(
+      tester,
+      FakeCore(subs: [sampleSubscription()], status: connectedTo('n1')),
+      notifications: alerts,
+    );
+
+    core.push(connectedTo('n1')..liveCheck = ProbeResult(nodeId: 'n1', exitCountry: 'DE', exitColo: 'FRA', exitIp: '1.2.3.4'));
+    await tester.pumpAndSettle();
+    expect(find.text('Выход: Германия, Франкфурт'), findsOneWidget);
+    expect(alerts.shown, isEmpty);
+
+    core.push(connectedTo('n1')..liveCheck = ProbeResult(nodeId: 'n1', error: 'probe: timeout'));
+    await tester.pumpAndSettle();
+    expect(find.text('Подключено, но не работает'), findsOneWidget);
+    expect(alerts.shown, ['VPN подключён, но интернет не идёт']);
+
+    core.push(connectedTo('n1')..liveCheck = ProbeResult(nodeId: 'n1', exitCountry: 'DE', exitColo: 'FRA', exitIp: '1.2.3.4'));
+    await tester.pumpAndSettle();
+    expect(alerts.shown.last, 'Интернет через VPN снова работает');
     await unmount(tester);
   });
 }

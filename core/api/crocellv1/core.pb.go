@@ -203,7 +203,13 @@ type Status struct {
 	TunnelMode TunnelMode `protobuf:"varint,7,opt,name=tunnel_mode,json=tunnelMode,proto3,enum=crocell.v1.TunnelMode" json:"tunnel_mode,omitempty"`
 	// HTTP+SOCKS on 127.0.0.1 while connected, for the client to put into
 	// the system proxy settings (that has to happen as the user, not root).
-	MixedPort     uint32 `protobuf:"varint,8,opt,name=mixed_port,json=mixedPort,proto3" json:"mixed_port,omitempty"`
+	MixedPort uint32 `protobuf:"varint,8,opt,name=mixed_port,json=mixedPort,proto3" json:"mixed_port,omitempty"`
+	// Does the internet actually work through the VPN? Checked right after
+	// connecting and every couple of minutes while connected, along the path
+	// the system uses (TUN or the mixed port). Unset until the first check.
+	// Not "check": that name collides with GeneratedMessage.check() in Dart.
+	LiveCheck     *ProbeResult `protobuf:"bytes,9,opt,name=live_check,json=liveCheck,proto3" json:"live_check,omitempty"`
+	Checking      bool         `protobuf:"varint,10,opt,name=checking,proto3" json:"checking,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -292,6 +298,20 @@ func (x *Status) GetMixedPort() uint32 {
 		return x.MixedPort
 	}
 	return 0
+}
+
+func (x *Status) GetLiveCheck() *ProbeResult {
+	if x != nil {
+		return x.LiveCheck
+	}
+	return nil
+}
+
+func (x *Status) GetChecking() bool {
+	if x != nil {
+		return x.Checking
+	}
+	return false
 }
 
 type Traffic struct {
@@ -1386,7 +1406,7 @@ var File_crocell_v1_core_proto protoreflect.FileDescriptor
 const file_crocell_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"\x15crocell/v1/core.proto\x12\n" +
-	"crocell.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdf\x02\n" +
+	"crocell.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb3\x03\n" +
 	"\x06Status\x121\n" +
 	"\x05state\x18\x01 \x01(\x0e2\x1b.crocell.v1.ConnectionStateR\x05state\x12'\n" +
 	"\x0fsubscription_id\x18\x02 \x01(\tR\x0esubscriptionId\x12\x17\n" +
@@ -1397,7 +1417,11 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\vtunnel_mode\x18\a \x01(\x0e2\x16.crocell.v1.TunnelModeR\n" +
 	"tunnelMode\x12\x1d\n" +
 	"\n" +
-	"mixed_port\x18\b \x01(\rR\tmixedPort\"y\n" +
+	"mixed_port\x18\b \x01(\rR\tmixedPort\x126\n" +
+	"\n" +
+	"live_check\x18\t \x01(\v2\x17.crocell.v1.ProbeResultR\tliveCheck\x12\x1a\n" +
+	"\bchecking\x18\n" +
+	" \x01(\bR\bchecking\"y\n" +
 	"\aTraffic\x12\x19\n" +
 	"\bup_bytes\x18\x01 \x01(\x04R\aupBytes\x12\x1d\n" +
 	"\n" +
@@ -1555,44 +1579,45 @@ var file_crocell_v1_core_proto_depIdxs = []int32{
 	23, // 1: crocell.v1.Status.connected_since:type_name -> google.protobuf.Timestamp
 	4,  // 2: crocell.v1.Status.traffic:type_name -> crocell.v1.Traffic
 	1,  // 3: crocell.v1.Status.tunnel_mode:type_name -> crocell.v1.TunnelMode
-	23, // 4: crocell.v1.Subscription.expire:type_name -> google.protobuf.Timestamp
-	23, // 5: crocell.v1.Subscription.fetched_at:type_name -> google.protobuf.Timestamp
-	11, // 6: crocell.v1.Subscription.nodes:type_name -> crocell.v1.Node
-	19, // 7: crocell.v1.Node.last_probe:type_name -> crocell.v1.ProbeResult
-	10, // 8: crocell.v1.ListSubscriptionsResponse.subscriptions:type_name -> crocell.v1.Subscription
-	23, // 9: crocell.v1.ProbeResult.probed_at:type_name -> google.protobuf.Timestamp
-	2,  // 10: crocell.v1.AppRule.mode:type_name -> crocell.v1.AppMode
-	1,  // 11: crocell.v1.Settings.tunnel_mode:type_name -> crocell.v1.TunnelMode
-	20, // 12: crocell.v1.Settings.app_rules:type_name -> crocell.v1.AppRule
-	5,  // 13: crocell.v1.Core.GetStatus:input_type -> crocell.v1.GetStatusRequest
-	6,  // 14: crocell.v1.Core.WatchStatus:input_type -> crocell.v1.WatchStatusRequest
-	7,  // 15: crocell.v1.Core.Connect:input_type -> crocell.v1.ConnectRequest
-	8,  // 16: crocell.v1.Core.Disconnect:input_type -> crocell.v1.DisconnectRequest
-	9,  // 17: crocell.v1.Core.SelectNode:input_type -> crocell.v1.SelectNodeRequest
-	12, // 18: crocell.v1.Core.ListSubscriptions:input_type -> crocell.v1.ListSubscriptionsRequest
-	14, // 19: crocell.v1.Core.AddSubscription:input_type -> crocell.v1.AddSubscriptionRequest
-	15, // 20: crocell.v1.Core.RefreshSubscription:input_type -> crocell.v1.RefreshSubscriptionRequest
-	16, // 21: crocell.v1.Core.RemoveSubscription:input_type -> crocell.v1.RemoveSubscriptionRequest
-	18, // 22: crocell.v1.Core.ProbeNodes:input_type -> crocell.v1.ProbeNodesRequest
-	22, // 23: crocell.v1.Core.GetSettings:input_type -> crocell.v1.GetSettingsRequest
-	21, // 24: crocell.v1.Core.UpdateSettings:input_type -> crocell.v1.Settings
-	3,  // 25: crocell.v1.Core.GetStatus:output_type -> crocell.v1.Status
-	3,  // 26: crocell.v1.Core.WatchStatus:output_type -> crocell.v1.Status
-	3,  // 27: crocell.v1.Core.Connect:output_type -> crocell.v1.Status
-	3,  // 28: crocell.v1.Core.Disconnect:output_type -> crocell.v1.Status
-	3,  // 29: crocell.v1.Core.SelectNode:output_type -> crocell.v1.Status
-	13, // 30: crocell.v1.Core.ListSubscriptions:output_type -> crocell.v1.ListSubscriptionsResponse
-	10, // 31: crocell.v1.Core.AddSubscription:output_type -> crocell.v1.Subscription
-	10, // 32: crocell.v1.Core.RefreshSubscription:output_type -> crocell.v1.Subscription
-	17, // 33: crocell.v1.Core.RemoveSubscription:output_type -> crocell.v1.RemoveSubscriptionResponse
-	19, // 34: crocell.v1.Core.ProbeNodes:output_type -> crocell.v1.ProbeResult
-	21, // 35: crocell.v1.Core.GetSettings:output_type -> crocell.v1.Settings
-	21, // 36: crocell.v1.Core.UpdateSettings:output_type -> crocell.v1.Settings
-	25, // [25:37] is the sub-list for method output_type
-	13, // [13:25] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	19, // 4: crocell.v1.Status.live_check:type_name -> crocell.v1.ProbeResult
+	23, // 5: crocell.v1.Subscription.expire:type_name -> google.protobuf.Timestamp
+	23, // 6: crocell.v1.Subscription.fetched_at:type_name -> google.protobuf.Timestamp
+	11, // 7: crocell.v1.Subscription.nodes:type_name -> crocell.v1.Node
+	19, // 8: crocell.v1.Node.last_probe:type_name -> crocell.v1.ProbeResult
+	10, // 9: crocell.v1.ListSubscriptionsResponse.subscriptions:type_name -> crocell.v1.Subscription
+	23, // 10: crocell.v1.ProbeResult.probed_at:type_name -> google.protobuf.Timestamp
+	2,  // 11: crocell.v1.AppRule.mode:type_name -> crocell.v1.AppMode
+	1,  // 12: crocell.v1.Settings.tunnel_mode:type_name -> crocell.v1.TunnelMode
+	20, // 13: crocell.v1.Settings.app_rules:type_name -> crocell.v1.AppRule
+	5,  // 14: crocell.v1.Core.GetStatus:input_type -> crocell.v1.GetStatusRequest
+	6,  // 15: crocell.v1.Core.WatchStatus:input_type -> crocell.v1.WatchStatusRequest
+	7,  // 16: crocell.v1.Core.Connect:input_type -> crocell.v1.ConnectRequest
+	8,  // 17: crocell.v1.Core.Disconnect:input_type -> crocell.v1.DisconnectRequest
+	9,  // 18: crocell.v1.Core.SelectNode:input_type -> crocell.v1.SelectNodeRequest
+	12, // 19: crocell.v1.Core.ListSubscriptions:input_type -> crocell.v1.ListSubscriptionsRequest
+	14, // 20: crocell.v1.Core.AddSubscription:input_type -> crocell.v1.AddSubscriptionRequest
+	15, // 21: crocell.v1.Core.RefreshSubscription:input_type -> crocell.v1.RefreshSubscriptionRequest
+	16, // 22: crocell.v1.Core.RemoveSubscription:input_type -> crocell.v1.RemoveSubscriptionRequest
+	18, // 23: crocell.v1.Core.ProbeNodes:input_type -> crocell.v1.ProbeNodesRequest
+	22, // 24: crocell.v1.Core.GetSettings:input_type -> crocell.v1.GetSettingsRequest
+	21, // 25: crocell.v1.Core.UpdateSettings:input_type -> crocell.v1.Settings
+	3,  // 26: crocell.v1.Core.GetStatus:output_type -> crocell.v1.Status
+	3,  // 27: crocell.v1.Core.WatchStatus:output_type -> crocell.v1.Status
+	3,  // 28: crocell.v1.Core.Connect:output_type -> crocell.v1.Status
+	3,  // 29: crocell.v1.Core.Disconnect:output_type -> crocell.v1.Status
+	3,  // 30: crocell.v1.Core.SelectNode:output_type -> crocell.v1.Status
+	13, // 31: crocell.v1.Core.ListSubscriptions:output_type -> crocell.v1.ListSubscriptionsResponse
+	10, // 32: crocell.v1.Core.AddSubscription:output_type -> crocell.v1.Subscription
+	10, // 33: crocell.v1.Core.RefreshSubscription:output_type -> crocell.v1.Subscription
+	17, // 34: crocell.v1.Core.RemoveSubscription:output_type -> crocell.v1.RemoveSubscriptionResponse
+	19, // 35: crocell.v1.Core.ProbeNodes:output_type -> crocell.v1.ProbeResult
+	21, // 36: crocell.v1.Core.GetSettings:output_type -> crocell.v1.Settings
+	21, // 37: crocell.v1.Core.UpdateSettings:output_type -> crocell.v1.Settings
+	26, // [26:38] is the sub-list for method output_type
+	14, // [14:26] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_crocell_v1_core_proto_init() }

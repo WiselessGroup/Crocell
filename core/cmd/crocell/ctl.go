@@ -330,6 +330,14 @@ func printStatus(ctx context.Context, c pb.CoreClient, st *pb.Status) {
 	if st.ConnectedSince != nil {
 		line += " · " + time.Since(st.ConnectedSince.AsTime()).Round(time.Second).String()
 	}
+	switch c := st.LiveCheck; {
+	case c != nil && c.Error != "":
+		line += "\n  ✗ internet through the VPN is not working: " + c.Error
+	case c != nil:
+		line += fmt.Sprintf("\n  ✓ exit %s %s (%s), %d ms", c.ExitCountry, c.ExitIp, c.ExitColo, c.LatencyMs)
+	case st.Checking:
+		line += "\n  checking…"
+	}
 	if st.Error != "" {
 		line += "\n  " + st.Error
 	}

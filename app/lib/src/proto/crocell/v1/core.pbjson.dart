@@ -106,6 +106,15 @@ const Status$json = {
       '10': 'tunnelMode'
     },
     {'1': 'mixed_port', '3': 8, '4': 1, '5': 13, '10': 'mixedPort'},
+    {
+      '1': 'live_check',
+      '3': 9,
+      '4': 1,
+      '5': 11,
+      '6': '.crocell.v1.ProbeResult',
+      '10': 'liveCheck'
+    },
+    {'1': 'checking', '3': 10, '4': 1, '5': 8, '10': 'checking'},
   ],
 };
 
@@ -117,7 +126,8 @@ final $typed_data.Uint8List statusDescriptor = $convert.base64Decode(
     'VmLlRpbWVzdGFtcFIOY29ubmVjdGVkU2luY2USLQoHdHJhZmZpYxgFIAEoCzITLmNyb2NlbGwu'
     'djEuVHJhZmZpY1IHdHJhZmZpYxIUCgVlcnJvchgGIAEoCVIFZXJyb3ISNwoLdHVubmVsX21vZG'
     'UYByABKA4yFi5jcm9jZWxsLnYxLlR1bm5lbE1vZGVSCnR1bm5lbE1vZGUSHQoKbWl4ZWRfcG9y'
-    'dBgIIAEoDVIJbWl4ZWRQb3J0');
+    'dBgIIAEoDVIJbWl4ZWRQb3J0EjYKCmxpdmVfY2hlY2sYCSABKAsyFy5jcm9jZWxsLnYxLlByb2'
+    'JlUmVzdWx0UglsaXZlQ2hlY2sSGgoIY2hlY2tpbmcYCiABKAhSCGNoZWNraW5n');
 
 @$core.Deprecated('Use trafficDescriptor instead')
 const Traffic$json = {
