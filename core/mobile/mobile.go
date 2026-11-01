@@ -19,6 +19,7 @@ import (
 
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/daemon"
+	"git.wiseless.net/fureunoir/crocell/core/logbuf"
 	"git.wiseless.net/fureunoir/crocell/core/probe"
 	"git.wiseless.net/fureunoir/crocell/core/procs"
 )
@@ -56,6 +57,7 @@ func Start(dataDir, socket, pkg string, key []byte, p Platform) error {
 	if p == nil {
 		return errors.New("mobile: no platform")
 	}
+	logbuf.Capture()
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
 		return err
 	}
@@ -87,7 +89,7 @@ func Start(dataDir, socket, pkg string, key []byte, p Platform) error {
 	}
 	_ = os.Chmod(socket, 0o600)
 
-	g := grpc.NewServer()
+	g := grpc.NewServer(daemon.LangInterceptors()...)
 	pb.RegisterCoreServer(g, s)
 	ctx, stop := context.WithCancel(context.Background())
 	go s.Run(ctx)
@@ -114,6 +116,32 @@ func Connect() error {
 	return err
 }
 
+// State is the connection state for the Quick Settings tile:
+// "connected", "connecting", "disconnecting", "failed" or "disconnected".
+func State() string {
+	mu.Lock()
+	s := svc
+	mu.Unlock()
+	if s == nil {
+		return "disconnected"
+	}
+	st, err := s.GetStatus(context.Background(), &pb.GetStatusRequest{})
+	if err != nil {
+		return "disconnected"
+	}
+	switch st.GetState() {
+	case pb.ConnectionState_CONNECTION_STATE_CONNECTED:
+		return "connected"
+	case pb.ConnectionState_CONNECTION_STATE_CONNECTING:
+		return "connecting"
+	case pb.ConnectionState_CONNECTION_STATE_DISCONNECTING:
+		return "disconnecting"
+	case pb.ConnectionState_CONNECTION_STATE_FAILED:
+		return "failed"
+	}
+	return "disconnected"
+}
+
 // Disconnect takes the VPN down, for the notification's button and for
 // the system revoking the VPN.
 func Disconnect() {
@@ -124,6 +152,9 @@ func Disconnect() {
 		_, _ = s.Disconnect(context.Background(), &pb.DisconnectRequest{})
 	}
 }
+
+// Log records a line from the Android side in the log the app can copy.
+func Log(text string) { logbuf.Add("android", text) }
 
 // Stop shuts the core down.
 func Stop() {

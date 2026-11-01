@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/core_api.dart';
 import '../data/state.dart';
+import '../l10n.dart';
 import '../sysproxy/controller.dart';
 import '../host.dart';
 import '../platform/android.dart';
@@ -38,7 +39,7 @@ class ConnectPanel extends ConsumerWidget {
           await ref.read(connectionProvider).disconnect();
         } else {
           if (!await ensureVpnPermission()) {
-            throw const CoreError('Без разрешения на VPN Crocell не подключится. Нажмите ещё раз и разрешите.');
+            throw CoreError(tr('Без разрешения на VPN Crocell не подключится. Нажмите ещё раз и разрешите.', "Crocell can't connect without VPN permission. Press again and allow it."));
           }
           // Checked after connecting, so it goes through the VPN like
           // everything else and works where GitHub is blocked.
@@ -79,7 +80,7 @@ class ConnectPanel extends ConsumerWidget {
                     connected: connected,
                     onPressed: onPressed,
                     size: buttonSize,
-                    label: subs.isEmpty ? 'Добавить подписку' : null,
+                    label: subs.isEmpty ? tr('Добавить подписку', 'Add subscription') : null,
                   ),
                   const SizedBox(height: 20),
                   _StatusText(status: status, hasNodes: subs.isNotEmpty),
@@ -120,14 +121,14 @@ class _StatusText extends StatelessWidget {
     final s = status;
 
     final (title, color) = switch (s) {
-      null => ('Связываюсь со службой…', null),
+      null => (tr('Связываюсь со службой…', 'Contacting the service…'), null),
       _ when s.isConnected && s.hasLiveCheck() && s.liveCheck.error.isNotEmpty =>
-        ('Подключено, но не работает', theme.colorScheme.error),
-      _ when s.isConnected => ('Подключено', t.brandText),
-      _ when s.isConnecting => ('Подключаюсь…', null),
-      _ when s.isDisconnecting => ('Отключаюсь…', null),
-      _ when s.isFailed => ('Не удалось подключиться', theme.colorScheme.error),
-      _ => (hasNodes ? 'Не подключено' : 'Нет подписки', null),
+        (tr('Подключено, но не работает', 'Connected, but not working'), theme.colorScheme.error),
+      _ when s.isConnected => (tr('Подключено', 'Connected'), t.brandText),
+      _ when s.isConnecting => (tr('Подключаюсь…', 'Connecting…'), null),
+      _ when s.isDisconnecting => (tr('Отключаюсь…', 'Disconnecting…'), null),
+      _ when s.isFailed => (tr('Не удалось подключиться', "Couldn't connect"), theme.colorScheme.error),
+      _ => (hasNodes ? tr('Не подключено', 'Not connected') : tr('Нет подписки', 'No subscription'), null),
     };
 
     Widget? detail;
@@ -141,8 +142,12 @@ class _StatusText extends StatelessWidget {
           Icon(icon, size: 15, color: t.muted);
       detail = Semantics(
         // No time here: a screen reader would re-announce it every second.
-        label: 'Загрузка ${speed(s.traffic.downRate.toInt())}, '
-            'отдача ${speed(s.traffic.upRate.toInt())}',
+        label: tr(
+          'Загрузка ${speed(s.traffic.downRate.toInt())}, '
+              'отдача ${speed(s.traffic.upRate.toInt())}',
+          'Download ${speed(s.traffic.downRate.toInt())}, '
+              'upload ${speed(s.traffic.upRate.toInt())}',
+        ),
         excludeSemantics: true,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -160,10 +165,10 @@ class _StatusText extends StatelessWidget {
       // What the live check found: where we exit, or that nothing gets out.
       final check = s.hasLiveCheck() ? s.liveCheck : null;
       final checkLine = switch (check) {
-        _ when check == null && s.checking => 'Проверяю, работает ли интернет…',
+        _ when check == null && s.checking => tr('Проверяю, работает ли интернет…', 'Checking if the internet works…'),
         null => null,
-        _ when check.error.isNotEmpty => 'Интернет через VPN не идёт. Попробуйте другую ноду.',
-        _ => 'Выход: ${exitPlace(check)}',
+        _ when check.error.isNotEmpty => tr('Интернет через VPN не идёт. Попробуйте другую ноду.', "The internet isn't getting through the VPN. Try another node."),
+        _ => tr('Выход: ${exitPlace(check)}', 'Exit: ${exitPlace(check)}'),
       };
       if (checkLine != null) {
         final broken = check != null && check.error.isNotEmpty;
@@ -209,14 +214,14 @@ class _ActionButton extends StatelessWidget {
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(minimumSize: size, foregroundColor: context.tokens.brandText),
         icon: const Icon(Icons.power_settings_new_rounded),
-        label: const Text('Отключить'),
+        label: Text(tr('Отключить', 'Disconnect')),
       );
     }
     return FilledButton.icon(
       onPressed: onPressed,
       style: FilledButton.styleFrom(minimumSize: size),
       icon: const Icon(Icons.power_settings_new_rounded),
-      label: const Text('Подключить'),
+      label: Text(tr('Подключить', 'Connect')),
     );
   }
 }
@@ -248,7 +253,7 @@ class _NodeCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      sel == null ? 'Нода не выбрана' : displayName(sel.node.name),
+                      sel == null ? tr('Нода не выбрана', 'No node selected') : displayName(sel.node.name),
                       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -256,7 +261,7 @@ class _NodeCard extends StatelessWidget {
                     if (sel != null)
                       QualityLine(probe: sel.node.hasLastProbe() ? sel.node.lastProbe : null)
                     else
-                      Text('Выберите ноду из списка', style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
+                      Text(tr('Выберите ноду из списка', 'Pick a node from the list'), style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
                   ],
                 ),
               ),
@@ -283,7 +288,7 @@ class _EmptyCard extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              'Добавьте ссылку на подписку от вашего VPN-сервиса, и здесь появятся ноды.',
+              tr('Добавьте ссылку на подписку от вашего VPN-сервиса, и здесь появятся ноды.', 'Add the subscription link from your VPN service, and nodes will show up here.'),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,
             ),
@@ -291,7 +296,7 @@ class _EmptyCard extends StatelessWidget {
             FilledButton.icon(
               onPressed: onAdd,
               icon: const Icon(Icons.add_link_rounded),
-              label: const Text('Добавить подписку'),
+              label: Text(tr('Добавить подписку', 'Add subscription')),
             ),
           ],
         ),
@@ -320,16 +325,16 @@ class _ModePicker extends ConsumerWidget {
         Expanded(
           child: SegmentedButton<TunnelMode>(
             showSelectedIcon: false,
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: TunnelMode.TUNNEL_MODE_SYSTEM_PROXY,
-                icon: Icon(Icons.public_rounded),
-                label: Text('Прокси'),
+                icon: const Icon(Icons.public_rounded),
+                label: Text(tr('Прокси', 'Proxy')),
               ),
               ButtonSegment(
                 value: TunnelMode.TUNNEL_MODE_TUN,
-                icon: Icon(Icons.shield_outlined),
-                label: Text('Туннель'),
+                icon: const Icon(Icons.shield_outlined),
+                label: Text(tr('Туннель', 'Tunnel')),
               ),
             ],
             selected: {mode},
@@ -344,7 +349,7 @@ class _ModePicker extends ConsumerWidget {
         ),
         const SizedBox(width: 4),
         IconButton(
-          tooltip: 'Чем отличаются режимы',
+          tooltip: tr('Чем отличаются режимы', 'How the modes differ'),
           icon: Icon(Icons.info_outline_rounded, color: t.muted),
           onPressed: () => showDialog<void>(context: context, builder: (_) => const _ModesInfo()),
         ),
@@ -379,7 +384,7 @@ class _ModesInfo extends StatelessWidget {
         );
 
     return AlertDialog(
-      title: const Text('Прокси или туннель'),
+      title: Text(tr('Прокси или туннель', 'Proxy or tunnel')),
       content: SizedBox(
         width: 420,
         child: Column(
@@ -388,23 +393,31 @@ class _ModesInfo extends StatelessWidget {
           children: [
             mode(
               Icons.public_rounded,
-              'Прокси',
-              'Crocell прописывает себя в системные настройки прокси, и браузер с большинством программ '
-                  'идут через VPN. Некоторые программы эти настройки игнорируют, им VPN не достанется.',
+              tr('Прокси', 'Proxy'),
+              tr(
+                'Crocell прописывает себя в системные настройки прокси, и браузер с большинством программ '
+                    'идут через VPN. Некоторые программы эти настройки игнорируют, им VPN не достанется.',
+                'Crocell sets itself as the system proxy, so your browser and most programs '
+                    'go through the VPN. Some programs ignore these settings and won\'t use the VPN.',
+              ),
             ),
             const SizedBox(height: 16),
             mode(
               Icons.shield_outlined,
-              'Туннель',
-              'Через VPN идёт весь трафик устройства: игры, Telegram, терминал. Пригодится, когда '
-                  'программа не видит прокси или не даёт его настроить.',
+              tr('Туннель', 'Tunnel'),
+              tr(
+                'Через VPN идёт весь трафик устройства: игры, Telegram, терминал. Пригодится, когда '
+                    'программа не видит прокси или не даёт его настроить.',
+                'All of the device\'s traffic goes through the VPN: games, Telegram, the terminal. Useful when '
+                    'a program doesn\'t see the proxy or won\'t let you set it.',
+              ),
             ),
             const SizedBox(height: 16),
-            Text('Если не знаете, что выбрать, начните с прокси.', style: body?.copyWith(color: context.tokens.muted)),
+            Text(tr('Если не знаете, что выбрать, начните с прокси.', "If you're not sure which to pick, start with proxy."), style: body?.copyWith(color: context.tokens.muted)),
           ],
         ),
       ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Понятно'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Понятно', 'Got it')))],
     );
   }
 }
@@ -426,7 +439,7 @@ class _SystemProxyWarning extends ConsumerWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Не получилось настроить системный прокси: $error',
+              tr('Не получилось настроить системный прокси: $error', "Couldn't set up the system proxy: $error"),
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
             ),
           ),

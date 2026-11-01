@@ -148,6 +148,15 @@ class CoreClient extends $grpc.Client {
     return $createUnaryCall(_$updateGeo, request, options: options);
   }
 
+  /// The core's recent log, for "copy the logs" in the app. Subscription
+  /// links are taken out.
+  $grpc.ResponseFuture<$0.Logs> getLogs(
+    $0.GetLogsRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getLogs, request, options: options);
+  }
+
   // method descriptors
 
   static final _$getStatus = $grpc.ClientMethod<$0.GetStatusRequest, $0.Status>(
@@ -222,6 +231,10 @@ class CoreClient extends $grpc.Client {
           '/crocell.v1.Core/UpdateGeo',
           ($0.UpdateGeoRequest value) => value.writeToBuffer(),
           $0.GeoInfo.fromBuffer);
+  static final _$getLogs = $grpc.ClientMethod<$0.GetLogsRequest, $0.Logs>(
+      '/crocell.v1.Core/GetLogs',
+      ($0.GetLogsRequest value) => value.writeToBuffer(),
+      $0.Logs.fromBuffer);
 }
 
 @$pb.GrpcServiceName('crocell.v1.Core')
@@ -345,6 +358,13 @@ abstract class CoreServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.UpdateGeoRequest.fromBuffer(value),
         ($0.GeoInfo value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GetLogsRequest, $0.Logs>(
+        'GetLogs',
+        getLogs_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GetLogsRequest.fromBuffer(value),
+        ($0.Logs value) => value.writeToBuffer()));
   }
 
   $async.Future<$0.Status> getStatus_Pre($grpc.ServiceCall $call,
@@ -470,4 +490,12 @@ abstract class CoreServiceBase extends $grpc.Service {
 
   $async.Future<$0.GeoInfo> updateGeo(
       $grpc.ServiceCall call, $0.UpdateGeoRequest request);
+
+  $async.Future<$0.Logs> getLogs_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.GetLogsRequest> $request) async {
+    return getLogs($call, await $request);
+  }
+
+  $async.Future<$0.Logs> getLogs(
+      $grpc.ServiceCall call, $0.GetLogsRequest request);
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n.dart';
 import 'core_api.dart';
 
 /// Where the core listens. Android overrides it with the socket of the core
@@ -23,7 +24,7 @@ final statusProvider = StreamProvider<Status>((ref) async* {
     try {
       yield* api.watchStatus();
       // A clean end means the daemon shut down.
-      throw const CoreError('Служба Crocell остановилась', unavailable: true);
+      throw CoreError(tr('Служба Crocell остановилась', 'Crocell service stopped'), unavailable: true);
     } on CoreError catch (e) {
       if (!e.unavailable) rethrow;
       // Surface the outage, then try again shortly.

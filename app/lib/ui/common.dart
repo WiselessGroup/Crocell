@@ -2,6 +2,8 @@ import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
 
 import '../data/core_api.dart';
+import '../l10n.dart';
+import '../logs.dart';
 import '../theme.dart';
 import 'format.dart';
 
@@ -32,12 +34,12 @@ class CountryBadge extends StatelessWidget {
     if (code.isEmpty) {
       return SizedBox.square(
         dimension: size,
-        child: Icon(Icons.public, size: size * 0.6, color: t.muted, semanticLabel: 'Страна неизвестна'),
+        child: Icon(Icons.public, size: size * 0.6, color: t.muted, semanticLabel: tr('Страна неизвестна', 'Unknown country')),
       );
     }
 
     final name = countryName(code);
-    final label = claimed ? '$name, по названию ноды' : 'Выход: $name';
+    final label = claimed ? tr('$name, по названию ноды', '$name, from the node name') : tr('Выход: $name', 'Exit: $name');
     final width = size * 0.86, height = width * 0.72;
 
     return Tooltip(
@@ -91,9 +93,9 @@ class QualityLine extends StatelessWidget {
 
     final r = probe;
     final details = switch (q) {
-      Quality.good || Quality.slow => 'Выход: ${exitPlace(r!)} · ${r.latencyMs} мс',
-      Quality.down => 'Не отвечает',
-      Quality.unknown => 'Не проверено',
+      Quality.good || Quality.slow => tr('Выход: ${exitPlace(r!)} · ${r.latencyMs} мс', 'Exit: ${exitPlace(r)} · ${r.latencyMs} ms'),
+      Quality.down => tr('Не отвечает', 'Not responding'),
+      Quality.unknown => tr('Не проверено', 'Not checked'),
     };
 
     return Row(
@@ -103,7 +105,7 @@ class QualityLine extends StatelessWidget {
         const SizedBox(width: 6),
         Flexible(
           child: Text(
-            q == Quality.slow ? '$details · медленно' : details,
+            q == Quality.slow ? tr('$details · медленно', '$details · slow') : details,
             style: style,
             overflow: TextOverflow.ellipsis,
           ),
@@ -114,7 +116,15 @@ class QualityLine extends StatelessWidget {
 }
 
 void showError(BuildContext context, Object error) {
+  appLog('error: $error');
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text('$error'), behavior: SnackBarBehavior.floating));
+}
+
+/// A plain note at the bottom, for things that went right.
+void showMessage(BuildContext context, String text) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(text), behavior: SnackBarBehavior.floating));
 }

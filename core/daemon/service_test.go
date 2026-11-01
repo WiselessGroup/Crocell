@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
@@ -132,7 +133,7 @@ func newHarness(t *testing.T, opts ...func(*Config)) *harness {
 	t.Cleanup(svc.Close) // stops the check loop
 
 	lis := bufconn.Listen(1 << 20)
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(LangInterceptors()...)
 	pb.RegisterCoreServer(srv, svc)
 	go func() { _ = srv.Serve(lis) }()
 	t.Cleanup(srv.Stop)
@@ -529,5 +530,52 @@ func TestOneFailedCheckIsLookedAtAgain(t *testing.T) {
 				return
 			}
 		}
+	}
+}
+
+// A failed connect left the status on the failed node, so picking another
+// one changed nothing on screen until the next Connect.
+func TestPickingANodeAfterAFailureShowsIt(t *testing.T) {
+	h := newHarness(t)
+	sub := h.add(t)
+	ctx := context.Background()
+
+	h.eng.mu.Lock()
+	h.eng.failWith = errors.New("boom")
+	h.eng.mu.Unlock()
+	st, _ := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.Id, NodeId: sub.Nodes[0].Id})
+	if st.GetState() != pb.ConnectionState_CONNECTION_STATE_FAILED {
+		t.Fatalf("state = %v, want failed", st.GetState())
+	}
+
+	st, err := h.client.SelectNode(ctx, &pb.SelectNodeRequest{SubscriptionId: sub.Id, NodeId: sub.Nodes[2].Id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.NodeId != sub.Nodes[2].Id || st.State != pb.ConnectionState_CONNECTION_STATE_DISCONNECTED || st.Error != "" {
+		t.Errorf("status after picking = %v, want the new node, disconnected, no error", st)
+	}
+}
+
+// The app in English gets the service's explanations in English, and the
+// language sticks for errors that come later without a call.
+func TestErrorsComeInTheClientsLanguage(t *testing.T) {
+	h := newHarness(t)
+	t.Cleanup(func() { english.Store(false) })
+	ctx := metadata.AppendToOutgoingContext(context.Background(), LangHeader, "en")
+	set, err := h.client.GetSettings(ctx, &pb.GetSettingsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	set.Dns = &pb.DnsSettings{DirectServers: []string{"system"}}
+	_, err = h.client.UpdateSettings(ctx, set)
+	if err == nil || !strings.Contains(err.Error(), "will not do") {
+		t.Errorf("error = %v, want it in English", err)
+	}
+
+	ru := metadata.AppendToOutgoingContext(context.Background(), LangHeader, "ru")
+	_, err = h.client.UpdateSettings(ru, set)
+	if err == nil || !strings.Contains(err.Error(), "не подходит") {
+		t.Errorf("error = %v, want it in Russian", err)
 	}
 }

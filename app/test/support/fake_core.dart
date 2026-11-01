@@ -98,6 +98,11 @@ class FakeCore implements CoreApi {
   @override
   Future<GeoInfo> getGeoInfo() async => geo;
 
+  String logs = '2026/11/01 12:00:00 crocelld: connected to "nlWISELESS" (TUNNEL_MODE_TUN)';
+
+  @override
+  Future<String> getLogs() async => logs;
+
   @override
   Future<GeoInfo> updateGeo() async {
     calls.add('geo update');

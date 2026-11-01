@@ -5,35 +5,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/core_api.dart';
 import '../data/rules.dart';
 import '../data/state.dart';
+import '../l10n.dart';
 import '../theme.dart';
 import 'add_rule.dart';
 import 'common.dart';
 
-const routeLists = [
-  (action: RouteAction.ROUTE_ACTION_PROXY, title: 'Через VPN', icon: Icons.shield_outlined),
-  (action: RouteAction.ROUTE_ACTION_DIRECT, title: 'Напрямую', icon: Icons.north_east_rounded),
-  (action: RouteAction.ROUTE_ACTION_BLOCK, title: 'Блокировать', icon: Icons.block_rounded),
+/// Getters, not consts, so the texts follow the app's language.
+List<({RouteAction action, String title, IconData icon})> get routeLists => [
+  (action: RouteAction.ROUTE_ACTION_PROXY, title: tr('Через VPN', 'Through VPN'), icon: Icons.shield_outlined),
+  (action: RouteAction.ROUTE_ACTION_DIRECT, title: tr('Напрямую', 'Direct'), icon: Icons.north_east_rounded),
+  (action: RouteAction.ROUTE_ACTION_BLOCK, title: tr('Блокировать', 'Block'), icon: Icons.block_rounded),
 ];
 
 String _listTitle(RouteAction a) => routeLists.firstWhere((l) => l.action == a).title;
 
 /// What each list is for, when it is empty.
-const _emptyHint = {
-  RouteAction.ROUTE_ACTION_PROXY: 'Что идёт через VPN всегда, даже когда всё остальное напрямую.',
-  RouteAction.ROUTE_ACTION_DIRECT: 'Что идёт мимо VPN: банки, госуслуги, российские сайты, игры.',
-  RouteAction.ROUTE_ACTION_BLOCK: 'Что не открывается совсем: реклама, слежка.',
+Map<RouteAction, String> get _emptyHint => {
+  RouteAction.ROUTE_ACTION_PROXY: tr('Что идёт через VPN всегда, даже когда всё остальное напрямую.', 'What always goes through the VPN, even when everything else goes direct.'),
+  RouteAction.ROUTE_ACTION_DIRECT: tr('Что идёт мимо VPN: банки, госуслуги, российские сайты, игры.', 'What bypasses the VPN: banks, government services, local sites, games.'),
+  RouteAction.ROUTE_ACTION_BLOCK: tr('Что не открывается совсем: реклама, слежка.', "What doesn't open at all: ads, trackers."),
 };
 
 /// Rules of one kind, in the order people think about them: big sets
 /// first, then single sites, addresses and programs.
-const _groups = [
-  (title: 'Наборы', kinds: {RuleKind.RULE_KIND_GEOSITE, RuleKind.RULE_KIND_GEOIP}),
+List<({String title, Set<RuleKind> kinds})> get _groups => [
+  (title: tr('Наборы', 'Sets'), kinds: {RuleKind.RULE_KIND_GEOSITE, RuleKind.RULE_KIND_GEOIP}),
   (
-    title: 'Сайты',
+    title: tr('Сайты', 'Sites'),
     kinds: {RuleKind.RULE_KIND_DOMAIN, RuleKind.RULE_KIND_DOMAIN_SUFFIX, RuleKind.RULE_KIND_DOMAIN_WILDCARD},
   ),
-  (title: 'IP и подсети', kinds: {RuleKind.RULE_KIND_IP_CIDR}),
-  (title: 'Программы', kinds: {RuleKind.RULE_KIND_PROCESS_NAME, RuleKind.RULE_KIND_PROCESS_PATH}),
+  (title: tr('IP и подсети', 'IPs and subnets'), kinds: {RuleKind.RULE_KIND_IP_CIDR}),
+  (title: tr('Программы', 'Programs'), kinds: {RuleKind.RULE_KIND_PROCESS_NAME, RuleKind.RULE_KIND_PROCESS_PATH}),
 ];
 
 /// Lists past this many chips fold, so a pasted list of 300 domains does
@@ -63,6 +65,8 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
     return RouteAction.ROUTE_ACTION_PROXY;
   }
 
+  int _count(RouteAction a) => widget.rules.where((r) => r.action == a).length;
+
   @override
   void dispose() {
     _search.dispose();
@@ -82,11 +86,19 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
     final theme = Theme.of(context);
     final t = context.tokens;
     final title = _listTitle(_list);
-    final inList = [for (final r in widget.rules) if (r.action == _list) r];
+    final inList = [
+      for (final r in widget.rules)
+        if (r.action == _list) r,
+    ];
     final query = _search.text.trim().toLowerCase();
     // Both the shown name and the stored one: .рф is found as xn--p1ai too.
     bool hit(RouteRule r) => ruleTitle(r).toLowerCase().contains(query) || ruleInput(r).toLowerCase().contains(query);
-    final shown = query.isEmpty ? inList : [for (final r in inList) if (hit(r)) r];
+    final shown = query.isEmpty
+        ? inList
+        : [
+            for (final r in inList)
+              if (hit(r)) r,
+          ];
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -107,7 +119,17 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
                       ButtonSegment(
                         value: l.action,
                         icon: c.maxWidth < 520 ? null : Icon(l.icon),
-                        label: Text('${l.title}  ${widget.rules.where((r) => r.action == l.action).length}'),
+                        label: c.maxWidth < 520
+                            // Name over count, the name shrinking rather than
+                            // breaking mid-word ("Блокироват-ь").
+                            ? Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  FittedBox(fit: BoxFit.scaleDown, child: Text(l.title, maxLines: 1)),
+                                  Text('${_count(l.action)}'),
+                                ],
+                              )
+                            : Text('${l.title}  ${_count(l.action)}'),
                       ),
                   ],
                   selected: {_list},
@@ -123,80 +145,96 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
             padding: const EdgeInsets.fromLTRB(12, 12, 4, 4),
             // Wide: search or hint, then the buttons, on one line. Narrow:
             // the buttons get their own line instead of squeezing the text.
-            child: LayoutBuilder(builder: (context, c) {
-              final lead = inList.length > 8
-                  ? TextField(
-                      controller: _search,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: 'Найти в «$title»',
-                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                        suffixIcon: query.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: 'Очистить поиск',
-                                icon: const Icon(Icons.close_rounded, size: 18),
-                                onPressed: () => setState(_search.clear),
-                              ),
-                      ),
-                    )
-                  : Text(_emptyHint[_list]!, style: theme.textTheme.bodySmall?.copyWith(color: t.muted));
-              final buttons = [
-                Tooltip(
-                  message: 'Добавить в «$title»',
-                  child: FilledButton.tonalIcon(
-                    onPressed: () => showAddRule(context, _list, title),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Добавить правило'),
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final lead = inList.length > 8
+                    ? TextField(
+                        controller: _search,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          hintText: tr('Найти в «$title»', 'Search in "$title"'),
+                          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                          suffixIcon: query.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: tr('Очистить поиск', 'Clear search'),
+                                  icon: const Icon(Icons.close_rounded, size: 18),
+                                  onPressed: () => setState(_search.clear),
+                                ),
+                        ),
+                      )
+                    : Text(_emptyHint[_list]!, style: theme.textTheme.bodySmall?.copyWith(color: t.muted));
+                final buttons = [
+                  Tooltip(
+                    message: tr('Добавить в «$title»', 'Add to "$title"'),
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => showAddRule(context, _list, title),
+                      icon: const Icon(Icons.add_rounded),
+                      label: Text(tr('Добавить правило', 'Add rule')),
+                    ),
                   ),
-                ),
-                PopupMenuButton<String>(
-                  tooltip: 'Ещё',
-                  enabled: inList.isNotEmpty,
-                  onSelected: (v) => switch (v) {
-                    'copy' => _copy(inList),
-                    _ => _clear(inList, title),
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'copy', child: Text('Скопировать списком')),
-                    PopupMenuItem(value: 'clear', child: Text('Очистить список')),
-                  ],
-                ),
-              ];
-              if (c.maxWidth < 560) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  PopupMenuButton<String>(
+                    tooltip: tr('Ещё', 'More'),
+                    enabled: inList.isNotEmpty,
+                    onSelected: (v) => switch (v) {
+                      'copy' => _copy(inList),
+                      _ => _clear(inList, title),
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(value: 'copy', child: Text(tr('Скопировать списком', 'Copy as a list'))),
+                      PopupMenuItem(value: 'clear', child: Text(tr('Очистить список', 'Clear list'))),
+                    ],
+                  ),
+                ];
+                if (c.maxWidth < 560) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(padding: const EdgeInsets.only(right: 8), child: lead),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Flexible(child: buttons[0]),
+                          buttons[1],
+                        ],
+                      ),
+                    ],
+                  );
+                }
+                return Row(
                   children: [
-                    Padding(padding: const EdgeInsets.only(right: 8), child: lead),
-                    const SizedBox(height: 8),
-                    Row(children: [Flexible(child: buttons[0]), buttons[1]]),
+                    Expanded(child: lead),
+                    const SizedBox(width: 8),
+                    ...buttons,
                   ],
                 );
-              }
-              return Row(children: [Expanded(child: lead), const SizedBox(width: 8), ...buttons]);
-            }),
+              },
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
             child: inList.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text('Пока пусто', style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
+                    child: Text(tr('Пока пусто', 'Empty for now'), style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
                   )
                 : shown.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Text('Ничего не нашлось', style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final g in _groups)
-                            if (shown.any((r) => g.kinds.contains(r.kind)))
-                              _group(g.title, [for (final r in shown) if (g.kinds.contains(r.kind)) r], folding: query.isEmpty),
-                        ],
-                      ),
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(tr('Ничего не нашлось', 'Nothing found'), style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final g in _groups)
+                        if (shown.any((r) => g.kinds.contains(r.kind)))
+                          _group(g.title, [
+                            for (final r in shown)
+                              if (g.kinds.contains(r.kind)) r,
+                          ], folding: query.isEmpty),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -224,7 +262,7 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
               for (final r in visible) _RuleChip(rule: r, onMove: (to) => _move(r, to), onRemove: () => _remove([r])),
               if (fold)
                 ActionChip(
-                  label: Text('Ещё ${rules.length - _folded}'),
+                  label: Text(tr('Ещё ${rules.length - _folded}', '${rules.length - _folded} more')),
                   onPressed: () => setState(() => _open.add(key)),
                 ),
             ],
@@ -242,7 +280,7 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
   Future<void> _copy(List<RouteRule> rules) async {
     await Clipboard.setData(ClipboardData(text: [for (final r in rules) ruleInput(r)].join('\n')));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Скопировано правил: ${rules.length}')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('Скопировано правил: ${rules.length}', 'Rules copied: ${rules.length}'))));
     }
   }
 
@@ -250,11 +288,11 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Очистить «$title»?'),
-        content: Text('Уйдут все ${rules.length} правил этого списка. Их можно сначала скопировать.'),
+        title: Text(tr('Очистить «$title»?', 'Clear "$title"?')),
+        content: Text(tr('Уйдут все ${rules.length} правил этого списка. Их можно сначала скопировать.', "${rules.length == 1 ? 'The rule' : 'All ${rules.length} rules'} in this list will be removed. You can copy ${rules.length == 1 ? 'it' : 'them'} first.")),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Очистить')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('Отмена', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('Очистить', 'Clear'))),
         ],
       ),
     );
@@ -287,7 +325,7 @@ class _RuleChip extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 260),
           child: Text(title, overflow: TextOverflow.ellipsis),
         ),
-        deleteButtonTooltipMessage: 'Убрать $title',
+        deleteButtonTooltipMessage: tr('Убрать $title', 'Remove $title'),
         onDeleted: onRemove,
         onPressed: () => _menu(context),
       ),
@@ -307,11 +345,11 @@ class _RuleChip extends StatelessWidget {
           if (l.action != rule.action)
             PopupMenuItem(
               value: i,
-              child: ListTile(leading: Icon(l.icon), title: Text('Перенести в «${l.title}»'), dense: true),
+              child: ListTile(leading: Icon(l.icon), title: Text(tr('Перенести в «${l.title}»', 'Move to "${l.title}"')), dense: true),
             ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: remove,
-          child: ListTile(leading: Icon(Icons.close_rounded), title: Text('Убрать'), dense: true),
+          child: ListTile(leading: const Icon(Icons.close_rounded), title: Text(tr('Убрать', 'Remove')), dense: true),
         ),
       ],
     );

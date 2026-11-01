@@ -1801,6 +1801,86 @@ func (x *ListProcessesResponse) GetProcesses() []*Process {
 	return nil
 }
 
+type GetLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLogsRequest) Reset() {
+	*x = GetLogsRequest{}
+	mi := &file_crocell_v1_core_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLogsRequest) ProtoMessage() {}
+
+func (x *GetLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_crocell_v1_core_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLogsRequest.ProtoReflect.Descriptor instead.
+func (*GetLogsRequest) Descriptor() ([]byte, []int) {
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{25}
+}
+
+type Logs struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Logs) Reset() {
+	*x = Logs{}
+	mi := &file_crocell_v1_core_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Logs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Logs) ProtoMessage() {}
+
+func (x *Logs) ProtoReflect() protoreflect.Message {
+	mi := &file_crocell_v1_core_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Logs.ProtoReflect.Descriptor instead.
+func (*Logs) Descriptor() ([]byte, []int) {
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *Logs) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
 type GetGeoInfoRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1809,7 +1889,7 @@ type GetGeoInfoRequest struct {
 
 func (x *GetGeoInfoRequest) Reset() {
 	*x = GetGeoInfoRequest{}
-	mi := &file_crocell_v1_core_proto_msgTypes[25]
+	mi := &file_crocell_v1_core_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1821,7 +1901,7 @@ func (x *GetGeoInfoRequest) String() string {
 func (*GetGeoInfoRequest) ProtoMessage() {}
 
 func (x *GetGeoInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[25]
+	mi := &file_crocell_v1_core_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1834,7 +1914,7 @@ func (x *GetGeoInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGeoInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetGeoInfoRequest) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{25}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{27}
 }
 
 type UpdateGeoRequest struct {
@@ -1845,7 +1925,7 @@ type UpdateGeoRequest struct {
 
 func (x *UpdateGeoRequest) Reset() {
 	*x = UpdateGeoRequest{}
-	mi := &file_crocell_v1_core_proto_msgTypes[26]
+	mi := &file_crocell_v1_core_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1857,7 +1937,7 @@ func (x *UpdateGeoRequest) String() string {
 func (*UpdateGeoRequest) ProtoMessage() {}
 
 func (x *UpdateGeoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[26]
+	mi := &file_crocell_v1_core_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1870,7 +1950,7 @@ func (x *UpdateGeoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateGeoRequest.ProtoReflect.Descriptor instead.
 func (*UpdateGeoRequest) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{26}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{28}
 }
 
 type GeoInfo struct {
@@ -1887,7 +1967,7 @@ type GeoInfo struct {
 
 func (x *GeoInfo) Reset() {
 	*x = GeoInfo{}
-	mi := &file_crocell_v1_core_proto_msgTypes[27]
+	mi := &file_crocell_v1_core_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1899,7 +1979,7 @@ func (x *GeoInfo) String() string {
 func (*GeoInfo) ProtoMessage() {}
 
 func (x *GeoInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[27]
+	mi := &file_crocell_v1_core_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1912,7 +1992,7 @@ func (x *GeoInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeoInfo.ProtoReflect.Descriptor instead.
 func (*GeoInfo) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{27}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *GeoInfo) GetGeoipUpdated() *timestamppb.Timestamp {
@@ -2079,7 +2159,10 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x14\n" +
 	"\x05label\x18\x03 \x01(\tR\x05label\"J\n" +
 	"\x15ListProcessesResponse\x121\n" +
-	"\tprocesses\x18\x01 \x03(\v2\x13.crocell.v1.ProcessR\tprocesses\"\x13\n" +
+	"\tprocesses\x18\x01 \x03(\v2\x13.crocell.v1.ProcessR\tprocesses\"\x10\n" +
+	"\x0eGetLogsRequest\"\x1a\n" +
+	"\x04Logs\x12\x12\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text\"\x13\n" +
 	"\x11GetGeoInfoRequest\"\x12\n" +
 	"\x10UpdateGeoRequest\"\x9b\x02\n" +
 	"\aGeoInfo\x12?\n" +
@@ -2115,7 +2198,7 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\x17RULE_KIND_DOMAIN_SUFFIX\x10\x05\x12\x15\n" +
 	"\x11RULE_KIND_IP_CIDR\x10\x06\x12\x15\n" +
 	"\x11RULE_KIND_GEOSITE\x10\a\x12\x13\n" +
-	"\x0fRULE_KIND_GEOIP\x10\b2\xdb\b\n" +
+	"\x0fRULE_KIND_GEOIP\x10\b2\x94\t\n" +
 	"\x04Core\x12=\n" +
 	"\tGetStatus\x12\x1c.crocell.v1.GetStatusRequest\x1a\x12.crocell.v1.Status\x12C\n" +
 	"\vWatchStatus\x12\x1e.crocell.v1.WatchStatusRequest\x1a\x12.crocell.v1.Status0\x01\x129\n" +
@@ -2135,7 +2218,8 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\rListProcesses\x12 .crocell.v1.ListProcessesRequest\x1a!.crocell.v1.ListProcessesResponse\x12@\n" +
 	"\n" +
 	"GetGeoInfo\x12\x1d.crocell.v1.GetGeoInfoRequest\x1a\x13.crocell.v1.GeoInfo\x12>\n" +
-	"\tUpdateGeo\x12\x1c.crocell.v1.UpdateGeoRequest\x1a\x13.crocell.v1.GeoInfoB7Z5git.wiseless.net/fureunoir/crocell/core/api/crocellv1b\x06proto3"
+	"\tUpdateGeo\x12\x1c.crocell.v1.UpdateGeoRequest\x1a\x13.crocell.v1.GeoInfo\x127\n" +
+	"\aGetLogs\x12\x1a.crocell.v1.GetLogsRequest\x1a\x10.crocell.v1.LogsB7Z5git.wiseless.net/fureunoir/crocell/core/api/crocellv1b\x06proto3"
 
 var (
 	file_crocell_v1_core_proto_rawDescOnce sync.Once
@@ -2150,7 +2234,7 @@ func file_crocell_v1_core_proto_rawDescGZIP() []byte {
 }
 
 var file_crocell_v1_core_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_crocell_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_crocell_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_crocell_v1_core_proto_goTypes = []any{
 	(ConnectionState)(0),               // 0: crocell.v1.ConnectionState
 	(TunnelMode)(0),                    // 1: crocell.v1.TunnelMode
@@ -2181,23 +2265,25 @@ var file_crocell_v1_core_proto_goTypes = []any{
 	(*ListProcessesRequest)(nil),       // 26: crocell.v1.ListProcessesRequest
 	(*Process)(nil),                    // 27: crocell.v1.Process
 	(*ListProcessesResponse)(nil),      // 28: crocell.v1.ListProcessesResponse
-	(*GetGeoInfoRequest)(nil),          // 29: crocell.v1.GetGeoInfoRequest
-	(*UpdateGeoRequest)(nil),           // 30: crocell.v1.UpdateGeoRequest
-	(*GeoInfo)(nil),                    // 31: crocell.v1.GeoInfo
-	(*timestamppb.Timestamp)(nil),      // 32: google.protobuf.Timestamp
+	(*GetLogsRequest)(nil),             // 29: crocell.v1.GetLogsRequest
+	(*Logs)(nil),                       // 30: crocell.v1.Logs
+	(*GetGeoInfoRequest)(nil),          // 31: crocell.v1.GetGeoInfoRequest
+	(*UpdateGeoRequest)(nil),           // 32: crocell.v1.UpdateGeoRequest
+	(*GeoInfo)(nil),                    // 33: crocell.v1.GeoInfo
+	(*timestamppb.Timestamp)(nil),      // 34: google.protobuf.Timestamp
 }
 var file_crocell_v1_core_proto_depIdxs = []int32{
 	0,  // 0: crocell.v1.Status.state:type_name -> crocell.v1.ConnectionState
-	32, // 1: crocell.v1.Status.connected_since:type_name -> google.protobuf.Timestamp
+	34, // 1: crocell.v1.Status.connected_since:type_name -> google.protobuf.Timestamp
 	5,  // 2: crocell.v1.Status.traffic:type_name -> crocell.v1.Traffic
 	1,  // 3: crocell.v1.Status.tunnel_mode:type_name -> crocell.v1.TunnelMode
 	20, // 4: crocell.v1.Status.live_check:type_name -> crocell.v1.ProbeResult
-	32, // 5: crocell.v1.Subscription.expire:type_name -> google.protobuf.Timestamp
-	32, // 6: crocell.v1.Subscription.fetched_at:type_name -> google.protobuf.Timestamp
+	34, // 5: crocell.v1.Subscription.expire:type_name -> google.protobuf.Timestamp
+	34, // 6: crocell.v1.Subscription.fetched_at:type_name -> google.protobuf.Timestamp
 	12, // 7: crocell.v1.Subscription.nodes:type_name -> crocell.v1.Node
 	20, // 8: crocell.v1.Node.last_probe:type_name -> crocell.v1.ProbeResult
 	11, // 9: crocell.v1.ListSubscriptionsResponse.subscriptions:type_name -> crocell.v1.Subscription
-	32, // 10: crocell.v1.ProbeResult.probed_at:type_name -> google.protobuf.Timestamp
+	34, // 10: crocell.v1.ProbeResult.probed_at:type_name -> google.protobuf.Timestamp
 	3,  // 11: crocell.v1.RouteRule.kind:type_name -> crocell.v1.RuleKind
 	2,  // 12: crocell.v1.RouteRule.action:type_name -> crocell.v1.RouteAction
 	1,  // 13: crocell.v1.Settings.tunnel_mode:type_name -> crocell.v1.TunnelMode
@@ -2206,8 +2292,8 @@ var file_crocell_v1_core_proto_depIdxs = []int32{
 	22, // 16: crocell.v1.Settings.dns:type_name -> crocell.v1.DnsSettings
 	23, // 17: crocell.v1.Settings.geo:type_name -> crocell.v1.GeoSettings
 	27, // 18: crocell.v1.ListProcessesResponse.processes:type_name -> crocell.v1.Process
-	32, // 19: crocell.v1.GeoInfo.geoip_updated:type_name -> google.protobuf.Timestamp
-	32, // 20: crocell.v1.GeoInfo.geosite_updated:type_name -> google.protobuf.Timestamp
+	34, // 19: crocell.v1.GeoInfo.geoip_updated:type_name -> google.protobuf.Timestamp
+	34, // 20: crocell.v1.GeoInfo.geosite_updated:type_name -> google.protobuf.Timestamp
 	6,  // 21: crocell.v1.Core.GetStatus:input_type -> crocell.v1.GetStatusRequest
 	7,  // 22: crocell.v1.Core.WatchStatus:input_type -> crocell.v1.WatchStatusRequest
 	8,  // 23: crocell.v1.Core.Connect:input_type -> crocell.v1.ConnectRequest
@@ -2221,25 +2307,27 @@ var file_crocell_v1_core_proto_depIdxs = []int32{
 	25, // 31: crocell.v1.Core.GetSettings:input_type -> crocell.v1.GetSettingsRequest
 	24, // 32: crocell.v1.Core.UpdateSettings:input_type -> crocell.v1.Settings
 	26, // 33: crocell.v1.Core.ListProcesses:input_type -> crocell.v1.ListProcessesRequest
-	29, // 34: crocell.v1.Core.GetGeoInfo:input_type -> crocell.v1.GetGeoInfoRequest
-	30, // 35: crocell.v1.Core.UpdateGeo:input_type -> crocell.v1.UpdateGeoRequest
-	4,  // 36: crocell.v1.Core.GetStatus:output_type -> crocell.v1.Status
-	4,  // 37: crocell.v1.Core.WatchStatus:output_type -> crocell.v1.Status
-	4,  // 38: crocell.v1.Core.Connect:output_type -> crocell.v1.Status
-	4,  // 39: crocell.v1.Core.Disconnect:output_type -> crocell.v1.Status
-	4,  // 40: crocell.v1.Core.SelectNode:output_type -> crocell.v1.Status
-	14, // 41: crocell.v1.Core.ListSubscriptions:output_type -> crocell.v1.ListSubscriptionsResponse
-	11, // 42: crocell.v1.Core.AddSubscription:output_type -> crocell.v1.Subscription
-	11, // 43: crocell.v1.Core.RefreshSubscription:output_type -> crocell.v1.Subscription
-	18, // 44: crocell.v1.Core.RemoveSubscription:output_type -> crocell.v1.RemoveSubscriptionResponse
-	20, // 45: crocell.v1.Core.ProbeNodes:output_type -> crocell.v1.ProbeResult
-	24, // 46: crocell.v1.Core.GetSettings:output_type -> crocell.v1.Settings
-	24, // 47: crocell.v1.Core.UpdateSettings:output_type -> crocell.v1.Settings
-	28, // 48: crocell.v1.Core.ListProcesses:output_type -> crocell.v1.ListProcessesResponse
-	31, // 49: crocell.v1.Core.GetGeoInfo:output_type -> crocell.v1.GeoInfo
-	31, // 50: crocell.v1.Core.UpdateGeo:output_type -> crocell.v1.GeoInfo
-	36, // [36:51] is the sub-list for method output_type
-	21, // [21:36] is the sub-list for method input_type
+	31, // 34: crocell.v1.Core.GetGeoInfo:input_type -> crocell.v1.GetGeoInfoRequest
+	32, // 35: crocell.v1.Core.UpdateGeo:input_type -> crocell.v1.UpdateGeoRequest
+	29, // 36: crocell.v1.Core.GetLogs:input_type -> crocell.v1.GetLogsRequest
+	4,  // 37: crocell.v1.Core.GetStatus:output_type -> crocell.v1.Status
+	4,  // 38: crocell.v1.Core.WatchStatus:output_type -> crocell.v1.Status
+	4,  // 39: crocell.v1.Core.Connect:output_type -> crocell.v1.Status
+	4,  // 40: crocell.v1.Core.Disconnect:output_type -> crocell.v1.Status
+	4,  // 41: crocell.v1.Core.SelectNode:output_type -> crocell.v1.Status
+	14, // 42: crocell.v1.Core.ListSubscriptions:output_type -> crocell.v1.ListSubscriptionsResponse
+	11, // 43: crocell.v1.Core.AddSubscription:output_type -> crocell.v1.Subscription
+	11, // 44: crocell.v1.Core.RefreshSubscription:output_type -> crocell.v1.Subscription
+	18, // 45: crocell.v1.Core.RemoveSubscription:output_type -> crocell.v1.RemoveSubscriptionResponse
+	20, // 46: crocell.v1.Core.ProbeNodes:output_type -> crocell.v1.ProbeResult
+	24, // 47: crocell.v1.Core.GetSettings:output_type -> crocell.v1.Settings
+	24, // 48: crocell.v1.Core.UpdateSettings:output_type -> crocell.v1.Settings
+	28, // 49: crocell.v1.Core.ListProcesses:output_type -> crocell.v1.ListProcessesResponse
+	33, // 50: crocell.v1.Core.GetGeoInfo:output_type -> crocell.v1.GeoInfo
+	33, // 51: crocell.v1.Core.UpdateGeo:output_type -> crocell.v1.GeoInfo
+	30, // 52: crocell.v1.Core.GetLogs:output_type -> crocell.v1.Logs
+	37, // [37:53] is the sub-list for method output_type
+	21, // [21:37] is the sub-list for method input_type
 	21, // [21:21] is the sub-list for extension type_name
 	21, // [21:21] is the sub-list for extension extendee
 	0,  // [0:21] is the sub-list for field type_name
@@ -2256,7 +2344,7 @@ func file_crocell_v1_core_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_crocell_v1_core_proto_rawDesc), len(file_crocell_v1_core_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   28,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

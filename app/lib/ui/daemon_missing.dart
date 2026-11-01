@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../host.dart';
+import '../l10n.dart';
 import '../service/install.dart';
 import '../theme.dart';
 
@@ -28,26 +29,30 @@ class DaemonMissing extends StatelessWidget {
             children: [
               Icon(Icons.power_settings_new_rounded, size: 44, color: t.muted),
               const SizedBox(height: 16),
-              Text('Служба Crocell не запущена', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text(tr('Служба Crocell не запущена', 'Crocell service is not running'), style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Text(
-                'VPN держит отдельная служба: система один раз выдаёт ей права, и дальше она работает, '
-                'даже когда это окно закрыто.',
+                tr(
+                  'VPN держит отдельная служба: система один раз выдаёт ей права, и дальше она работает, '
+                  'даже когда это окно закрыто.',
+                  'A separate service keeps the VPN running: the system grants it rights once, and from then on '
+                  'it works even when this window is closed.',
+                ),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(color: t.muted),
               ),
               const SizedBox(height: 20),
               if (host.embeddedCore)
                 Text(
-                  'Ядро Crocell не запустилось. Закройте приложение и откройте снова.',
+                  tr('Ядро Crocell не запустилось. Закройте приложение и откройте снова.', "Crocell core didn't start. Close the app and open it again."),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium,
                 )
               else if (installer.available)
-                InstallServiceAction(installer: installer, label: 'Установить службу')
+                InstallServiceAction(installer: installer, label: tr('Установить службу', 'Install service'))
               else
                 Text(
-                  'Установщик службы для этой системы ещё в работе. Пока запустите crocelld вручную от администратора.',
+                  tr('Установщик службы для этой системы ещё в работе. Пока запустите crocelld вручную от администратора.', 'The service installer for this system is still in the works. For now, run crocelld manually as administrator.'),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium,
                 ),
@@ -55,7 +60,7 @@ class DaemonMissing extends StatelessWidget {
               // No spinner: it would spin for as long as the service is
               // missing, and nothing here should cost CPU while idle.
               Text(
-                'Как только служба заработает, Crocell откроется сам.',
+                tr('Как только служба заработает, Crocell откроется сам.', 'Crocell will open by itself as soon as the service is running.'),
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(color: t.muted),
               ),
@@ -109,7 +114,7 @@ class _InstallServiceActionState extends State<InstallServiceAction> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Выполните в терминале:', style: theme.textTheme.bodyMedium),
+          Text(tr('Выполните в терминале:', 'Run in a terminal:'), style: theme.textTheme.bodyMedium),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
@@ -124,7 +129,7 @@ class _InstallServiceActionState extends State<InstallServiceAction> {
                   child: SelectableText(command, style: const TextStyle(fontFamily: 'monospace', fontSize: 15)),
                 ),
                 IconButton(
-                  tooltip: 'Скопировать команду',
+                  tooltip: tr('Скопировать команду', 'Copy command'),
                   icon: const Icon(Icons.copy_rounded),
                   onPressed: () => Clipboard.setData(ClipboardData(text: command)),
                 ),
@@ -147,7 +152,7 @@ class _InstallServiceActionState extends State<InstallServiceAction> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Система попросит пароль администратора.',
+          tr('Система попросит пароль администратора.', 'The system will ask for the administrator password.'),
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(color: t.muted),
         ),

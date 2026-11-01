@@ -1,41 +1,78 @@
 import '../data/core_api.dart';
+import '../l10n.dart';
 
-/// Country names people read, by ISO 3166-1 alpha-2. Text, not flag emoji:
-/// Windows has no flag glyphs, and a flag alone is not accessible.
+/// Country names people read, by ISO 3166-1 alpha-2, in Russian and
+/// English. Text, not flag emoji: Windows has no flag glyphs, and a flag
+/// alone is not accessible.
 const _countries = {
-  'RU': 'Россия', 'NL': 'Нидерланды', 'DE': 'Германия', 'PL': 'Польша', 'SG': 'Сингапур',
-  'FI': 'Финляндия', 'SE': 'Швеция', 'NO': 'Норвегия', 'EE': 'Эстония', 'LV': 'Латвия',
-  'LT': 'Литва', 'FR': 'Франция', 'GB': 'Великобритания', 'US': 'США', 'CA': 'Канада',
-  'TR': 'Турция', 'KZ': 'Казахстан', 'AM': 'Армения', 'GE': 'Грузия', 'AT': 'Австрия',
-  'CH': 'Швейцария', 'CZ': 'Чехия', 'IT': 'Италия', 'ES': 'Испания', 'PT': 'Португалия',
-  'RO': 'Румыния', 'BG': 'Болгария', 'HU': 'Венгрия', 'RS': 'Сербия', 'MD': 'Молдова',
-  'UA': 'Украина', 'BY': 'Беларусь', 'IL': 'Израиль', 'AE': 'ОАЭ', 'JP': 'Япония',
-  'HK': 'Гонконг', 'KR': 'Южная Корея', 'IN': 'Индия', 'AU': 'Австралия', 'IE': 'Ирландия',
-  'BE': 'Бельгия', 'DK': 'Дания', 'LU': 'Люксембург', 'CY': 'Кипр', 'GR': 'Греция',
+  'RU': ('Россия', 'Russia'), 'NL': ('Нидерланды', 'Netherlands'), 'DE': ('Германия', 'Germany'),
+  'PL': ('Польша', 'Poland'), 'SG': ('Сингапур', 'Singapore'), 'FI': ('Финляндия', 'Finland'),
+  'SE': ('Швеция', 'Sweden'), 'NO': ('Норвегия', 'Norway'), 'EE': ('Эстония', 'Estonia'),
+  'LV': ('Латвия', 'Latvia'), 'LT': ('Литва', 'Lithuania'), 'FR': ('Франция', 'France'),
+  'GB': ('Великобритания', 'United Kingdom'), 'US': ('США', 'USA'), 'CA': ('Канада', 'Canada'),
+  'TR': ('Турция', 'Turkey'), 'KZ': ('Казахстан', 'Kazakhstan'), 'AM': ('Армения', 'Armenia'),
+  'GE': ('Грузия', 'Georgia'), 'AT': ('Австрия', 'Austria'), 'CH': ('Швейцария', 'Switzerland'),
+  'CZ': ('Чехия', 'Czechia'), 'IT': ('Италия', 'Italy'), 'ES': ('Испания', 'Spain'),
+  'PT': ('Португалия', 'Portugal'), 'RO': ('Румыния', 'Romania'), 'BG': ('Болгария', 'Bulgaria'),
+  'HU': ('Венгрия', 'Hungary'), 'RS': ('Сербия', 'Serbia'), 'MD': ('Молдова', 'Moldova'),
+  'UA': ('Украина', 'Ukraine'), 'BY': ('Беларусь', 'Belarus'), 'IL': ('Израиль', 'Israel'),
+  'AE': ('ОАЭ', 'UAE'), 'JP': ('Япония', 'Japan'), 'HK': ('Гонконг', 'Hong Kong'),
+  'KR': ('Южная Корея', 'South Korea'), 'IN': ('Индия', 'India'), 'AU': ('Австралия', 'Australia'),
+  'IE': ('Ирландия', 'Ireland'), 'BE': ('Бельгия', 'Belgium'), 'DK': ('Дания', 'Denmark'),
+  'LU': ('Люксембург', 'Luxembourg'), 'CY': ('Кипр', 'Cyprus'), 'GR': ('Греция', 'Greece'),
 };
 
-String countryName(String code) => _countries[code.toUpperCase()] ?? code.toUpperCase();
+/// The country's name in the app's language, or the code if unknown.
+String countryName(String code) {
+  final c = _countries[code.toUpperCase()];
+  return c == null ? code.toUpperCase() : tr(c.$1, c.$2);
+}
+
+/// Both names, so a search finds a country typed in either language.
+List<String> _countryNames(String code) {
+  final c = _countries[code.toUpperCase()];
+  return c == null ? [code.toUpperCase()] : [c.$1, c.$2];
+}
 
 /// Cloudflare PoP (IATA airport code) to a city: tells "Frankfurt" from
 /// "Germany somewhere" without a GeoIP database.
 const _colos = {
-  'FRA': 'Франкфурт', 'AMS': 'Амстердам', 'WAW': 'Варшава', 'SIN': 'Сингапур', 'HEL': 'Хельсинки',
-  'ARN': 'Стокгольм', 'OSL': 'Осло', 'CPH': 'Копенгаген', 'TLL': 'Таллин', 'RIX': 'Рига',
-  'VNO': 'Вильнюс', 'LHR': 'Лондон', 'MAN': 'Манчестер', 'CDG': 'Париж', 'MRS': 'Марсель',
-  'DUS': 'Дюссельдорф', 'HAM': 'Гамбург', 'MUC': 'Мюнхен', 'BER': 'Берлин', 'TXL': 'Берлин',
-  'VIE': 'Вена', 'ZRH': 'Цюрих', 'PRG': 'Прага', 'MXP': 'Милан', 'FCO': 'Рим', 'MAD': 'Мадрид',
-  'LIS': 'Лиссабон', 'OTP': 'Бухарест', 'SOF': 'София', 'BUD': 'Будапешт', 'BEG': 'Белград',
-  'KIV': 'Кишинёв', 'IST': 'Стамбул', 'TLV': 'Тель-Авив', 'DXB': 'Дубай', 'ALA': 'Алматы',
-  'EVN': 'Ереван', 'TBS': 'Тбилиси', 'DME': 'Москва', 'SVO': 'Москва', 'LED': 'Санкт-Петербург',
-  'KJA': 'Красноярск', 'NRT': 'Токио', 'HKG': 'Гонконг', 'ICN': 'Сеул', 'BOM': 'Мумбаи',
-  'SYD': 'Сидней', 'DUB': 'Дублин', 'BRU': 'Брюссель', 'LUX': 'Люксембург', 'ATH': 'Афины',
-  'EWR': 'Нью-Йорк', 'IAD': 'Вашингтон', 'ORD': 'Чикаго', 'LAX': 'Лос-Анджелес', 'SJC': 'Сан-Хосе',
-  'YYZ': 'Торонто',
+  'FRA': ('Франкфурт', 'Frankfurt'), 'AMS': ('Амстердам', 'Amsterdam'), 'WAW': ('Варшава', 'Warsaw'),
+  'SIN': ('Сингапур', 'Singapore'), 'HEL': ('Хельсинки', 'Helsinki'), 'ARN': ('Стокгольм', 'Stockholm'),
+  'OSL': ('Осло', 'Oslo'), 'CPH': ('Копенгаген', 'Copenhagen'), 'TLL': ('Таллин', 'Tallinn'),
+  'RIX': ('Рига', 'Riga'), 'VNO': ('Вильнюс', 'Vilnius'), 'LHR': ('Лондон', 'London'),
+  'MAN': ('Манчестер', 'Manchester'), 'CDG': ('Париж', 'Paris'), 'MRS': ('Марсель', 'Marseille'),
+  'DUS': ('Дюссельдорф', 'Düsseldorf'), 'HAM': ('Гамбург', 'Hamburg'), 'MUC': ('Мюнхен', 'Munich'),
+  'BER': ('Берлин', 'Berlin'), 'TXL': ('Берлин', 'Berlin'), 'VIE': ('Вена', 'Vienna'),
+  'ZRH': ('Цюрих', 'Zurich'), 'PRG': ('Прага', 'Prague'), 'MXP': ('Милан', 'Milan'),
+  'FCO': ('Рим', 'Rome'), 'MAD': ('Мадрид', 'Madrid'), 'LIS': ('Лиссабон', 'Lisbon'),
+  'OTP': ('Бухарест', 'Bucharest'), 'SOF': ('София', 'Sofia'), 'BUD': ('Будапешт', 'Budapest'),
+  'BEG': ('Белград', 'Belgrade'), 'KIV': ('Кишинёв', 'Chișinău'), 'IST': ('Стамбул', 'Istanbul'),
+  'TLV': ('Тель-Авив', 'Tel Aviv'), 'DXB': ('Дубай', 'Dubai'), 'ALA': ('Алматы', 'Almaty'),
+  'EVN': ('Ереван', 'Yerevan'), 'TBS': ('Тбилиси', 'Tbilisi'), 'DME': ('Москва', 'Moscow'),
+  'SVO': ('Москва', 'Moscow'), 'LED': ('Санкт-Петербург', 'Saint Petersburg'),
+  'KJA': ('Красноярск', 'Krasnoyarsk'), 'NRT': ('Токио', 'Tokyo'), 'HKG': ('Гонконг', 'Hong Kong'),
+  'ICN': ('Сеул', 'Seoul'), 'BOM': ('Мумбаи', 'Mumbai'), 'SYD': ('Сидней', 'Sydney'),
+  'DUB': ('Дублин', 'Dublin'), 'BRU': ('Брюссель', 'Brussels'), 'LUX': ('Люксембург', 'Luxembourg'),
+  'ATH': ('Афины', 'Athens'), 'EWR': ('Нью-Йорк', 'New York'), 'IAD': ('Вашингтон', 'Washington'),
+  'ORD': ('Чикаго', 'Chicago'), 'LAX': ('Лос-Анджелес', 'Los Angeles'), 'SJC': ('Сан-Хосе', 'San Jose'),
+  'YYZ': ('Торонто', 'Toronto'),
 };
 
-String? coloCity(String colo) => _colos[colo.toUpperCase()];
+/// The city in the app's language, or null if the PoP is unknown.
+String? coloCity(String colo) {
+  final c = _colos[colo.toUpperCase()];
+  return c == null ? null : tr(c.$1, c.$2);
+}
 
-/// "Германия, Франкфурт", or just the country when the city is unknown.
+/// Both names of the city, for search; empty if the PoP is unknown.
+List<String> _cityNames(String colo) {
+  final c = _colos[colo.toUpperCase()];
+  return c == null ? const [] : [c.$1, c.$2];
+}
+
+/// "Германия, Франкфурт" ("Germany, Frankfurt"), or just the country when
+/// the city is unknown.
 String exitPlace(ProbeResult r) {
   final city = coloCity(r.exitColo);
   final country = countryName(r.exitCountry);
@@ -52,10 +89,10 @@ Quality quality(ProbeResult? r) {
 }
 
 String qualityLabel(Quality q) => switch (q) {
-      Quality.good => 'работает',
-      Quality.slow => 'медленно',
-      Quality.down => 'не отвечает',
-      Quality.unknown => 'не проверено',
+      Quality.good => tr('работает', 'working'),
+      Quality.slow => tr('медленно', 'slow'),
+      Quality.down => tr('не отвечает', 'not responding'),
+      Quality.unknown => tr('не проверено', 'not checked'),
     };
 
 String nodeKind(Node n) {
@@ -80,7 +117,7 @@ String nodeKind(Node n) {
 }
 
 String bytes(num n) {
-  const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+  final units = lang == Lang.ru ? const ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'] : const ['B', 'KB', 'MB', 'GB', 'TB'];
   var v = n.toDouble();
   var i = 0;
   while (v >= 1024 && i < units.length - 1) {
@@ -90,7 +127,7 @@ String bytes(num n) {
   return i == 0 ? '${v.toInt()} ${units[i]}' : '${v.toStringAsFixed(v < 10 ? 1 : 0)} ${units[i]}';
 }
 
-String speed(num bytesPerSecond) => '${bytes(bytesPerSecond)}/с';
+String speed(num bytesPerSecond) => tr('${bytes(bytesPerSecond)}/с', '${bytes(bytesPerSecond)}/s');
 
 String elapsed(Duration d) {
   final h = d.inHours, m = d.inMinutes % 60, s = d.inSeconds % 60;
@@ -102,7 +139,8 @@ String elapsed(Duration d) {
 String? quota(Subscription s) {
   final parts = <String>[];
   if (s.totalBytes > 0) {
-    parts.add('${bytes((s.uploadBytes + s.downloadBytes).toInt())} из ${bytes(s.totalBytes.toInt())}');
+    final used = bytes((s.uploadBytes + s.downloadBytes).toInt()), total = bytes(s.totalBytes.toInt());
+    parts.add(tr('$used из $total', '$used of $total'));
   }
   if (s.hasExpire()) {
     final d = s.expire.toDateTime().toLocal();
@@ -110,7 +148,11 @@ String? quota(Subscription s) {
       'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
       'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
     ];
-    parts.add('до ${d.day} ${months[d.month - 1]}');
+    const monthsEn = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    parts.add(tr('до ${d.day} ${months[d.month - 1]}', 'until ${monthsEn[d.month - 1]} ${d.day}'));
   }
   return parts.isEmpty ? null : parts.join(' · ');
 }
@@ -149,8 +191,8 @@ bool nodeMatches(Node n, String query) {
   return [
     n.name,
     nodeKind(n),
-    if (claimed.isNotEmpty) countryName(claimed),
-    if (probe != null && probe.exitCountry.isNotEmpty) countryName(probe.exitCountry),
-    if (probe != null) coloCity(probe.exitColo) ?? '',
+    if (claimed.isNotEmpty) ..._countryNames(claimed),
+    if (probe != null && probe.exitCountry.isNotEmpty) ..._countryNames(probe.exitCountry),
+    if (probe != null) ..._cityNames(probe.exitColo),
   ].any((s) => s.toLowerCase().contains(q));
 }

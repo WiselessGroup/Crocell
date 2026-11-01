@@ -619,6 +619,27 @@ final $typed_data.Uint8List listProcessesResponseDescriptor = $convert.base64Dec
     'ChVMaXN0UHJvY2Vzc2VzUmVzcG9uc2USMQoJcHJvY2Vzc2VzGAEgAygLMhMuY3JvY2VsbC52MS'
     '5Qcm9jZXNzUglwcm9jZXNzZXM=');
 
+@$core.Deprecated('Use getLogsRequestDescriptor instead')
+const GetLogsRequest$json = {
+  '1': 'GetLogsRequest',
+};
+
+/// Descriptor for `GetLogsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getLogsRequestDescriptor =
+    $convert.base64Decode('Cg5HZXRMb2dzUmVxdWVzdA==');
+
+@$core.Deprecated('Use logsDescriptor instead')
+const Logs$json = {
+  '1': 'Logs',
+  '2': [
+    {'1': 'text', '3': 1, '4': 1, '5': 9, '10': 'text'},
+  ],
+};
+
+/// Descriptor for `Logs`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List logsDescriptor =
+    $convert.base64Decode('CgRMb2dzEhIKBHRleHQYASABKAlSBHRleHQ=');
+
 @$core.Deprecated('Use getGeoInfoRequestDescriptor instead')
 const GetGeoInfoRequest$json = {
   '1': 'GetGeoInfoRequest',

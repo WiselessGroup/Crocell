@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../l10n.dart';
+
 /// Points the desktop proxy settings at crocelld's mixed port and puts the
 /// previous settings back. Runs as the person, not root: these are their
 /// settings. Same platforms as core/sysproxy in Go.
@@ -27,7 +29,7 @@ class SystemProxy {
 
   Future<void> enable(int port) async {
     final backend = _backend();
-    if (backend == null) throw const SystemProxyError('Системный прокси на этой системе не настраивается');
+    if (backend == null) throw SystemProxyError(tr('Системный прокси на этой системе не настраивается', "The system proxy can't be set on this system"));
     if (isActive) await restore(); // re-pointing at another port
 
     final saved = await backend.read(_run);

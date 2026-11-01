@@ -239,6 +239,34 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('logs: the core log and the app version, ready to copy', (tester) async {
+    String? copied;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform,
+        (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      return null;
+    });
+    await pumpApp(tester, FakeCore(subs: [sampleSubscription()]), size: const Size(1000, 2000));
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform,
+        (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      return null;
+    });
+    await tester.tap(find.byTooltip('Настройки'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Логи'));
+    await tester.tap(find.text('Логи'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('connected to "nlWISELESS"'), findsOneWidget);
+
+    await tester.tap(find.text('Скопировать'));
+    await tester.pumpAndSettle();
+    expect(copied, contains('Crocell dev'));
+    expect(copied, contains('--- core ---'));
+    expect(find.text('Скопировано'), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets('many subscriptions: search by claimed country, fold one away', (tester) async {
     await pumpApp(
       tester,
@@ -307,9 +335,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('DNS-серверы'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Блокировать  0'));
+    // Phone width: the tab shows the name over the count.
+    await tester.ensureVisible(find.text('Блокировать'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Блокировать  0'));
+    await tester.tap(find.text('Блокировать'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Добавить в «Блокировать»'));
     await tester.pumpAndSettle();

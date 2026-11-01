@@ -42,6 +42,7 @@ const (
 	Core_ListProcesses_FullMethodName       = "/crocell.v1.Core/ListProcesses"
 	Core_GetGeoInfo_FullMethodName          = "/crocell.v1.Core/GetGeoInfo"
 	Core_UpdateGeo_FullMethodName           = "/crocell.v1.Core/UpdateGeo"
+	Core_GetLogs_FullMethodName             = "/crocell.v1.Core/GetLogs"
 )
 
 // CoreClient is the client API for Core service.
@@ -70,6 +71,9 @@ type CoreClient interface {
 	// geoip.dat / geosite.dat: when they were fetched and what is inside.
 	GetGeoInfo(ctx context.Context, in *GetGeoInfoRequest, opts ...grpc.CallOption) (*GeoInfo, error)
 	UpdateGeo(ctx context.Context, in *UpdateGeoRequest, opts ...grpc.CallOption) (*GeoInfo, error)
+	// The core's recent log, for "copy the logs" in the app. Subscription
+	// links are taken out.
+	GetLogs(ctx context.Context, in *GetLogsRequest, opts ...grpc.CallOption) (*Logs, error)
 }
 
 type coreClient struct {
@@ -248,6 +252,16 @@ func (c *coreClient) UpdateGeo(ctx context.Context, in *UpdateGeoRequest, opts .
 	return out, nil
 }
 
+func (c *coreClient) GetLogs(ctx context.Context, in *GetLogsRequest, opts ...grpc.CallOption) (*Logs, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Logs)
+	err := c.cc.Invoke(ctx, Core_GetLogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CoreServer is the server API for Core service.
 // All implementations must embed UnimplementedCoreServer
 // for forward compatibility.
@@ -274,6 +288,9 @@ type CoreServer interface {
 	// geoip.dat / geosite.dat: when they were fetched and what is inside.
 	GetGeoInfo(context.Context, *GetGeoInfoRequest) (*GeoInfo, error)
 	UpdateGeo(context.Context, *UpdateGeoRequest) (*GeoInfo, error)
+	// The core's recent log, for "copy the logs" in the app. Subscription
+	// links are taken out.
+	GetLogs(context.Context, *GetLogsRequest) (*Logs, error)
 	mustEmbedUnimplementedCoreServer()
 }
 
@@ -328,6 +345,9 @@ func (UnimplementedCoreServer) GetGeoInfo(context.Context, *GetGeoInfoRequest) (
 }
 func (UnimplementedCoreServer) UpdateGeo(context.Context, *UpdateGeoRequest) (*GeoInfo, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateGeo not implemented")
+}
+func (UnimplementedCoreServer) GetLogs(context.Context, *GetLogsRequest) (*Logs, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetLogs not implemented")
 }
 func (UnimplementedCoreServer) mustEmbedUnimplementedCoreServer() {}
 func (UnimplementedCoreServer) testEmbeddedByValue()              {}
@@ -606,6 +626,24 @@ func _Core_UpdateGeo_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Core_GetLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServer).GetLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Core_GetLogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServer).GetLogs(ctx, req.(*GetLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Core_ServiceDesc is the grpc.ServiceDesc for Core service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -664,6 +702,10 @@ var Core_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateGeo",
 			Handler:    _Core_UpdateGeo_Handler,
+		},
+		{
+			MethodName: "GetLogs",
+			Handler:    _Core_GetLogs_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

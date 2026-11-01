@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/core_api.dart';
 import '../data/state.dart';
+import '../l10n.dart';
 import '../theme.dart';
 import 'add_subscription.dart';
 import 'common.dart';
@@ -56,12 +57,12 @@ class _NodesViewState extends ConsumerState<NodesView> {
                   controller: _query,
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    hintText: 'Найти ноду или страну',
+                    hintText: tr('Найти ноду или страну', 'Find a node or country'),
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: query.isEmpty
                         ? null
                         : IconButton(
-                            tooltip: 'Очистить',
+                            tooltip: tr('Очистить', 'Clear'),
                             icon: const Icon(Icons.close_rounded),
                             onPressed: () => setState(_query.clear),
                           ),
@@ -116,7 +117,7 @@ class _NodesViewState extends ConsumerState<NodesView> {
               child: Padding(
                 padding: const EdgeInsets.only(top: 24),
                 child: Text(
-                  'Ничего не нашлось по «$query»',
+                  tr('Ничего не нашлось по «$query»', 'Nothing found for "$query"'),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: t.muted),
                 ),
@@ -180,13 +181,16 @@ class _SubscriptionHeader extends ConsumerWidget {
     }
 
     final count = shown == sub.nodes.length
-        ? '${sub.nodes.length} ${_plural(sub.nodes.length, 'нода', 'ноды', 'нод')}'
-        : '$shown из ${sub.nodes.length}';
+        ? tr(
+            '${sub.nodes.length} ${_plural(sub.nodes.length, 'нода', 'ноды', 'нод')}',
+            '${sub.nodes.length} ${sub.nodes.length == 1 ? 'node' : 'nodes'}',
+          )
+        : tr('$shown из ${sub.nodes.length}', '$shown of ${sub.nodes.length}');
 
     return Row(
       children: [
         IconButton(
-          tooltip: folded ? 'Развернуть' : 'Свернуть',
+          tooltip: folded ? tr('Развернуть', 'Expand') : tr('Свернуть', 'Collapse'),
           icon: AnimatedRotation(
             turns: folded ? -0.25 : 0,
             duration: const Duration(milliseconds: 150),
@@ -212,10 +216,10 @@ class _SubscriptionHeader extends ConsumerWidget {
           icon: probing
               ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.travel_explore_rounded, size: 18),
-          label: Text(probing ? 'Проверяю…' : 'Проверить'),
+          label: Text(probing ? tr('Проверяю…', 'Checking…') : tr('Проверить', 'Check')),
         ),
         PopupMenuButton<String>(
-          tooltip: 'Ещё',
+          tooltip: tr('Ещё', 'More'),
           icon: const Icon(Icons.more_horiz_rounded),
           onSelected: (v) async {
             switch (v) {
@@ -225,9 +229,9 @@ class _SubscriptionHeader extends ConsumerWidget {
                 if (await _confirmRemove(context, sub)) await run(() => notifier.remove(sub.id));
             }
           },
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'refresh', child: Text('Обновить подписку')),
-            PopupMenuItem(value: 'remove', child: Text('Удалить подписку…')),
+          itemBuilder: (_) => [
+            PopupMenuItem(value: 'refresh', child: Text(tr('Обновить подписку', 'Refresh subscription'))),
+            PopupMenuItem(value: 'remove', child: Text(tr('Удалить подписку…', 'Remove subscription…'))),
           ],
         ),
       ],
@@ -238,14 +242,18 @@ class _SubscriptionHeader extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Удалить «${sub.title.isNotEmpty ? sub.title : sub.urlMasked}»?'),
-        content: const Text(
-          'Ноды из неё пропадут. Если VPN подключён через неё, он отключится. '
-          'Вернуть можно, снова добавив ссылку.',
+        title: Text(tr('Удалить «${sub.title.isNotEmpty ? sub.title : sub.urlMasked}»?', 'Remove "${sub.title.isNotEmpty ? sub.title : sub.urlMasked}"?')),
+        content: Text(
+          tr(
+            'Ноды из неё пропадут. Если VPN подключён через неё, он отключится. '
+            'Вернуть можно, снова добавив ссылку.',
+            'Its nodes will be gone. If the VPN is connected through it, it will disconnect. '
+            'You can bring it back by adding the link again.',
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Удалить')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('Отмена', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('Удалить', 'Remove'))),
         ],
       ),
     );
@@ -303,7 +311,7 @@ class _NodeRow extends ConsumerWidget {
               Text(nodeKind(node), style: theme.textTheme.labelSmall?.copyWith(color: t.muted)),
               SizedBox(
                 width: 36,
-                child: selected ? Icon(Icons.check_rounded, color: t.brandText, semanticLabel: 'Выбрана') : null,
+                child: selected ? Icon(Icons.check_rounded, color: t.brandText, semanticLabel: tr('Выбрана', 'Selected')) : null,
               ),
             ],
           ),
@@ -329,10 +337,10 @@ class _Empty extends StatelessWidget {
           children: [
             Icon(Icons.dns_outlined, size: 40, color: context.tokens.muted),
             const SizedBox(height: 12),
-            Text('Здесь будут ноды', style: theme.textTheme.titleMedium),
+            Text(tr('Здесь будут ноды', 'Nodes will show up here'), style: theme.textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(
-              'Добавьте подписку, и Crocell покажет все ноды из неё.',
+              tr('Добавьте подписку, и Crocell покажет все ноды из неё.', 'Add a subscription, and Crocell will show all its nodes.'),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(color: context.tokens.muted),
             ),
@@ -340,7 +348,7 @@ class _Empty extends StatelessWidget {
             FilledButton.icon(
               onPressed: onAdd,
               icon: const Icon(Icons.add_link_rounded),
-              label: const Text('Добавить подписку'),
+              label: Text(tr('Добавить подписку', 'Add subscription')),
             ),
           ],
         ),

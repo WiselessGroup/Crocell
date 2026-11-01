@@ -39,7 +39,7 @@ Under the hood it's [mihomo](https://github.com/MetaCubeX/mihomo), so it speaks 
 | macOS, Apple silicon | [Crocell-arm64.dmg](https://github.com/WiselessGroup/Crocell/releases/latest/download/Crocell-arm64.dmg) |
 | Android 7+ | [Crocell.apk](https://github.com/WiselessGroup/Crocell/releases/latest/download/Crocell.apk) |
 
-When a new version comes out, Crocell says so after you connect, and a click on the notice shows how to update on your system. The interface is in Russian for now.
+When a new version comes out, Crocell says so after you connect, and a click on the notice shows how to update on your system. The app speaks English or Russian, whichever your system does.
 
 ### First start
 
@@ -47,7 +47,7 @@ On a desktop the VPN is held by a small system service, so closing or updating t
 
 - **Linux.** Crocell shows the install command and a copy button. If [Gear Lever](https://flathub.org/apps/it.mijorus.gearlever) keeps the AppImage, it's `sudo ~/AppImages/crocell.appimage crocelld install`. Gear Lever also picks up updates by itself.
 - **Windows.** The installer sets the service up. The build isn't code-signed yet, so SmartScreen will warn you: "More info", then "Run anyway".
-- **macOS.** Drag Crocell to Applications. It isn't notarized, so macOS blocks the first launch; allow it in System Settings → Privacy & Security → "Open Anyway". Then press "Установить службу" (install service) in Crocell and enter your password.
+- **macOS.** Drag Crocell to Applications. It isn't notarized, so macOS blocks the first launch; allow it in System Settings → Privacy & Security → "Open Anyway". Then press "Install service" in Crocell and enter your password.
 - **Android.** Let your browser install the APK, then allow the VPN when Crocell asks. That's it, there's no service to install.
 
 ## What it does
@@ -59,6 +59,8 @@ On a desktop the VPN is held by a small system service, so closing or updating t
 - Routes traffic through three lists: through the VPN, direct, or blocked. A rule can be a site, a wildcard, a subnet, a [runetfreedom](https://github.com/runetfreedom/russia-v2ray-rules-dat) geosite/geoip set (or your own database), a program, or an Android app. Lists copied from v2ray configs paste as they are, `domain:` and `full:` included. A specific rule beats a general one.
 - Checks the connection right after connecting and every couple of minutes, and sends a notification if traffic stops getting through.
 - Picks up new settings on its own: change a rule while connected and the tunnel quietly reconnects.
+- Turns on and off without opening the window: a Quick Settings tile on Android, and a toggle in GNOME's quick settings (Settings → "Add to GNOME quick settings" installs it).
+- Copies its logs with one button, subscription links taken out, for when something breaks and you want to tell us.
 - Keeps subscriptions and settings encrypted with AES-256-GCM. On Linux the key is sealed with `systemd-creds` (TPM when there is one), on Android it sits in the Keystore. A copied state file is useless anywhere else.
 
 <p align="center">

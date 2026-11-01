@@ -5,6 +5,8 @@
 //	crocelld                 run in the foreground
 //	crocelld install         install and start the system service
 //	crocelld uninstall       stop and remove it
+//	crocelld connect | disconnect | watch    control the running service
+//	crocelld gnome-extension install | uninstall    the GNOME quick toggle
 package main
 
 import (
@@ -26,6 +28,7 @@ import (
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/daemon"
 	"git.wiseless.net/fureunoir/crocell/core/internal/paths"
+	"git.wiseless.net/fureunoir/crocell/core/logbuf"
 )
 
 func main() {
@@ -35,6 +38,10 @@ func main() {
 			exit(install(os.Args[2:]))
 		case "uninstall":
 			exit(uninstall())
+		case "connect", "disconnect", "watch":
+			exit(ctl(os.Args[1]))
+		case "gnome-extension":
+			exit(gnomeExtension(os.Args[2:]))
 		}
 	}
 	// Under the Windows service manager the stop comes from it, not from
@@ -85,6 +92,8 @@ func serve(ctx context.Context, args []string) error {
 			return err
 		}
 	}
+	// The app's "Logs" button reads these back.
+	logbuf.Capture()
 	if err := os.MkdirAll(*stateDir, 0o700); err != nil {
 		return err
 	}
@@ -102,7 +111,7 @@ func serve(ctx context.Context, args []string) error {
 		return err
 	}
 
-	srv := grpc.NewServer(opts...)
+	srv := grpc.NewServer(append(opts, daemon.LangInterceptors()...)...)
 	pb.RegisterCoreServer(srv, svc)
 
 	// Connect-on-start and keeping geo databases fresh.

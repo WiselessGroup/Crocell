@@ -5,6 +5,7 @@ import '../data/core_api.dart';
 import '../data/rules.dart';
 import '../data/state.dart';
 import '../host.dart';
+import '../l10n.dart';
 import '../theme.dart';
 
 /// Adds rules to one of the three lists. Three ways in, because people
@@ -74,7 +75,7 @@ class _AddRuleDialogState extends ConsumerState<_AddRuleDialog> {
       return;
     }
     if (rules.isEmpty) {
-      setState(() => _error = 'Ничего не выбрано');
+      setState(() => _error = tr('Ничего не выбрано', 'Nothing selected'));
       return;
     }
     setState(() {
@@ -99,7 +100,7 @@ class _AddRuleDialogState extends ConsumerState<_AddRuleDialog> {
     return AlertDialog(
       // Phones: the default 40 px inset leaves ~230 px for three tabs.
       insetPadding: narrow ? const EdgeInsets.symmetric(horizontal: 12, vertical: 24) : null,
-      title: Text('Добавить: ${widget.listName}'),
+      title: Text(tr('Добавить: ${widget.listName}', 'Add to: ${widget.listName}')),
       content: SizedBox(
         width: 560,
         height: (size.height * 0.6).clamp(320, 520),
@@ -112,19 +113,19 @@ class _AddRuleDialogState extends ConsumerState<_AddRuleDialog> {
                 ButtonSegment(
                   value: _Tab.site,
                   icon: narrow ? null : const Icon(Icons.language_rounded),
-                  label: const Text('Сайт или IP'),
+                  label: Text(tr('Сайт или IP', 'Site or IP')),
                 ),
                 // Android can send an app around the VPN or through it, not block it.
                 if (!(android && widget.action == RouteAction.ROUTE_ACTION_BLOCK))
                   ButtonSegment(
                     value: _Tab.program,
                     icon: narrow ? null : const Icon(Icons.apps_rounded),
-                    label: Text(android ? 'Приложение' : 'Программа'),
+                    label: Text(android ? tr('Приложение', 'App') : tr('Программа', 'Program')),
                   ),
                 ButtonSegment(
                   value: _Tab.set,
                   icon: narrow ? null : const Icon(Icons.category_outlined),
-                  label: const Text('Набор'),
+                  label: Text(tr('Набор', 'Set')),
                 ),
               ],
               selected: {_tab},
@@ -156,12 +157,12 @@ class _AddRuleDialogState extends ConsumerState<_AddRuleDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: _busy ? null : () => Navigator.of(context).pop(), child: const Text('Отмена')),
+        TextButton(onPressed: _busy ? null : () => Navigator.of(context).pop(), child: Text(tr('Отмена', 'Cancel'))),
         FilledButton(
           onPressed: _busy ? null : _add,
           child: _busy
               ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Добавить'),
+              : Text(tr('Добавить', 'Add')),
         ),
       ],
     );
@@ -192,18 +193,24 @@ class _SiteTab extends StatelessWidget {
           autocorrect: false,
           keyboardType: TextInputType.multiline,
           onChanged: (_) => onChanged(),
-          decoration: const InputDecoration(
-            labelText: 'Сайты, адреса или наборы',
+          decoration: InputDecoration(
+            labelText: tr('Сайты, адреса или наборы', 'Sites, addresses or sets'),
             hintText: 'wiseless.net\n*.wiseless.net\n10.0.0.0/8',
             alignLabelWithHint: true,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'По одному в строке. wiseless.net — только этот домен, *.wiseless.net — его поддомены, '
-          '+.wiseless.net — и то и другое. Списки из v2ray тоже читаются: domain:ru — вся зона .ru, '
-          'full:wiseless.net — только этот домен. Ещё подходят IP и подсети (10.0.0.0/8), '
-          'geosite:ru-blocked и geoip:telegram.',
+          tr(
+            'По одному в строке. wiseless.net — только этот домен, *.wiseless.net — его поддомены, '
+            '+.wiseless.net — и то и другое. Списки из v2ray тоже читаются: domain:ru — вся зона .ru, '
+            'full:wiseless.net — только этот домен. Ещё подходят IP и подсети (10.0.0.0/8), '
+            'geosite:ru-blocked и geoip:telegram.',
+            'One per line. wiseless.net is just this domain, *.wiseless.net is its subdomains, '
+            '+.wiseless.net is both. v2ray lists work too: domain:ru is the whole .ru zone, '
+            'full:wiseless.net is just this domain. IPs and subnets (10.0.0.0/8), '
+            'geosite:ru-blocked and geoip:telegram also work.',
+          ),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: t.muted),
         ),
         const SizedBox(height: 8),
@@ -242,7 +249,7 @@ class _ProgramTab extends ConsumerWidget {
           controller: search,
           onChanged: (_) => onChanged(),
           decoration: InputDecoration(
-            hintText: android ? 'Найти приложение' : 'Найти запущенную программу',
+            hintText: android ? tr('Найти приложение', 'Find an app') : tr('Найти запущенную программу', 'Find a running program'),
             prefixIcon: const Icon(Icons.search_rounded),
           ),
         ),
@@ -282,10 +289,10 @@ class _ProgramTab extends ConsumerWidget {
             controller: path,
             autocorrect: false,
             onChanged: (_) => onChanged(),
-            decoration: const InputDecoration(
-              labelText: 'Или путь к программе',
+            decoration: InputDecoration(
+              labelText: tr('Или путь к программе', 'Or the path to a program'),
               hintText: '/usr/bin/steam',
-              prefixIcon: Icon(Icons.folder_outlined),
+              prefixIcon: const Icon(Icons.folder_outlined),
             ),
           ),
         ],
@@ -318,8 +325,12 @@ class _SetTab extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Базы geosite и geoip ещё не скачаны. Они скачаются сами при подключении, '
-              'или можно скачать их сейчас и выбрать набор.',
+              tr(
+                'Базы geosite и geoip ещё не скачаны. Они скачаются сами при подключении, '
+                'или можно скачать их сейчас и выбрать набор.',
+                "The geosite and geoip databases aren't downloaded yet. They download by themselves when you connect, "
+                'or you can download them now and pick a set.',
+              ),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(color: t.muted),
             ),
@@ -327,7 +338,7 @@ class _SetTab extends ConsumerWidget {
             FilledButton.tonalIcon(
               onPressed: info.updating ? null : () => ref.read(geoInfoProvider.notifier).refresh(),
               icon: const Icon(Icons.download_rounded),
-              label: Text(info.updating ? 'Скачиваю…' : 'Скачать базы'),
+              label: Text(info.updating ? tr('Скачиваю…', 'Downloading…') : tr('Скачать базы', 'Download databases')),
             ),
           ],
         ),
@@ -367,7 +378,7 @@ class _SetTab extends ConsumerWidget {
           controller: search,
           onChanged: (_) => onChanged(),
           decoration: InputDecoration(
-            hintText: 'Найти среди ${all.length} наборов',
+            hintText: tr('Найти среди ${all.length} наборов', 'Search ${all.length} sets'),
             prefixIcon: const Icon(Icons.search_rounded),
           ),
         ),

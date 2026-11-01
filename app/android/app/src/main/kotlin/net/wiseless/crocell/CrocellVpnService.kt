@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.Build
-import android.util.Log
 import net.wiseless.crocell.core.mobile.Mobile
 import org.json.JSONObject
 
@@ -20,7 +19,6 @@ import org.json.JSONObject
  */
 class CrocellVpnService : VpnService() {
     companion object {
-        private const val TAG = "Crocell"
         private const val CHANNEL = "vpn"
         private const val NOTIFICATION = 10
         private const val ACTION_HOLD = "net.wiseless.crocell.HOLD"
@@ -36,7 +34,7 @@ class CrocellVpnService : VpnService() {
             val service = synchronized(lock) {
                 while (instance == null) {
                     val left = deadline - System.currentTimeMillis()
-                    if (left <= 0) throw IllegalStateException("Служба VPN не запустилась")
+                    if (left <= 0) throw IllegalStateException(context.getString(R.string.vpn_service_timeout))
                     lock.wait(left)
                 }
                 instance!!
@@ -61,7 +59,7 @@ class CrocellVpnService : VpnService() {
                 try {
                     Mobile.connect()
                 } catch (e: Exception) {
-                    Log.w(TAG, "always-on connect failed", e)
+                    Core.log("always-on connect failed: ${e.message}")
                 }
             }.start()
         }
@@ -70,11 +68,13 @@ class CrocellVpnService : VpnService() {
             instance = this
             lock.notifyAll()
         }
+        CrocellTile.refresh(this)
         return START_STICKY
     }
 
     /** Another VPN took over, or the person turned Crocell off in Settings. */
     override fun onRevoke() {
+        Core.log("VPN revoked by the system (another VPN, or turned off in Settings)")
         Thread { Mobile.disconnect() }.start()
     }
 
@@ -101,13 +101,15 @@ class CrocellVpnService : VpnService() {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) b.setMetered(false)
         b.setConfigureIntent(openApp())
-        val pfd = b.establish() ?: throw IllegalStateException("Android не дал создать VPN: разрешение отозвано")
+        val pfd = b.establish() ?: throw IllegalStateException(getString(R.string.vpn_establish_null))
+        Core.log("VPN interface up")
         return pfd.detachFd()
     }
 
     private fun stop() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+        CrocellTile.refresh(this)
     }
 
     private fun addCidr(b: Builder, cidr: String) {
@@ -130,8 +132,8 @@ class CrocellVpnService : VpnService() {
     private fun startForeground() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL, "VPN включён", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Пока висит это уведомление, Crocell держит VPN"
+            NotificationChannel(CHANNEL, getString(R.string.vpn_channel), NotificationManager.IMPORTANCE_LOW).apply {
+                description = getString(R.string.vpn_channel_description)
                 setShowBadge(false)
             },
         )
@@ -140,11 +142,11 @@ class CrocellVpnService : VpnService() {
         )
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Crocell подключён")
-            .setContentText("Нажмите, чтобы открыть")
+            .setContentTitle(getString(R.string.vpn_connected))
+            .setContentText(getString(R.string.vpn_tap_to_open))
             .setContentIntent(openApp())
             .setOngoing(true)
-            .addAction(Notification.Action.Builder(null, "Отключить", disconnect).build())
+            .addAction(Notification.Action.Builder(null, getString(R.string.vpn_disconnect), disconnect).build())
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(NOTIFICATION, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../host.dart';
+import '../l10n.dart';
 
 /// How the service that holds the tunnel gets installed or updated here.
 /// Either a command the person runs (Linux, where sudo in a terminal is the
@@ -73,8 +74,10 @@ Future<void> _installWindows() async {
 String _why(String stderr) {
   // Cancelling the password prompt is a choice, not a failure to explain.
   if (stderr.contains('-128') || stderr.contains('canceled by the user') || stderr.contains('отменена')) {
-    return 'Установка отменена';
+    return tr('Установка отменена', 'Installation cancelled');
   }
   final text = stderr.trim();
-  return text.isEmpty ? 'Не удалось установить службу' : 'Не удалось установить службу: $text';
+  return text.isEmpty
+      ? tr('Не удалось установить службу', "Couldn't install the service")
+      : tr('Не удалось установить службу: $text', "Couldn't install the service: $text");
 }

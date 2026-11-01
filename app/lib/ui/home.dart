@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/state.dart';
+import '../l10n.dart';
 import '../update/how_to_update.dart';
 import 'add_subscription.dart';
 import 'connect_panel.dart';
@@ -39,12 +40,12 @@ class HomeScreen extends ConsumerWidget {
                 const UpdateButton(),
                 if (wide && reachable == true)
                   IconButton(
-                    tooltip: 'Добавить подписку',
+                    tooltip: tr('Добавить подписку', 'Add subscription'),
                     icon: const Icon(Icons.add_link_rounded),
                     onPressed: () => showAddSubscription(context),
                   ),
                 IconButton(
-                  tooltip: 'Настройки',
+                  tooltip: tr('Настройки', 'Settings'),
                   icon: const Icon(Icons.settings_outlined),
                   onPressed: reachable == true ? openSettings : null,
                 ),
@@ -67,10 +68,10 @@ class HomeScreen extends ConsumerWidget {
                     onOpenNodes: () => Navigator.of(context).push(MaterialPageRoute<void>(
                       builder: (_) => Scaffold(
                         appBar: AppBar(
-                          title: const Text('Ноды'),
+                          title: Text(tr('Ноды', 'Nodes')),
                           actions: [
                             IconButton(
-                              tooltip: 'Добавить подписку',
+                              tooltip: tr('Добавить подписку', 'Add subscription'),
                               icon: const Icon(Icons.add_link_rounded),
                               onPressed: () => showAddSubscription(context),
                             ),

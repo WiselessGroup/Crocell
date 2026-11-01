@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../host.dart';
+import '../l10n.dart';
 import '../notify/alerts.dart';
 import '../version.dart';
 
@@ -107,8 +108,8 @@ class UpdateNotifier extends Notifier<String?> {
     if (_announced == latest) return;
     _announced = latest;
     await ref.read(notificationsProvider).show(
-          'Вышла Crocell $latest',
-          'Нажмите, чтобы узнать, как обновиться.',
+          tr('Вышла Crocell $latest', 'Crocell $latest is out'),
+          tr('Нажмите, чтобы узнать, как обновиться.', 'Open it to see how to update.'),
           payload: tapPayload,
         );
   }

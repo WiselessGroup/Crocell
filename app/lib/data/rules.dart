@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../l10n.dart';
 import 'core_api.dart';
 
 /// A rule as typed, before it has an action.
@@ -28,7 +29,7 @@ class ParsedRule {
     raw = raw.trim();
     if (raw.isEmpty) continue;
     final r = _parseOne(raw);
-    if (r == null) return (rules: rules, error: '«$raw» — не похоже ни на сайт, ни на IP, ни на набор');
+    if (r == null) return (rules: rules, error: tr('«$raw» — не похоже ни на сайт, ни на IP, ни на набор', '"$raw" doesn\'t look like a site, an IP or a set'));
     rules.add(r);
   }
   return (rules: rules, error: null);
@@ -106,32 +107,33 @@ String ruleTitle(RouteRule r) => switch (r.kind) {
     };
 
 String ruleKindLabel(RouteRule r) => switch (r.kind) {
-      RuleKind.RULE_KIND_DOMAIN => 'Только этот домен',
-      RuleKind.RULE_KIND_DOMAIN_WILDCARD => 'Поддомены',
-      RuleKind.RULE_KIND_DOMAIN_SUFFIX => 'Домен и поддомены',
-      RuleKind.RULE_KIND_IP_CIDR => r.value.contains('/') ? 'Подсеть' : 'IP-адрес',
-      RuleKind.RULE_KIND_GEOSITE => 'Набор сайтов',
-      RuleKind.RULE_KIND_GEOIP => 'Набор IP-адресов',
-      RuleKind.RULE_KIND_PROCESS_NAME => 'Программа',
+      RuleKind.RULE_KIND_DOMAIN => tr('Только этот домен', 'Only this domain'),
+      RuleKind.RULE_KIND_DOMAIN_WILDCARD => tr('Поддомены', 'Subdomains'),
+      RuleKind.RULE_KIND_DOMAIN_SUFFIX => tr('Домен и поддомены', 'Domain and subdomains'),
+      RuleKind.RULE_KIND_IP_CIDR => r.value.contains('/') ? tr('Подсеть', 'Subnet') : tr('IP-адрес', 'IP address'),
+      RuleKind.RULE_KIND_GEOSITE => tr('Набор сайтов', 'Site set'),
+      RuleKind.RULE_KIND_GEOIP => tr('Набор IP-адресов', 'IP address set'),
+      RuleKind.RULE_KIND_PROCESS_NAME => tr('Программа', 'Program'),
       RuleKind.RULE_KIND_PROCESS_PATH => r.value,
       _ => '',
     };
 
 /// Hand-picked sets worth suggesting, shown only if present in the files.
 /// Names checked against runetfreedom's databases on 1 Nov 2026.
-const geoSuggestions = <({String input, String label})>[
-  (input: 'geosite:ru-blocked', label: 'Заблокированное в России'),
-  (input: 'geoip:ru-blocked', label: 'Заблокированные в России IP'),
-  (input: 'geosite:category-ru', label: 'Российские сайты'),
-  (input: 'geoip:ru', label: 'Российские IP-адреса'),
-  (input: 'geosite:ru-available-only-inside', label: 'Работает только из России'),
+/// A getter, so the labels follow the app's language.
+List<({String input, String label})> get geoSuggestions => [
+  (input: 'geosite:ru-blocked', label: tr('Заблокированное в России', 'Blocked in Russia')),
+  (input: 'geoip:ru-blocked', label: tr('Заблокированные в России IP', 'IPs blocked in Russia')),
+  (input: 'geosite:category-ru', label: tr('Российские сайты', 'Russian sites')),
+  (input: 'geoip:ru', label: tr('Российские IP-адреса', 'Russian IP addresses')),
+  (input: 'geosite:ru-available-only-inside', label: tr('Работает только из России', 'Works only from inside Russia')),
   (input: 'geosite:youtube', label: 'YouTube'),
   (input: 'geosite:telegram', label: 'Telegram'),
-  (input: 'geoip:telegram', label: 'IP-адреса Telegram'),
-  (input: 'geosite:openai', label: 'ChatGPT и OpenAI'),
+  (input: 'geoip:telegram', label: tr('IP-адреса Telegram', 'Telegram IP addresses')),
+  (input: 'geosite:openai', label: tr('ChatGPT и OpenAI', 'ChatGPT and OpenAI')),
   (input: 'geosite:discord', label: 'Discord'),
-  (input: 'geosite:category-ads-all', label: 'Реклама'),
-  (input: 'geosite:win-spy', label: 'Слежка Windows'),
+  (input: 'geosite:category-ads-all', label: tr('Реклама', 'Ads')),
+  (input: 'geosite:win-spy', label: tr('Слежка Windows', 'Windows telemetry')),
 ];
 
 /// Decodes xn-- labels (RFC 3492). Anything malformed stays as it was.

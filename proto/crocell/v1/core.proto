@@ -42,6 +42,10 @@ service Core {
   // geoip.dat / geosite.dat: when they were fetched and what is inside.
   rpc GetGeoInfo(GetGeoInfoRequest) returns (GeoInfo);
   rpc UpdateGeo(UpdateGeoRequest) returns (GeoInfo);
+
+  // The core's recent log, for "copy the logs" in the app. Subscription
+  // links are taken out.
+  rpc GetLogs(GetLogsRequest) returns (Logs);
 }
 
 // ---------- State ----------
@@ -251,6 +255,11 @@ message ListProcessesResponse {
 }
 
 // ---------- Geo databases ----------
+
+message GetLogsRequest {}
+message Logs {
+  string text = 1;
+}
 
 message GetGeoInfoRequest {}
 message UpdateGeoRequest {}

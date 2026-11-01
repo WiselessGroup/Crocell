@@ -22,6 +22,15 @@ object Core {
     @Volatile var startError: String? = null
         private set
 
+    /** Into the log the app's "Logs" button copies, and logcat. */
+    fun log(text: String) {
+        Log.i(TAG, text)
+        try {
+            Mobile.log(text)
+        } catch (_: Throwable) {
+        }
+    }
+
     fun socketPath(context: Context): String = File(context.noBackupFilesDir, "core.sock").path
 
     fun start(context: Context) {
@@ -42,10 +51,15 @@ object Core {
 
     private class AndroidPlatform(private val context: Context) : Platform {
         override fun openTun(request: String): Int {
-            if (VpnService.prepare(context) != null) {
-                throw IllegalStateException("Разрешите Crocell создать VPN: откройте приложение и подключитесь оттуда")
+            try {
+                if (VpnService.prepare(context) != null) {
+                    throw IllegalStateException(context.getString(R.string.vpn_not_allowed))
+                }
+                return CrocellVpnService.open(context, JSONObject(request))
+            } catch (e: Exception) {
+                log("openTun: ${e.javaClass.simpleName}: ${e.message}")
+                throw e
             }
-            return CrocellVpnService.open(context, JSONObject(request))
         }
 
         override fun closeTun() = CrocellVpnService.close(context)

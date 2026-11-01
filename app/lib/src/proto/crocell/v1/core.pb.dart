@@ -2092,6 +2092,102 @@ class ListProcessesResponse extends $pb.GeneratedMessage {
   $pb.PbList<Process> get processes => $_getList(0);
 }
 
+class GetLogsRequest extends $pb.GeneratedMessage {
+  factory GetLogsRequest() => GetLogsRequest._();
+
+  GetLogsRequest._();
+
+  factory GetLogsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetLogsRequest()..mergeFromBuffer(data, registry);
+  factory GetLogsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetLogsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetLogsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: GetLogsRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetLogsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetLogsRequest copyWith(void Function(GetLogsRequest) updates) =>
+      super.copyWith((message) => updates(message as GetLogsRequest))
+          as GetLogsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetLogsRequest() / GetLogsRequest.new instead')
+  static GetLogsRequest create() => GetLogsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetLogsRequest._();
+  @$core.override
+  GetLogsRequest createEmptyInstance() => GetLogsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetLogsRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetLogsRequest>(
+          GetLogsRequest.$_createMessage);
+  static GetLogsRequest? _defaultInstance;
+}
+
+class Logs extends $pb.GeneratedMessage {
+  factory Logs({
+    $core.String? text,
+  }) {
+    final result = Logs._();
+    if (text != null) result.text = text;
+    return result;
+  }
+
+  Logs._();
+
+  factory Logs.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Logs()..mergeFromBuffer(data, registry);
+  factory Logs.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Logs()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Logs',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: Logs.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'text')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Logs clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Logs copyWith(void Function(Logs) updates) =>
+      super.copyWith((message) => updates(message as Logs)) as Logs;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Logs() / Logs.new instead')
+  static Logs create() => Logs._();
+  static $pb.GeneratedMessage $_createMessage() => Logs._();
+  @$core.override
+  Logs createEmptyInstance() => Logs._();
+  @$core.pragma('dart2js:noInline')
+  static Logs getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Logs>(Logs.$_createMessage);
+  static Logs? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get text => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set text($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasText() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearText() => $_clearField(1);
+}
+
 class GetGeoInfoRequest extends $pb.GeneratedMessage {
   factory GetGeoInfoRequest() => GetGeoInfoRequest._();
 

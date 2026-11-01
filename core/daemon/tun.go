@@ -72,14 +72,13 @@ func withoutPrograms(rules []engine.Rule) []engine.Rule {
 	return out
 }
 
-var errAndroidProgramRule = errors.New(
-	"на Android приложение можно пустить только напрямую или через VPN, блокировать и указывать путь нельзя")
-
 // checkMobileRules refuses program rules Android cannot carry out.
 func checkMobileRules(rules []rule) error {
 	for _, r := range rules {
 		if r.Kind == "process_path" || (r.Kind == "process_name" && r.Action == "block") {
-			return errAndroidProgramRule
+			return errors.New(say(
+				"на Android приложение можно пустить только напрямую или через VPN, блокировать и указывать путь нельзя",
+				"on Android an app can go direct or through the VPN; blocking it or naming a path is not possible"))
 		}
 	}
 	return nil

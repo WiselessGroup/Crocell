@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../l10n.dart';
 import '../theme.dart';
 
 /// The figure from the logo. Wings spread when connected.
@@ -80,7 +81,7 @@ class _ConnectButtonState extends State<ConnectButton>
       button: true,
       enabled: widget.onPressed != null,
       toggled: widget.connected,
-      label: widget.label ?? (widget.connected ? 'Отключить VPN' : 'Подключить VPN'),
+      label: widget.label ?? (widget.connected ? tr('Отключить VPN', 'Disconnect VPN') : tr('Подключить VPN', 'Connect VPN')),
       excludeSemantics: true,
       child: SizedBox.square(
         dimension: size,

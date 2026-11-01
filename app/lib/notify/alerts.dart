@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/core_api.dart';
 import '../data/state.dart';
+import '../l10n.dart';
+import '../logs.dart';
 import '../ui/format.dart';
 
 /// Where alerts go. System notifications in the app, a list in tests.
@@ -28,11 +30,11 @@ class SystemNotifications implements Notifications {
 
   Future<bool?> _init() => _ready ??= () async {
         final ok = await _plugin.initialize(
-          settings: const InitializationSettings(
-            android: AndroidInitializationSettings('ic_notification'),
-            linux: LinuxInitializationSettings(defaultActionName: 'Открыть Crocell'),
-            macOS: DarwinInitializationSettings(),
-            windows: WindowsInitializationSettings(
+          settings: InitializationSettings(
+            android: const AndroidInitializationSettings('ic_notification'),
+            linux: LinuxInitializationSettings(defaultActionName: tr('Открыть Crocell', 'Open Crocell')),
+            macOS: const DarwinInitializationSettings(),
+            windows: const WindowsInitializationSettings(
               appName: 'Crocell',
               appUserModelId: 'net.wiseless.crocell',
               guid: '6f3d2a8e-9b41-4c7e-8a55-2f1c0d7e4b93',
@@ -78,9 +80,9 @@ class SystemNotifications implements Notifications {
         title: title,
         body: body,
         payload: payload,
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails('alerts', 'Состояние VPN',
-              channelDescription: 'Сбои подключения и новые версии Crocell'),
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails('alerts', tr('Состояние VPN', 'VPN status'),
+              channelDescription: tr('Сбои подключения и новые версии Crocell', 'Connection failures and new Crocell versions')),
         ),
       );
     } catch (_) {
@@ -109,20 +111,23 @@ final notificationsProvider = Provider<Notifications>((ref) {
 /// What went wrong, in words, or null when nothing worth interrupting for.
 /// Pure, so the rules are testable without a notification server.
 ({String title, String body})? alertFor(Status? prev, Status? next, {String nodeName = ''}) {
-  final node = nodeName.isEmpty ? 'Нода' : 'Нода «$nodeName»';
+  final node = nodeName.isEmpty ? tr('Нода', 'The node') : tr('Нода «$nodeName»', 'Node "$nodeName"');
 
   if (next == null) {
     // The service vanished. Only news if a VPN was supposed to be running.
     if (prev != null && prev.isConnected) {
-      return (title: 'Служба Crocell остановилась', body: 'VPN мог отключиться. Откройте Crocell, чтобы проверить.');
+      return (
+        title: tr('Служба Crocell остановилась', 'Crocell service stopped'),
+        body: tr('VPN мог отключиться. Откройте Crocell, чтобы проверить.', 'The VPN may have disconnected. Open Crocell to check.'),
+      );
     }
     return null;
   }
 
   if (next.isFailed && (prev == null || !prev.isFailed)) {
     return (
-      title: 'Не удалось подключиться',
-      body: next.error.isNotEmpty ? next.error : 'Попробуйте выбрать другую ноду.',
+      title: tr('Не удалось подключиться', "Couldn't connect"),
+      body: next.error.isNotEmpty ? next.error : tr('Попробуйте выбрать другую ноду.', 'Try picking another node.'),
     );
   }
 
@@ -132,10 +137,16 @@ final notificationsProvider = Provider<Notifications>((ref) {
   final sameNode = prev != null && prev.nodeId == next.nodeId;
 
   if (isBroken && !wasBroken) {
-    return (title: 'VPN подключён, но интернет не идёт', body: '$node не отвечает. Выберите другую в списке.');
+    return (
+      title: tr('VPN подключён, но интернет не идёт', "VPN is connected, but there's no internet"),
+      body: tr('$node не отвечает. Выберите другую в списке.', '$node is not responding. Pick another one from the list.'),
+    );
   }
   if (!isBroken && wasBroken && sameNode) {
-    return (title: 'Интернет через VPN снова работает', body: 'Выход: ${exitPlace(next.liveCheck)}.');
+    return (
+      title: tr('Интернет через VPN снова работает', 'Internet through VPN works again'),
+      body: tr('Выход: ${exitPlace(next.liveCheck)}.', 'Exit: ${exitPlace(next.liveCheck)}.'),
+    );
   }
   return null;
 }
@@ -150,7 +161,10 @@ final connectionAlertsProvider = Provider<void>((ref) {
     final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
     final name = next == null ? '' : (findNode(subs, next.subscriptionId, next.nodeId)?.node.name ?? '');
     final alert = alertFor(last, next, nodeName: displayName(name));
-    if (alert != null) ref.read(notificationsProvider).show(alert.title, alert.body);
+    if (alert != null) {
+      appLog('${alert.title}: ${alert.body}');
+      ref.read(notificationsProvider).show(alert.title, alert.body);
+    }
     last = next;
   }
 

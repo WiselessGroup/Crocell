@@ -16,6 +16,7 @@ import (
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/engine"
 	"git.wiseless.net/fureunoir/crocell/core/geo"
+	"git.wiseless.net/fureunoir/crocell/core/logbuf"
 )
 
 // ---------- Processes ----------
@@ -30,6 +31,18 @@ func (s *Service) ListProcesses(context.Context, *pb.ListProcessesRequest) (*pb.
 		resp.Processes = append(resp.Processes, &pb.Process{Name: p.Name, Path: p.Path, Label: p.Label})
 	}
 	return resp, nil
+}
+
+// ---------- Logs ----------
+
+func (s *Service) GetLogs(context.Context, *pb.GetLogsRequest) (*pb.Logs, error) {
+	text := logbuf.Text()
+	s.mu.Lock()
+	for _, sub := range s.st.Subscriptions {
+		text = scrub(text, sub.URL)
+	}
+	s.mu.Unlock()
+	return &pb.Logs{Text: text}, nil
 }
 
 // ---------- Geo databases ----------
@@ -143,27 +156,27 @@ func (s *Service) installGeo(ds []geo.Download) error {
 // explainGeo says what is wrong with a geo source in the app's language.
 func explainGeo(label, src string, err error) error {
 	if src == "" {
-		src = "источник по умолчанию"
+		src = say("источник по умолчанию", "the default source")
 	}
 	var he *geo.HTTPError
 	switch {
 	case errors.As(err, &he) && he.Status == http.StatusNotFound:
-		return fmt.Errorf("%s: по ссылке ничего нет (404). Проверьте адрес: %s", label, src)
+		return fmt.Errorf(say("%s: по ссылке ничего нет (404). Проверьте адрес: %s", "%s: nothing at this link (404). Check the address: %s"), label, src)
 	case errors.As(err, &he):
-		return fmt.Errorf("%s: сервер ответил ошибкой %d на %s", label, he.Status, src)
+		return fmt.Errorf(say("%s: сервер ответил ошибкой %d на %s", "%s: the server answered %d for %s"), label, he.Status, src)
 	case errors.Is(err, geo.ErrSwapped):
 		other := map[string]string{"geoip.dat": "geosite.dat", "geosite.dat": "geoip.dat"}[label]
-		return fmt.Errorf("%s: по этой ссылке лежит %s. Похоже, ссылки перепутаны местами.", label, other)
+		return fmt.Errorf(say("%s: по этой ссылке лежит %s. Похоже, ссылки перепутаны местами.", "%s: this link has %s. The two links look swapped."), label, other)
 	case errors.Is(err, geo.ErrNotDatabase):
-		return fmt.Errorf("%s: по ссылке не база, а что-то другое, скорее всего веб-страница. Нужна прямая ссылка на сам файл .dat.", label)
+		return fmt.Errorf(say("%s: по ссылке не база, а что-то другое, скорее всего веб-страница. Нужна прямая ссылка на сам файл .dat.", "%s: this link is not a database, most likely a web page. It needs a direct link to the .dat file."), label)
 	case errors.Is(err, fs.ErrNotExist):
-		return fmt.Errorf("%s: файла %s нет", label, src)
+		return fmt.Errorf(say("%s: файла %s нет", "%s: there is no file %s"), label, src)
 	case errors.Is(err, fs.ErrPermission):
-		return fmt.Errorf("%s: службе не хватает прав прочитать %s", label, src)
+		return fmt.Errorf(say("%s: службе не хватает прав прочитать %s", "%s: the service may not read %s"), label, src)
 	case errors.Is(err, context.DeadlineExceeded):
-		return fmt.Errorf("%s: не скачался за 3 минуты с %s", label, src)
+		return fmt.Errorf(say("%s: не скачался за 3 минуты с %s", "%s: did not download from %s in 3 minutes"), label, src)
 	default:
-		return fmt.Errorf("%s: не скачался с %s (%v)", label, src, err)
+		return fmt.Errorf(say("%s: не скачался с %s (%v)", "%s: did not download from %s (%v)"), label, src, err)
 	}
 }
 

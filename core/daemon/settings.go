@@ -74,17 +74,17 @@ func checkGeoSource(src string) error {
 	case src == "":
 		return nil
 	case strings.ContainsAny(src, "\n\r"):
-		return errors.New("одна ссылка, без переносов строки")
+		return errors.New(say("одна ссылка, без переносов строки", "one link, no line breaks"))
 	case isURL(src):
 		u, err := url.Parse(src)
 		if err != nil || u.Host == "" {
-			return errors.New("ссылка не разбирается, проверьте адрес")
+			return errors.New(say("ссылка не разбирается, проверьте адрес", "the link does not parse, check the address"))
 		}
 		return nil
 	case filepath.IsAbs(src):
 		return nil
 	default:
-		return errors.New("нужна ссылка, начинающаяся с https://, или полный путь к файлу, начинающийся с /")
+		return errors.New(say("нужна ссылка, начинающаяся с https://, или полный путь к файлу, начинающийся с /", "needs a link starting with https://, or a full file path starting with /"))
 	}
 }
 
@@ -166,7 +166,7 @@ func settingsFromProto(p *pb.Settings) (settings, error) {
 	s.Geo.GeoSiteSource = geo.Normalize(s.Geo.GeoSiteSource)
 	for _, g := range []struct{ name, src string }{{"geoip.dat", s.Geo.GeoIPSource}, {"geosite.dat", s.Geo.GeoSiteSource}} {
 		if err := checkGeoSource(g.src); err != nil {
-			return settings{}, fmt.Errorf("Источник %s: %w", g.name, err)
+			return settings{}, fmt.Errorf(say("Источник %s: %w", "Source of %s: %w"), g.name, err)
 		}
 	}
 	for _, d := range append(append([]string{}, s.DNS.Servers...), s.DNS.DirectServers...) {
@@ -176,7 +176,7 @@ func settingsFromProto(p *pb.Settings) (settings, error) {
 	}
 	for _, d := range s.DNS.DirectServers {
 		if strings.EqualFold(d, "system") {
-			return settings{}, errors.New("DNS для прямых соединений: «system» не подходит. В туннеле системный DNS спрашивает сам Crocell, и прямые сайты не открываются. Впишите адрес сервера, например 77.88.8.8, или оставьте поле пустым.")
+			return settings{}, errors.New(say("DNS для прямых соединений: «system» не подходит. В туннеле системный DNS спрашивает сам Crocell, и прямые сайты не открываются. Впишите адрес сервера, например 77.88.8.8, или оставьте поле пустым.", "DNS for direct connections: \"system\" will not do. In the tunnel the system DNS asks Crocell itself, and direct sites stop opening. Enter a server address, for example 1.1.1.1, or leave the field empty."))
 		}
 	}
 

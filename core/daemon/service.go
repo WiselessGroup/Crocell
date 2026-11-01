@@ -253,6 +253,9 @@ func (s *Service) startChecksLocked() {
 			s.mu.Unlock()
 
 			r := toProtoProbe(nodeID, s.check(ctx, mode, port))
+			if r.GetError() != "" {
+				log.Printf("crocelld: live check: %s", r.GetError())
+			}
 
 			s.mu.Lock()
 			if ctx.Err() != nil {
@@ -422,11 +425,13 @@ func (s *Service) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.Stat
 		}
 	}
 	if err != nil {
+		log.Printf("crocelld: connect to %q (%s) failed: %s", node.Name, mode, scrub(err.Error(), sub.URL))
 		s.setConn(connection{
 			state: pb.ConnectionState_CONNECTION_STATE_FAILED, subID: sub.ID, nodeID: node.ID,
 			mode: mode, err: scrub(err.Error(), sub.URL),
 		})
 	} else {
+		log.Printf("crocelld: connected to %q (%s)", node.Name, mode)
 		s.setConn(connection{
 			state: pb.ConnectionState_CONNECTION_STATE_CONNECTED, subID: sub.ID, nodeID: node.ID,
 			mode: mode, port: opts.MixedPort, since: time.Now(),
@@ -502,9 +507,11 @@ func (s *Service) openTun(opts *engine.Options) error {
 	if err != nil {
 		return err
 	}
-	fd, err := s.tun.Open(tunRequest(rules, opts.Final, opts.IPv6, s.pkg))
+	req := tunRequest(rules, opts.Final, opts.IPv6, s.pkg)
+	log.Printf("crocelld: VPN interface %s %s, allow %v, disallow %v", req.Address4, req.Address6, req.Allow, req.Disallow)
+	fd, err := s.tun.Open(req)
 	if err != nil {
-		return fmt.Errorf("VPN не поднялся: %w", err)
+		return fmt.Errorf(say("VPN не поднялся: %w", "the VPN did not come up: %w"), err)
 	}
 	opts.Tun.FileDescriptor = fd
 	return nil
@@ -554,6 +561,12 @@ func (s *Service) SelectNode(ctx context.Context, req *pb.SelectNodeRequest) (*p
 			s.st.Last = selection{SubscriptionID: sub.ID, NodeID: node.ID}
 			if err := s.store.save(s.st); err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
+			}
+			// After a failed connect the status still names the node that
+			// failed; picking another one starts over from it.
+			if s.conn.state == pb.ConnectionState_CONNECTION_STATE_FAILED ||
+				s.conn.state == pb.ConnectionState_CONNECTION_STATE_DISCONNECTED {
+				s.conn = connection{state: pb.ConnectionState_CONNECTION_STATE_DISCONNECTED, subID: sub.ID, nodeID: node.ID}
 			}
 			s.notifyLocked() // the client shows the selection before connecting
 			return s.statusLocked(), nil

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/state.dart';
+import '../l10n.dart';
 
 /// Asks for a subscription link. Picks it up from the clipboard when one is
 /// there, since that is where people bring it from.
@@ -55,7 +56,7 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
   Future<void> _submit() async {
     final url = _url.text.trim();
     if (!_looksLikeLink(url)) {
-      setState(() => _error = 'Нужна ссылка, которая начинается с https://');
+      setState(() => _error = tr('Нужна ссылка, которая начинается с https://', 'The link should start with https://'));
       return;
     }
     setState(() {
@@ -81,14 +82,14 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Добавить подписку'),
+      title: Text(tr('Добавить подписку', 'Add subscription')),
       content: SizedBox(
         width: 460,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Вставьте ссылку, которую дал ваш VPN-сервис. Crocell сам разберётся с форматом.'),
+            Text(tr('Вставьте ссылку, которую дал ваш VPN-сервис. Crocell сам разберётся с форматом.', 'Paste the link your VPN service gave you. Crocell will figure out the format.')),
             const SizedBox(height: 16),
             TextField(
               controller: _url,
@@ -102,13 +103,13 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
                 _fromClipboard = false;
               }),
               decoration: InputDecoration(
-                labelText: 'Ссылка на подписку',
+                labelText: tr('Ссылка на подписку', 'Subscription link'),
                 hintText: 'https://…',
                 errorText: _error,
                 errorMaxLines: 3,
-                helperText: _fromClipboard ? 'Взяли из буфера обмена' : null,
+                helperText: _fromClipboard ? tr('Взяли из буфера обмена', 'Taken from the clipboard') : null,
                 suffixIcon: IconButton(
-                  tooltip: 'Вставить',
+                  tooltip: tr('Вставить', 'Paste'),
                   icon: const Icon(Icons.content_paste_rounded),
                   onPressed: _busy ? null : () => _pasteIfLink(),
                 ),
@@ -118,12 +119,12 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
         ),
       ),
       actions: [
-        TextButton(onPressed: _busy ? null : () => Navigator.of(context).pop(), child: const Text('Отмена')),
+        TextButton(onPressed: _busy ? null : () => Navigator.of(context).pop(), child: Text(tr('Отмена', 'Cancel'))),
         FilledButton(
           onPressed: _busy ? null : _submit,
           child: _busy
               ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Добавить'),
+              : Text(tr('Добавить', 'Add')),
         ),
       ],
     );

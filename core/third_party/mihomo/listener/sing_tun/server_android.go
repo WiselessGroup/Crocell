@@ -47,6 +47,15 @@ func getPackageManager() (tun.PackageManager, error) {
 }
 
 func (l *Listener) buildAndroidRules(tunOptions *tun.Options) error {
+	// Crocell: with a VpnService fd the app lists and the routes are
+	// VpnService's, and the package manager below reads
+	// /data/system/packages.xml, which an ordinary app may not open: TUN
+	// failed with "permission denied" on every connect. Only go there when
+	// package or user lists were actually given.
+	if tunOptions.FileDescriptor > 0 || (len(tunOptions.IncludePackage) == 0 && len(tunOptions.ExcludePackage) == 0 &&
+		len(tunOptions.IncludeAndroidUser) == 0) {
+		return nil
+	}
 	packageManager, err := getPackageManager()
 	if err != nil {
 		return err

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vpn_channel">VPN включён</string>
+    <string name="vpn_channel_description">Пока висит это уведомление, Crocell держит VPN</string>
+    <string name="vpn_connected">Crocell подключён</string>
+    <string name="vpn_tap_to_open">Нажмите, чтобы открыть</string>
+    <string name="vpn_disconnect">Отключить</string>
+    <string name="vpn_not_allowed">Разрешите Crocell создать VPN: откройте приложение и подключитесь оттуда</string>
+    <string name="vpn_service_timeout">Служба VPN не запустилась</string>
+    <string name="vpn_establish_null">Android не дал создать VPN: разрешение отозвано</string>
+    <string name="tile_label">Crocell</string>
+    <string name="tile_connecting">Подключаюсь…</string>
+    <string name="tile_no_service">Откройте Crocell один раз, чтобы всё настроить</string>
+</resources>

@@ -1,11 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 
 import 'data/core_api.dart';
 import 'data/state.dart';
+import 'l10n.dart';
 import 'platform/android.dart';
 
 import 'notify/alerts.dart';
@@ -43,6 +45,9 @@ class CrocellApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: crocellTheme(Brightness.light),
       darkTheme: crocellTheme(Brightness.dark),
+      locale: appLocale,
+      supportedLocales: const [Locale('ru'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const HomeScreen(),
     );
   }

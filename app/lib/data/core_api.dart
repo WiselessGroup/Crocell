@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:grpc/grpc.dart';
 
+import '../l10n.dart';
 import '../src/proto/crocell/v1/core.pbgrpc.dart';
 
 export '../src/proto/crocell/v1/core.pb.dart';
@@ -29,6 +30,9 @@ abstract interface class CoreApi {
   Future<List<Process>> listProcesses();
   Future<GeoInfo> getGeoInfo();
   Future<GeoInfo> updateGeo();
+
+  /// The core's recent log, subscription links taken out.
+  Future<String> getLogs();
 }
 
 /// Something went wrong in a way the person can read.
@@ -86,8 +90,12 @@ class GrpcCoreApi implements CoreApi {
             connectTimeout: Duration(seconds: 2),
           ),
         ) {
+    // The service answers in the app's language, errors included.
     _client = CoreClient(_channel,
-        options: endpoint.isUnix ? null : CallOptions(providers: [_tokenFrom(endpoint.tokenFile)]));
+        options: CallOptions(
+          metadata: {'x-crocell-lang': lang.name},
+          providers: [if (!endpoint.isUnix) _tokenFrom(endpoint.tokenFile)],
+        ));
   }
 
   /// Read on every call: the service writes it on its first start, which
@@ -121,7 +129,7 @@ class GrpcCoreApi implements CoreApi {
     if (e.code == StatusCode.unavailable ||
         e.code == StatusCode.deadlineExceeded ||
         e.code == StatusCode.unauthenticated) {
-      return const CoreError('Служба Crocell не отвечает', unavailable: true);
+      return CoreError(tr('Служба Crocell не отвечает', 'Crocell service is not responding'), unavailable: true);
     }
     return CoreError(e.message ?? e.codeName);
   }
@@ -177,6 +185,9 @@ class GrpcCoreApi implements CoreApi {
   Future<GeoInfo> updateGeo() => _call(() => _client.updateGeo(UpdateGeoRequest(),
       // Two databases, ~100 MB from GitHub: give it time.
       options: CallOptions(timeout: const Duration(minutes: 4))));
+
+  @override
+  Future<String> getLogs() async => (await _call(() => _client.getLogs(GetLogsRequest()))).text;
 
   Future<void> close() => _channel.shutdown();
 }
