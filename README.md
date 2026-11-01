@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/home-dark.png" width="820" alt="Crocell connected, with the node list">
+  <img src="assets/screenshots/home-dark-en.png" width="820" alt="Crocell connected, with the node list">
 </p>
 
 Paste your subscription link, pick a node, press the button. That's the whole first screen. No wall of toggles, no "ping 5000" that means nothing to anyone.
@@ -64,7 +64,7 @@ On a desktop the VPN is held by a small system service, so closing or updating t
 - Keeps subscriptions and settings encrypted with AES-256-GCM. On Linux the key is sealed with `systemd-creds` (TPM when there is one), on Android it sits in the Keystore. A copied state file is useless anywhere else.
 
 <p align="center">
-  <img src="assets/screenshots/rules-dark.png" width="820" alt="Routing rules: three lists, grouped by kind">
+  <img src="assets/screenshots/rules-dark-en.png" width="820" alt="Routing rules: three lists, grouped by kind">
 </p>
 
 ## How it's built
@@ -105,11 +105,6 @@ cd ../app && flutter run -d linux
 
 The packages come out of `scripts/`: `build-appimage.sh`, `build-windows.sh`, `build-macos.sh` and `build-android.sh`, each taking a version.
 
-## Star history
-
-<a href="https://star-history.com/#WiselessGroup/Crocell&Date">
-  <img src="https://api.star-history.com/svg?repos=WiselessGroup/Crocell&type=Date" width="600" alt="Star history">
-</a>
 
 ## License
 

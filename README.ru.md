@@ -105,11 +105,6 @@ cd ../app && flutter run -d linux
 
 Пакеты собирают скрипты в `scripts/`: `build-appimage.sh`, `build-windows.sh`, `build-macos.sh` и `build-android.sh`, каждый принимает версию.
 
-## История звёзд
-
-<a href="https://star-history.com/#WiselessGroup/Crocell&Date">
-  <img src="https://api.star-history.com/svg?repos=WiselessGroup/Crocell&type=Date" width="600" alt="История звёзд">
-</a>
 
 ## Лицензия
 
