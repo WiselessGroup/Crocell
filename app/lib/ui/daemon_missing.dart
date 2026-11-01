@@ -15,7 +15,7 @@ class DaemonMissing extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final t = context.tokens;
-    final command = Platform.isLinux ? 'sudo crocelld install' : null;
+    final command = installCommand(Platform.environment);
 
     return Center(
       child: SingleChildScrollView(
@@ -79,4 +79,14 @@ class DaemonMissing extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The command that installs the service here, or null where there is no
+/// installer yet. From an AppImage the service lives inside the image, so
+/// the image itself runs the installer.
+String? installCommand(Map<String, String> env) {
+  if (!Platform.isLinux) return null;
+  final image = env['APPIMAGE'];
+  if (image == null || image.isEmpty) return 'sudo crocelld install';
+  return "sudo '${image.replaceAll("'", r"'\''")}' crocelld install";
 }

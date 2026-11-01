@@ -83,6 +83,26 @@ flutter run -d linux
 
 Чтобы направить клиент на демон, запущенный руками, задайте `CROCELL_SOCKET=/путь/к/crocelld.sock`. Код клиента для API генерируется вместе с Go: `make proto` в `core/` (нужен `dart pub global activate protoc_plugin`).
 
+## Сборки и релизы
+
+Исходники живут на git.wiseless.net, оттуда они сами уходят в зеркало [github.com/WiselessGroup/Crocell](https://github.com/WiselessGroup/Crocell). Собирает всё GitHub Actions ([build.yml](.github/workflows/build.yml)): тесты ядра и клиента, AppImage, а также проверочные сборки под Windows, macOS и Android. Эти три пока никуда не публикуются, потому что ни службы, ни VPN-слоя под них ещё нет.
+
+Релиз выпускается тегом:
+
+```bash
+git tag v0.3.0 && git push origin v0.3.0
+```
+
+Зеркало передаёт тег на GitHub, а workflow выкладывает в релиз `Crocell-x86_64.AppImage` и `.zsync`. Ссылка на обновления зашита в сам образ, поэтому Gear Lever и AppImageUpdate подтягивают новые версии сами. Служба ставится прямо из образа:
+
+```bash
+sudo ./Crocell-x86_64.AppImage crocelld install
+```
+
+Если у root нет FUSE, сработает `--appimage-extract-and-run` перед `crocelld`. После обновления образа службу надо переустановить той же командой, иначе продолжит работать старая.
+
+AppImage можно собрать и локально, это `scripts/build-appimage.sh [версия]`. Нужен `appimagetool` в PATH, а без него скрипт останавливается на готовой `dist/AppDir`.
+
 ## Лицензия
 
 [GPL-3.0](LICENSE). Crocell построен на [mihomo](https://github.com/MetaCubeX/mihomo), который тоже под GPL-3.0.

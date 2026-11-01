@@ -1,0 +1,10 @@
+#!/bin/sh
+# Crocell AppImage entry point. With no arguments it opens the app;
+# "crocelld ..." runs the bundled service, so
+#   sudo ./Crocell-x86_64.AppImage crocelld install
+# installs the service straight from the image.
+here="$(dirname "$(readlink -f "$0")")"
+case "$1" in
+crocelld) shift; exec "$here/usr/bin/crocelld" "$@" ;;
+esac
+exec "$here/usr/lib/crocell/crocell" "$@"

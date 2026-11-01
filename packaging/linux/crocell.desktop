@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Crocell
+GenericName=VPN client
+Comment=Proxy and tunnel client for Xray and Mihomo subscriptions
+Comment[ru]=Прокси и туннель для подписок Xray и Mihomo
+Exec=crocell
+Icon=crocell
+Terminal=false
+Categories=Network;
+StartupWMClass=net.wiseless.crocell

@@ -5,6 +5,7 @@ import '../data/core_api.dart';
 import '../data/rules.dart';
 import '../data/state.dart';
 import '../theme.dart';
+import '../version.dart';
 import 'add_rule.dart';
 import 'common.dart';
 
@@ -51,7 +52,7 @@ class SettingsScreen extends ConsumerWidget {
                       const SizedBox(height: 32),
                       const _Heading('О Crocell'),
                       Text(
-                        'Версия 0.2.0. Ядро — mihomo. Свободная программа под лицензией GPL-3.0. '
+                        'Версия $appVersion. Ядро — mihomo. Свободная программа под лицензией GPL-3.0. '
                         'Подписки и настройки хранятся на диске в зашифрованном виде.',
                         style: theme.textTheme.bodyMedium?.copyWith(color: t.muted),
                       ),
