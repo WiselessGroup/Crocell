@@ -11,7 +11,11 @@ import (
 // hands the fd to the engine, which owns it from then on.
 type TunProvider interface {
 	Open(TunRequest) (fd int, err error)
-	// Close takes the VPN down after a disconnect.
+	// Hold keeps the app alive with no VPN, for proxy mode: the core only
+	// serves the mixed port, and Android would otherwise kill it in the
+	// background.
+	Hold(mixedPort int) error
+	// Close takes the VPN (or the hold) down after a disconnect.
 	Close()
 }
 

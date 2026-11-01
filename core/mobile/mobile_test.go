@@ -16,6 +16,7 @@ type fakePlatform struct{}
 
 func (fakePlatform) OpenTun(string) (int32, error) { return 0, nil }
 func (fakePlatform) CloseTun()                     {}
+func (fakePlatform) HoldProxy(int32) error         { return nil }
 func (fakePlatform) InstalledApps() (string, error) {
 	return `[{"package":"org.telegram.messenger","label":"Telegram"}]`, nil
 }

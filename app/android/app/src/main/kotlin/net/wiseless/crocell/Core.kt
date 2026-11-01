@@ -62,6 +62,15 @@ object Core {
             }
         }
 
+        override fun holdProxy(port: Int) {
+            try {
+                CrocellVpnService.hold(context, port)
+            } catch (e: Exception) {
+                log("holdProxy: ${e.javaClass.simpleName}: ${e.message}")
+                throw e
+            }
+        }
+
         override fun closeTun() = CrocellVpnService.close(context)
 
         override fun installedApps(): String {

@@ -13,6 +13,7 @@ import (
 type fakeTun struct {
 	mu     sync.Mutex
 	opened []TunRequest
+	held   []int
 	closed int
 }
 
@@ -24,6 +25,13 @@ func (f *fakeTun) Open(r TunRequest) (int, error) {
 }
 
 func (f *fakeTun) Close() { f.mu.Lock(); f.closed++; f.mu.Unlock() }
+
+func (f *fakeTun) Hold(port int) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.held = append(f.held, port)
+	return nil
+}
 
 // Android: the platform builds the interface, program rules become the
 // interface's package lists, and the app itself stays outside.
@@ -52,6 +60,9 @@ func TestAndroidConnectsThroughVpnService(t *testing.T) {
 	opts := h.eng.last()
 	if opts.Tun == nil || opts.Tun.FileDescriptor != 42 {
 		t.Fatalf("engine TUN = %+v, want the fd from VpnService", opts.Tun)
+	}
+	if opts.Tun.Stack != "gvisor" {
+		t.Errorf("stack = %q: on Android only gVisor works, the app is outside its own VPN", opts.Tun.Stack)
 	}
 	for _, r := range opts.Rules {
 		if r.Value == "ru.sberbankmobile" {
@@ -90,5 +101,33 @@ func TestAndroidOnlyChosenAppsWhenFinalIsDirect(t *testing.T) {
 	r = tunRequest(rules, engine.Proxy, true, "self")
 	if r.Allow != nil || !slices.Equal(r.Disallow, []string{"self", "ru.sberbankmobile"}) || r.Address6 == "" {
 		t.Errorf("request = %+v", r)
+	}
+}
+
+// A phone starts in the tunnel; choosing proxy there gives a bare mixed
+// port with no VPN, kept alive by the platform.
+func TestAndroidProxyModeHoldsWithoutVpn(t *testing.T) {
+	tun := &fakeTun{}
+	h := newHarness(t, func(c *Config) { c.Tun, c.Package = tun, "net.wiseless.crocell" })
+	sub := h.add(t)
+	ctx := context.Background()
+
+	set, _ := h.client.GetSettings(ctx, &pb.GetSettingsRequest{})
+	if set.TunnelMode != pb.TunnelMode_TUNNEL_MODE_TUN {
+		t.Fatalf("Android starts in %v, want the tunnel", set.TunnelMode)
+	}
+	set.TunnelMode = pb.TunnelMode_TUNNEL_MODE_SYSTEM_PROXY
+	if _, err := h.client.UpdateSettings(ctx, set); err != nil {
+		t.Fatal(err)
+	}
+	st, err := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.Id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.TunnelMode != pb.TunnelMode_TUNNEL_MODE_SYSTEM_PROXY || h.eng.last().Tun != nil {
+		t.Errorf("mode %v, engine TUN %+v: want the mixed port only", st.TunnelMode, h.eng.last().Tun)
+	}
+	if len(tun.opened) != 0 || len(tun.held) != 1 || tun.held[0] != 7890 {
+		t.Errorf("opened %v, held %v: want no VPN and a hold on 7890", tun.opened, tun.held)
 	}
 }

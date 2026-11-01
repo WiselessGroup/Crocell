@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/core_api.dart';
@@ -313,14 +314,14 @@ class _ModePicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider).value;
-    // A phone has one way: the VPN for everything.
-    if (settings == null || ref.watch(hostProvider).embeddedCore) return const SizedBox.shrink();
+    if (settings == null) return const SizedBox.shrink();
+    final phone = ref.watch(hostProvider).embeddedCore;
     final t = context.tokens;
     final mode = settings.tunnelMode == TunnelMode.TUNNEL_MODE_TUN
         ? TunnelMode.TUNNEL_MODE_TUN
         : TunnelMode.TUNNEL_MODE_SYSTEM_PROXY;
 
-    return Row(
+    final picker = Row(
       children: [
         Expanded(
           child: SegmentedButton<TunnelMode>(
@@ -351,7 +352,34 @@ class _ModePicker extends ConsumerWidget {
         IconButton(
           tooltip: tr('Чем отличаются режимы', 'How the modes differ'),
           icon: Icon(Icons.info_outline_rounded, color: t.muted),
-          onPressed: () => showDialog<void>(context: context, builder: (_) => const _ModesInfo()),
+          onPressed: () => showDialog<void>(context: context, builder: (_) => _ModesInfo(phone: phone)),
+        ),
+      ],
+    );
+    if (!phone || mode != TunnelMode.TUNNEL_MODE_SYSTEM_PROXY) return picker;
+
+    // A phone has no system proxy to set: the address goes into the apps.
+    final address = '127.0.0.1:${settings.mixedPort == 0 ? 7890 : settings.mixedPort}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        picker,
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                tr('Укажите в приложении прокси $address (HTTP или SOCKS5)',
+                    'Set the proxy to $address (HTTP or SOCKS5) in the app'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: t.muted),
+              ),
+            ),
+            IconButton(
+              tooltip: tr('Скопировать адрес', 'Copy the address'),
+              icon: Icon(Icons.copy_rounded, size: 18, color: t.muted),
+              onPressed: () => Clipboard.setData(ClipboardData(text: address)),
+            ),
+          ],
         ),
       ],
     );
@@ -361,7 +389,11 @@ class _ModePicker extends ConsumerWidget {
 /// Written for people who don't know what a proxy is, and edited with the
 /// humanizer skill so it reads like a person explaining, not a spec.
 class _ModesInfo extends StatelessWidget {
-  const _ModesInfo();
+  const _ModesInfo({required this.phone});
+
+  /// On a phone "proxy" is a local proxy for the apps you set it in, not
+  /// the system's proxy settings.
+  final bool phone;
 
   @override
   Widget build(BuildContext context) {
@@ -394,12 +426,21 @@ class _ModesInfo extends StatelessWidget {
             mode(
               Icons.public_rounded,
               tr('Прокси', 'Proxy'),
-              tr(
-                'Crocell прописывает себя в системные настройки прокси, и браузер с большинством программ '
-                    'идут через VPN. Некоторые программы эти настройки игнорируют, им VPN не достанется.',
-                'Crocell sets itself as the system proxy, so your browser and most programs '
-                    'go through the VPN. Some programs ignore these settings and won\'t use the VPN.',
-              ),
+              phone
+                  ? tr(
+                      'VPN не включается. Crocell держит прокси на 127.0.0.1:7890, и через ноду идут только те '
+                          'приложения, где вы его указали: Telegram, браузер. Остальное идёт как обычно, '
+                          'а системный VPN свободен для другого.',
+                      'No VPN is turned on. Crocell runs a proxy on 127.0.0.1:7890, and only the apps you set it in '
+                          'go through the node: Telegram, a browser. Everything else goes as usual, '
+                          'and the system VPN stays free for something else.',
+                    )
+                  : tr(
+                      'Crocell прописывает себя в системные настройки прокси, и браузер с большинством программ '
+                          'идут через VPN. Некоторые программы эти настройки игнорируют, им VPN не достанется.',
+                      'Crocell sets itself as the system proxy, so your browser and most programs '
+                          'go through the VPN. Some programs ignore these settings and won\'t use the VPN.',
+                    ),
             ),
             const SizedBox(height: 16),
             mode(
@@ -413,7 +454,12 @@ class _ModesInfo extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text(tr('Если не знаете, что выбрать, начните с прокси.', "If you're not sure which to pick, start with proxy."), style: body?.copyWith(color: context.tokens.muted)),
+            Text(
+              phone
+                  ? tr('Если не знаете, что выбрать, оставьте туннель.', "If you're not sure which to pick, keep the tunnel.")
+                  : tr('Если не знаете, что выбрать, начните с прокси.', "If you're not sure which to pick, start with proxy."),
+              style: body?.copyWith(color: context.tokens.muted),
+            ),
           ],
         ),
       ),

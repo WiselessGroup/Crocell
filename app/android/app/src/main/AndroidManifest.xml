@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- The app picker for routing rules lists installed apps. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
+    <!-- "Hide the notification" asks to be left alone in the background. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 
     <!-- No backup: the state is encrypted with a Keystore key that does not
          travel, so a restored copy could never be opened. -->

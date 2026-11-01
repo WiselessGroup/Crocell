@@ -16,6 +16,14 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "socketPath" -> result.success(Core.socketPath(this))
                 "startError" -> result.success(Core.startError)
+                "hideNotification" -> result.success(Prefs.hideNotification(this))
+                "setHideNotification" -> {
+                    val hide = call.arguments as Boolean
+                    Prefs.setHideNotification(this, hide)
+                    if (hide) Prefs.askBatteryUnrestricted(this)
+                    result.success(null)
+                }
+                "batteryUnrestricted" -> result.success(Prefs.batteryUnrestricted(this))
                 // Android shows its "allow VPN" dialog once; after that prepare() returns null.
                 "prepareVpn" -> {
                     val ask = VpnService.prepare(this)

@@ -23,13 +23,32 @@ class CrocellVpnService : VpnService() {
         private const val NOTIFICATION = 10
         private const val ACTION_HOLD = "net.wiseless.crocell.HOLD"
         private const val ACTION_DISCONNECT = "net.wiseless.crocell.DISCONNECT"
+        private const val ACTION_NOTIFICATION = "net.wiseless.crocell.NOTIFICATION"
+
+        /** The person changed "hide notification": apply it to a running VPN. */
+        fun notificationChoiceChanged(context: Context) {
+            if (synchronized(lock) { instance } != null) {
+                context.startService(Intent(context, CrocellVpnService::class.java).setAction(ACTION_NOTIFICATION))
+            }
+        }
 
         private val lock = Object()
         private var instance: CrocellVpnService? = null
 
+        private const val EXTRA_PROXY_PORT = "proxy_port"
+
         /** Called by the core on its own thread: start the service, build the interface, return its fd. */
-        fun open(context: Context, request: JSONObject): Int {
-            context.startForegroundService(Intent(context, CrocellVpnService::class.java).setAction(ACTION_HOLD))
+        fun open(context: Context, request: JSONObject): Int = start(context, 0).establish(request)
+
+        /** Proxy mode: the same service and notification, no interface. */
+        fun hold(context: Context, port: Int) {
+            start(context, port)
+        }
+
+        private fun start(context: Context, proxyPort: Int): CrocellVpnService {
+            context.startForegroundService(
+                Intent(context, CrocellVpnService::class.java).setAction(ACTION_HOLD).putExtra(EXTRA_PROXY_PORT, proxyPort),
+            )
             val deadline = System.currentTimeMillis() + 10_000
             val service = synchronized(lock) {
                 while (instance == null) {
@@ -39,11 +58,30 @@ class CrocellVpnService : VpnService() {
                 }
                 instance!!
             }
-            return service.establish(request)
+            return service
         }
 
         fun close(@Suppress("UNUSED_PARAMETER") context: Context) {
             synchronized(lock) { instance.also { instance = null } }?.stop()
+        }
+    }
+
+    /** Non-zero in proxy mode: the notification says where the proxy is. */
+    private var proxyPort = 0
+
+    /** The VPN interface is up: the system holds this service, no notification needed. */
+    private var tunUp = false
+
+    /**
+     * With the VPN up, Android binds this service as a foreground one by
+     * itself, so the notification can go if the person does not want it.
+     * Proxy mode has no such binding and keeps it, or the proxy is frozen.
+     */
+    private fun applyNotificationChoice() {
+        if (tunUp && proxyPort == 0 && Prefs.hideNotification(this)) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            startForeground()
         }
     }
 
@@ -53,7 +91,14 @@ class CrocellVpnService : VpnService() {
                 Thread { Mobile.disconnect() }.start()
                 return START_NOT_STICKY
             }
-            ACTION_HOLD -> Unit
+            ACTION_HOLD -> {
+                proxyPort = intent.getIntExtra(EXTRA_PROXY_PORT, 0)
+                if (proxyPort > 0) tunUp = false
+            }
+            ACTION_NOTIFICATION -> {
+                applyNotificationChoice()
+                return START_STICKY
+            }
             // Started by the system: always-on VPN, or after a reboot.
             else -> Thread {
                 try {
@@ -103,6 +148,8 @@ class CrocellVpnService : VpnService() {
         b.setConfigureIntent(openApp())
         val pfd = b.establish() ?: throw IllegalStateException(getString(R.string.vpn_establish_null))
         Core.log("VPN interface up")
+        tunUp = true
+        applyNotificationChoice()
         return pfd.detachFd()
     }
 
@@ -143,7 +190,9 @@ class CrocellVpnService : VpnService() {
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(getString(R.string.vpn_connected))
-            .setContentText(getString(R.string.vpn_tap_to_open))
+            .setContentText(
+                if (proxyPort > 0) getString(R.string.proxy_running, proxyPort) else getString(R.string.vpn_tap_to_open),
+            )
             .setContentIntent(openApp())
             .setOngoing(true)
             .addAction(Notification.Action.Builder(null, getString(R.string.vpn_disconnect), disconnect).build())

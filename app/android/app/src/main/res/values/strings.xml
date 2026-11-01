@@ -4,11 +4,13 @@
     <string name="vpn_channel_description">While this notification is up, Crocell holds the VPN</string>
     <string name="vpn_connected">Crocell connected</string>
     <string name="vpn_tap_to_open">Tap to open</string>
+    <string name="proxy_running">Proxy on 127.0.0.1:%1$d, no VPN</string>
     <string name="vpn_disconnect">Disconnect</string>
     <string name="vpn_not_allowed">Allow Crocell to create a VPN: open the app and connect from there</string>
     <string name="vpn_service_timeout">The VPN service did not start</string>
     <string name="vpn_establish_null">Android did not let Crocell create the VPN: the permission was revoked</string>
     <string name="tile_label">Crocell</string>
     <string name="tile_connecting">Connecting…</string>
+    <string name="tile_disconnecting">Disconnecting…</string>
     <string name="tile_no_service">Open Crocell once to set it up</string>
 </resources>

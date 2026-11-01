@@ -5,6 +5,7 @@ import '../data/core_api.dart';
 import '../data/state.dart';
 import '../host.dart';
 import '../l10n.dart';
+import '../platform/android.dart';
 import '../service/gnome.dart';
 import '../theme.dart';
 import '../version.dart';
@@ -370,6 +371,7 @@ class _AdvancedState extends ConsumerState<_Advanced> {
         expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
         shape: const Border(),
         children: [
+          if (android) const _HideNotification(),
           // On a phone the system starts the VPN (always-on), and nobody
           // shares a phone's VPN with the LAN.
           if (!android)
@@ -422,6 +424,8 @@ class _AdvancedState extends ConsumerState<_Advanced> {
                 onChanged: (v) => _edit((s) => s.tunStack = v ?? 'mixed'),
               );
               final port = field(_port, tr('Порт прокси', 'Proxy port'));
+              // Android always tunnels with gVisor: nothing to choose.
+              if (android) return port;
               if (c.maxWidth < 480) {
                 return Column(children: [stack, const SizedBox(height: 12), port]);
               }
@@ -469,6 +473,52 @@ class _AdvancedState extends ConsumerState<_Advanced> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Android: the ongoing notification can go in tunnel mode, where the
+/// system itself keeps the VPN service alive. Proxy mode keeps it.
+class _HideNotification extends StatefulWidget {
+  const _HideNotification();
+
+  @override
+  State<_HideNotification> createState() => _HideNotificationState();
+}
+
+class _HideNotificationState extends State<_HideNotification> {
+  bool? _hide;
+
+  @override
+  void initState() {
+    super.initState();
+    hideVpnNotification().then((v) {
+      if (mounted) setState(() => _hide = v);
+    }).catchError((Object _) {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(tr('Не показывать уведомление', 'Hide the notification')),
+      subtitle: Text(tr(
+        'В режиме туннеля VPN держит сама система, уведомление ему не нужно. Crocell попросит не ограничивать '
+            'его в фоне. В режиме прокси уведомление останется: без него Android усыпит прокси.',
+        'In tunnel mode the system itself keeps the VPN running, so it needs no notification. Crocell will ask '
+            'not to be restricted in the background. Proxy mode keeps it: without it Android puts the proxy to sleep.',
+      )),
+      value: _hide ?? false,
+      onChanged: _hide == null
+          ? null
+          : (v) async {
+              setState(() => _hide = v);
+              try {
+                await setHideVpnNotification(v);
+              } catch (e) {
+                if (context.mounted) showError(context, e);
+              }
+            },
     );
   }
 }

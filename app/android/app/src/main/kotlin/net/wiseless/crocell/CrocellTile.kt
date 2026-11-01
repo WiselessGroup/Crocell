@@ -7,6 +7,8 @@ import android.content.Intent
 import android.graphics.drawable.Icon
 import android.net.VpnService
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import net.wiseless.crocell.core.mobile.Mobile
@@ -28,7 +30,10 @@ class CrocellTile : TileService() {
 
     override fun onClick() {
         when (Mobile.state()) {
-            "connected" -> background { Mobile.disconnect() }
+            "connected" -> {
+                render("disconnecting")
+                background { Mobile.disconnect() }
+            }
             "connecting", "disconnecting" -> Unit
             else -> {
                 if (VpnService.prepare(this) != null) {
@@ -47,10 +52,15 @@ class CrocellTile : TileService() {
         }
     }
 
+    // While the panel is open the tile is already listening, so asking the
+    // system to refresh it does nothing: draw the outcome ourselves.
     private fun background(work: () -> Unit) = Thread {
         work()
-        refresh(this)
+        val state = Mobile.state()
+        main.post { render(state) }
     }.start()
+
+    private val main = Handler(Looper.getMainLooper())
 
     private fun render(state: String) {
         val tile = qsTile ?: return
@@ -60,6 +70,7 @@ class CrocellTile : TileService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             tile.subtitle = when (state) {
                 "connecting" -> getString(R.string.tile_connecting)
+                "disconnecting" -> getString(R.string.tile_disconnecting)
                 else -> null
             }
         }

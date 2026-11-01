@@ -191,6 +191,13 @@ func New(cfg Config) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
+	if s.tun != nil && !st.MobileModeSet {
+		st.Settings.TunnelMode = "tun"
+		st.MobileModeSet = true
+		if err := s.store.save(st); err != nil {
+			return nil, err
+		}
+	}
 	s.st = st
 	return s, nil
 }
@@ -416,7 +423,11 @@ func (s *Service) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.Stat
 	// them itself in the middle of Start, with no word to the client.
 	err = s.ensureGeo(ctx, opts.Rules)
 	if err == nil && s.tun != nil {
-		err = s.openTun(&opts)
+		if opts.Tun != nil {
+			err = s.openTun(&opts)
+		} else {
+			err = s.tun.Hold(opts.MixedPort)
+		}
 	}
 	if err == nil {
 		err = s.eng.Start(opts)
@@ -485,9 +496,20 @@ func (s *Service) engineOptionsLocked(sub *storedSub, node storedNode) (engine.O
 	}
 
 	mode := pb.TunnelMode_TUNNEL_MODE_SYSTEM_PROXY
+	if s.tun != nil && set.TunnelMode != "tun" {
+		// Proxy mode on a phone: no VPN at all, only the mixed port, which
+		// people point Telegram or a browser at. Program rules cannot match
+		// anything there.
+		opts.Rules = withoutPrograms(opts.Rules)
+		return opts, pb.TunnelMode_TUNNEL_MODE_SYSTEM_PROXY, nil
+	}
 	if s.tun != nil {
 		opts.Rules = withoutPrograms(opts.Rules)
-		opts.Tun = &engine.TunOptions{Stack: set.TunStack}
+		// gVisor only. The system stack (and "mixed", which uses it for TCP)
+		// answers through a kernel socket of this app, and the app is kept
+		// out of its own VPN, so those answers left by the phone's network
+		// and every TCP connection timed out.
+		opts.Tun = &engine.TunOptions{Stack: "gvisor"}
 		return opts, pb.TunnelMode_TUNNEL_MODE_TUN, nil
 	}
 	if set.TunnelMode == "tun" {

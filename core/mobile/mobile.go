@@ -30,7 +30,10 @@ type Platform interface {
 	// daemon.TunRequest) and returns its file descriptor, detached: the
 	// core owns and closes it.
 	OpenTun(request string) (int32, error)
-	// CloseTun stops the VPN service after a disconnect.
+	// HoldProxy keeps the app in the foreground with no VPN, for proxy
+	// mode: only the mixed port on 127.0.0.1 serves.
+	HoldProxy(port int32) error
+	// CloseTun stops the VPN service (or the hold) after a disconnect.
 	CloseTun()
 	// InstalledApps lists launchable apps as JSON:
 	// [{"package": "org.telegram.messenger", "label": "Telegram"}].
@@ -179,6 +182,8 @@ func (t tun) Open(r daemon.TunRequest) (int, error) {
 	fd, err := t.p.OpenTun(string(b))
 	return int(fd), err
 }
+
+func (t tun) Hold(port int) error { return t.p.HoldProxy(int32(port)) }
 
 func (t tun) Close() { t.p.CloseTun() }
 

@@ -22,6 +22,9 @@ type state struct {
 	Subscriptions []*storedSub `json:"subscriptions"`
 	Settings      settings     `json:"settings"`
 	Last          selection    `json:"last"`
+	// The phone's mode starts as the tunnel, not the desktop's proxy. Set
+	// once on Android, so a later choice of proxy sticks.
+	MobileModeSet bool `json:"mobile_mode_set,omitempty"`
 }
 
 type storedSub struct {

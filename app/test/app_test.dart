@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:crocell/data/core_api.dart';
 import 'package:crocell/data/state.dart';
+import 'package:crocell/host.dart';
 import 'package:crocell/main.dart';
 import 'package:crocell/notify/alerts.dart';
 import 'package:crocell/sysproxy/controller.dart';
@@ -282,6 +283,25 @@ void main() {
     expect(find.text('nlWISELESS'), findsNothing);
     expect(find.text('autoWISELESS-2 (HYSTERIA)'), findsWidgets, reason: 'the node in use stays');
     expect(find.text('autoWISELESS-1'), findsOneWidget, reason: 'unchecked nodes stay');
+    await unmount(tester);
+  });
+
+  testWidgets('phone: proxy or tunnel, and in proxy mode the address for the apps', (tester) async {
+    final core = FakeCore(subs: [sampleSubscription()]);
+    await pumpApp(tester, core, overrides: [hostProvider.overrideWithValue(const Host(HostKind.android))]);
+    expect(find.text('Туннель'), findsOneWidget);
+    expect(find.textContaining('127.0.0.1:7890'), findsOneWidget, reason: 'proxy mode says where to point apps');
+
+    await tester.tap(find.byTooltip('Чем отличаются режимы'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('VPN не включается'), findsOneWidget);
+    await tester.tap(find.text('Понятно'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Туннель'));
+    await tester.pumpAndSettle();
+    expect(core.calls.last, startsWith('settings TUNNEL_MODE_TUN'));
+    expect(find.textContaining('127.0.0.1:7890'), findsNothing);
     await unmount(tester);
   });
 

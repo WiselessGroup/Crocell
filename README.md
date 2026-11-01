@@ -55,7 +55,7 @@ On a desktop the VPN is held by a small system service, so closing or updating t
 - Takes subscriptions in any shape: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `tuic://` links, base64 of them, or Clash/mihomo YAML with `proxy-providers`. It figures out the format itself and reads the title, traffic and expiry the provider sends.
 - Handles VLESS Reality and Vision, XHTTP, Hysteria2 with obfs, and the rest of what mihomo supports.
 - Shows each node as a flag and an exit city after a check, not as a latency number. If the name says Netherlands and the exit says Germany, you'll see that. Nodes that failed their check can be hidden with one switch.
-- Runs as a system proxy (no admin rights, for apps that respect it) or as a TUN tunnel for the whole system. Android always tunnels the whole phone.
+- Runs as a system proxy (no admin rights, for apps that respect it) or as a TUN tunnel for the whole system. On Android the same choice means the whole phone through the VPN, or a local proxy for the apps you point at it.
 - Routes traffic through three lists: through the VPN, direct, or blocked. A rule can be a site, a wildcard, a subnet, a [runetfreedom](https://github.com/runetfreedom/russia-v2ray-rules-dat) geosite/geoip set (or your own database), a program, or an Android app. Lists copied from v2ray configs paste as they are, `domain:` and `full:` included. A specific rule beats a general one.
 - Checks the connection right after connecting and every couple of minutes, and sends a notification if traffic stops getting through.
 - Picks up new settings on its own: change a rule while connected and the tunnel quietly reconnects.
