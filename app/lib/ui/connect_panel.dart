@@ -6,6 +6,7 @@ import '../data/state.dart';
 import '../sysproxy/controller.dart';
 import '../theme.dart';
 import '../widgets/connect_button.dart';
+import '../widgets/elapsed_text.dart';
 import 'add_subscription.dart';
 import 'common.dart';
 import 'format.dart';
@@ -118,7 +119,7 @@ class _StatusText extends StatelessWidget {
 
     Widget? detail;
     if (s != null && s.isConnected) {
-      final since = s.hasConnectedSince() ? DateTime.now().difference(s.connectedSince.toDateTime()) : Duration.zero;
+      final since = s.hasConnectedSince() ? s.connectedSince.toDateTime() : DateTime.now();
       final style = theme.textTheme.bodyMedium?.copyWith(
         color: t.muted,
         fontFeatures: const [FontFeature.tabularFigures()],
@@ -126,13 +127,14 @@ class _StatusText extends StatelessWidget {
       Widget arrow(IconData icon) =>
           Icon(icon, size: 15, color: t.muted);
       detail = Semantics(
-        label: 'Подключено ${elapsed(since)}, загрузка ${speed(s.traffic.downRate.toInt())}, '
+        // No time here: a screen reader would re-announce it every second.
+        label: 'Загрузка ${speed(s.traffic.downRate.toInt())}, '
             'отдача ${speed(s.traffic.upRate.toInt())}',
         excludeSemantics: true,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(elapsed(since), style: style),
+            ElapsedText(since: since, style: style),
             const SizedBox(width: 14),
             arrow(Icons.south_rounded),
             Text(speed(s.traffic.downRate.toInt()), style: style),
