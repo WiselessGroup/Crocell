@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -93,7 +94,17 @@ func serve(args []string) error {
 	defer stop()
 	go func() {
 		<-ctx.Done()
-		srv.GracefulStop()
+		// GracefulStop waits for every open stream, and a client watching
+		// the status never closes its stream. Give unary calls a moment,
+		// then cut the rest, so the deferred Close still tears TUN down
+		// before systemd loses patience and kills us mid-cleanup.
+		done := make(chan struct{})
+		go func() { srv.GracefulStop(); close(done) }()
+		select {
+		case <-done:
+		case <-time.After(3 * time.Second):
+			srv.Stop()
+		}
 	}()
 
 	log.Printf("crocelld: listening on %s, state in %s", *socket, *stateDir)
