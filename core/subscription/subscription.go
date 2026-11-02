@@ -21,6 +21,8 @@ type Format string
 const (
 	FormatLinks Format = "links" // share links, plain or base64
 	FormatClash Format = "clash" // Clash / Mihomo YAML
+	// FormatConfig is a WireGuard or AmneziaWG config, pasted or downloaded.
+	FormatConfig Format = "config"
 )
 
 // Node is one proxy from a subscription.
@@ -88,8 +90,19 @@ func (f *Fetcher) userAgent() string {
 	return DefaultUserAgent
 }
 
-// Fetch downloads a subscription and resolves it into nodes.
+// IsLink tells a subscription link from text pasted as is: a share link, a
+// WireGuard config, a vpn:// key.
+func IsLink(input string) bool {
+	return strings.HasPrefix(input, "https://") || strings.HasPrefix(input, "http://")
+}
+
+// Fetch downloads a subscription and resolves it into nodes. Anything that is
+// not an http(s) link is taken as the subscription's body itself.
 func (f *Fetcher) Fetch(ctx context.Context, url string) (*Subscription, error) {
+	url = strings.TrimSpace(url)
+	if !IsLink(url) {
+		return f.fromText(ctx, url)
+	}
 	body, header, err := f.get(ctx, url)
 	if err != nil {
 		return nil, err
@@ -110,6 +123,19 @@ func (f *Fetcher) Fetch(ctx context.Context, url string) (*Subscription, error) 
 		Nodes:     parsed.nodes,
 		FetchedAt: time.Now(),
 	}, nil
+}
+
+func (f *Fetcher) fromText(ctx context.Context, text string) (*Subscription, error) {
+	parsed, err := f.parse(ctx, []byte(text), 0)
+	if err != nil {
+		return nil, err
+	}
+	info := parsed.info
+	// Nothing else names it: no provider, no headers.
+	if info.Title == "" && len(parsed.nodes) > 0 {
+		info.Title = parsed.nodes[0].Name
+	}
+	return &Subscription{URL: text, Format: parsed.format, Info: info, Nodes: parsed.nodes, FetchedAt: time.Now()}, nil
 }
 
 func (f *Fetcher) get(ctx context.Context, url string) ([]byte, http.Header, error) {

@@ -331,6 +331,18 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('add: a WireGuard config can be pasted as text', (tester) async {
+    final core = await pumpApp(tester, FakeCore());
+    await tester.tap(find.byType(ConnectButton));
+    await tester.pumpAndSettle();
+    const conf = '[Interface]\nPrivateKey = a\nJc = 4\n[Peer]\nPublicKey = b\nEndpoint = awg.example.net:51820';
+    await tester.enterText(find.byType(TextField), conf);
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить'));
+    await tester.pumpAndSettle();
+    expect(core.calls.first, 'add $conf');
+    await unmount(tester);
+  });
+
   testWidgets('many subscriptions: search by claimed country, fold one away', (tester) async {
     await pumpApp(
       tester,

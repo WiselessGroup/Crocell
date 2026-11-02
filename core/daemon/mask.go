@@ -3,11 +3,17 @@ package daemon
 import (
 	"net/url"
 	"strings"
+
+	"git.wiseless.net/fureunoir/crocell/core/subscription"
 )
 
 // maskURL keeps enough of a subscription link to recognise it and hides the
 // token: https://ftn.example.net/sub/…d03d1c
 func maskURL(raw string) string {
+	// Pasted text (a config, a share link) carries keys: show none of it.
+	if !subscription.IsLink(raw) {
+		return say("вставлено вручную", "pasted by hand")
+	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" {
 		return "…"

@@ -104,6 +104,7 @@ String nodeKind(Node n) {
     'hysteria2' => 'Hysteria 2',
     'tuic' => 'TUIC',
     'wireguard' => 'WireGuard',
+    'amneziawg' => 'AmneziaWG',
     _ => n.type,
   };
   final net = switch (n.network) {

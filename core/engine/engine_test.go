@@ -279,3 +279,21 @@ func TestZonesAsSuffix(t *testing.T) {
 		t.Error("a bare zone accepted as one exact domain")
 	}
 }
+
+// A WireGuard node with AmneziaWG's options goes through mihomo's own config
+// parser: its fields must be the ones mihomo reads.
+func TestAmneziaWGThroughMihomo(t *testing.T) {
+	cfg := parse(t, Options{Nodes: []subscription.Node{{
+		Name: "awg", Type: "wireguard", Server: "127.0.0.1", Port: "51820",
+		Proxy: map[string]any{
+			"name": "awg", "type": "wireguard", "server": "127.0.0.1", "port": 51820,
+			"private-key": "aPxGfTNyxr0JAAtbgxCpZ1eHSbnNtcn3S4cGcMzQ1lI=",
+			"public-key":  "IBjD9LKCWNpMKrINpxy4CqV9rGlvWbf7cZ0GjDYpkXs=",
+			"ip":          "10.8.1.2/32", "udp": true,
+			"amnezia-wg-option": map[string]any{"jc": 4, "jmin": 10, "jmax": 50, "s1": 86, "s2": 130, "h1": "1", "h2": "2", "h3": "3", "h4": "4"},
+		},
+	}}})
+	if _, ok := cfg.Proxies["awg"]; !ok {
+		t.Fatalf("mihomo dropped the node: %v", cfg.Proxies)
+	}
+}

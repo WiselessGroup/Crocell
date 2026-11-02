@@ -834,6 +834,9 @@ func (s *Service) subToProtoLocked(sub *storedSub) *pb.Subscription {
 	}
 	for _, n := range sub.Nodes {
 		typ, _ := n.Proxy["type"].(string)
+		if n.Proxy["amnezia-wg-option"] != nil {
+			typ = "amneziawg" // what people call it; mihomo's type stays wireguard
+		}
 		network, _ := n.Proxy["network"].(string)
 		server, _ := n.Proxy["server"].(string)
 		var port uint32

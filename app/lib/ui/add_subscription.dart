@@ -36,15 +36,24 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
     super.dispose();
   }
 
-  static bool _looksLikeLink(String s) {
-    final uri = Uri.tryParse(s.trim());
-    return uri != null && (uri.scheme == 'https' || uri.scheme == 'http') && uri.host.isNotEmpty;
+  /// A subscription link, a share link, a vpn:// key or a WireGuard config:
+  /// what the core can read, judged by the start of it.
+  static bool looksReadable(String s) {
+    final text = s.trim();
+    if (text.toLowerCase().startsWith('[interface]')) return true;
+    final uri = Uri.tryParse(text.split('\n').first);
+    if (uri == null || !uri.hasScheme) return false;
+    if (uri.scheme == 'https' || uri.scheme == 'http') return uri.host.isNotEmpty;
+    return const {
+      'vless', 'vmess', 'trojan', 'ss', 'ssr', 'hysteria', 'hysteria2', 'hy2', 'tuic',
+      'wireguard', 'wg', 'awg', 'amneziawg', 'vpn',
+    }.contains(uri.scheme);
   }
 
   Future<void> _pasteIfLink({bool auto = false}) async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim() ?? '';
     if (!mounted) return;
-    if (_looksLikeLink(text) || !auto) {
+    if (looksReadable(text) || !auto) {
       setState(() {
         _url.text = text;
         _fromClipboard = auto && text.isNotEmpty;
@@ -55,8 +64,11 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
 
   Future<void> _submit() async {
     final url = _url.text.trim();
-    if (!_looksLikeLink(url)) {
-      setState(() => _error = tr('Нужна ссылка, которая начинается с https://', 'The link should start with https://'));
+    if (!looksReadable(url)) {
+      setState(() => _error = tr(
+        'Нужна ссылка, которая начинается с https://, ключ vpn:// или конфиг WireGuard',
+        'This needs a link starting with https://, a vpn:// key or a WireGuard config',
+      ));
       return;
     }
     setState(() {
@@ -89,21 +101,29 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(tr('Вставьте ссылку, которую дал ваш VPN-сервис. Crocell сам разберётся с форматом.', 'Paste the link your VPN service gave you. Crocell will figure out the format.')),
+            Text(tr(
+                'Вставьте то, что дал ваш VPN-сервис: ссылку на подписку, ссылку на ноду, ключ vpn:// из AmneziaVPN '
+                    'или конфиг WireGuard. Crocell сам разберётся с форматом.',
+                'Paste what your VPN service gave you: a subscription link, a node link, a vpn:// key from AmneziaVPN '
+                    'or a WireGuard config. Crocell will figure out the format.',
+              )),
             const SizedBox(height: 16),
             TextField(
               controller: _url,
               autofocus: true,
               enabled: !_busy,
-              keyboardType: TextInputType.url,
+              // A WireGuard config is many lines.
+              keyboardType: TextInputType.multiline,
+              minLines: 1,
+              maxLines: 6,
               autocorrect: false,
-              onSubmitted: (_) => _submit(),
+              enableSuggestions: false,
               onChanged: (_) => setState(() {
                 _error = null;
                 _fromClipboard = false;
               }),
               decoration: InputDecoration(
-                labelText: tr('Ссылка на подписку', 'Subscription link'),
+                labelText: tr('Ссылка или конфиг', 'Link or config'),
                 hintText: 'https://…',
                 errorText: _error,
                 errorMaxLines: 3,

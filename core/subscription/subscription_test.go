@@ -1,7 +1,14 @@
 package subscription
 
 import (
+	"bytes"
+	"compress/zlib"
 	"context"
+	"encoding/base64"
+	"encoding/binary"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -135,5 +142,145 @@ func TestJSONIsReportedAsUnsupported(t *testing.T) {
 	_, _, _, err := Parse([]byte(`{"outbounds": []}`))
 	if err == nil || !strings.Contains(err.Error(), "JSON") {
 		t.Errorf("err = %v", err)
+	}
+}
+
+const awgConf = `[Interface]
+# Name = office
+PrivateKey = cHJpdmF0ZQ==
+Address = 10.8.1.2/32, fd00::2/128
+DNS = 1.1.1.1
+MTU = 1376
+Jc = 4
+Jmin = 10
+Jmax = 50
+S1 = 86
+S2 = 130
+H1 = 1234567
+H2 = 2345678-2345700
+H3 = 3456789
+H4 = 4567890
+I1 = <b 0xc0ff>
+
+[Peer]
+PublicKey = cHVibGlj
+PresharedKey = cHNr
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = awg.example.net:51820
+PersistentKeepalive = 25
+`
+
+func TestAmneziaWGConfig(t *testing.T) {
+	sub, err := (&Fetcher{}).Fetch(context.Background(), awgConf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sub.Format != FormatConfig || len(sub.Nodes) != 1 || sub.Info.Title != "office" {
+		t.Fatalf("format %q, title %q, nodes %v", sub.Format, sub.Info.Title, sub.Nodes)
+	}
+	p := sub.Nodes[0].Proxy
+	for k, want := range map[string]any{
+		"type": "wireguard", "name": "office", "server": "awg.example.net", "port": 51820,
+		"private-key": "cHJpdmF0ZQ==", "public-key": "cHVibGlj", "pre-shared-key": "cHNr",
+		"ip": "10.8.1.2/32", "ipv6": "fd00::2/128", "mtu": 1376, "persistent-keepalive": 25, "udp": true,
+	} {
+		if p[k] != want {
+			t.Errorf("%s = %v, want %v", k, p[k], want)
+		}
+	}
+	awg, _ := p["amnezia-wg-option"].(map[string]any)
+	for k, want := range map[string]any{"jc": 4, "jmin": 10, "jmax": 50, "s1": 86, "s2": 130, "h2": "2345678-2345700", "i1": "<b 0xc0ff>"} {
+		if awg[k] != want {
+			t.Errorf("amnezia %s = %v, want %v", k, awg[k], want)
+		}
+	}
+}
+
+func TestPlainWireGuardHasNoAmneziaOption(t *testing.T) {
+	conf := "[Interface]\nPrivateKey = a\nAddress = 10.0.0.2/32\n[Peer]\nPublicKey = b\nEndpoint = wg.example.net:51820\n"
+	_, _, nodes, err := Parse([]byte(conf))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, has := nodes[0].Proxy["amnezia-wg-option"]; has || nodes[0].Name != "WireGuard wg.example.net" {
+		t.Errorf("node = %+v", nodes[0])
+	}
+}
+
+func TestWireGuardLinks(t *testing.T) {
+	links := "awg://cHJpdg==@awg.example.net:51820?publickey=cHVi&address=10.8.1.2/32&jc=4&jmin=10&jmax=50&h1=7#Finland\n" +
+		"wireguard://cHJpdg==@wg.example.net:443?public_key=cHVi&ip=10.8.1.3&reserved=1,2,3#Plain\n" +
+		"trojan://secret@tr.example.net:443#Trojan\n"
+	_, _, nodes, err := Parse([]byte(links))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(nodes) != 3 {
+		t.Fatalf("nodes = %d", len(nodes))
+	}
+	byName := map[string]Node{}
+	for _, n := range nodes {
+		byName[n.Name] = n
+	}
+	awg := byName["Finland"].Proxy
+	if awg["type"] != "wireguard" || awg["server"] != "awg.example.net" || awg["amnezia-wg-option"] == nil {
+		t.Errorf("awg link = %v", awg)
+	}
+	if plain := byName["Plain"].Proxy; plain["amnezia-wg-option"] != nil || fmt.Sprint(plain["reserved"]) != "[1 2 3]" {
+		t.Errorf("wireguard link = %v", plain)
+	}
+	if byName["Trojan"].Type != "trojan" {
+		t.Error("the converter's links must still work next to ours")
+	}
+}
+
+func amneziaKey(t *testing.T, doc map[string]any) string {
+	t.Helper()
+	raw, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var z bytes.Buffer
+	w := zlib.NewWriter(&z)
+	w.Write(raw)
+	w.Close()
+	head := binary.BigEndian.AppendUint32(nil, uint32(len(raw)))
+	return "vpn://" + base64.RawURLEncoding.EncodeToString(append(head, z.Bytes()...))
+}
+
+func TestAmneziaVPNKey(t *testing.T) {
+	last, _ := json.Marshal(map[string]any{"config": awgConf, "hostName": "awg.example.net"})
+	key := amneziaKey(t, map[string]any{
+		"description": "My server",
+		"hostName":    "awg.example.net",
+		"containers": []any{
+			map[string]any{"container": "amnezia-awg", "awg": map[string]any{"last_config": string(last)}},
+			map[string]any{"container": "amnezia-xray", "xray": map[string]any{"last_config": "{}"}},
+		},
+	})
+	sub, err := (&Fetcher{}).Fetch(context.Background(), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sub.Nodes) != 1 || sub.Nodes[0].Name != "My server" || sub.Nodes[0].Proxy["amnezia-wg-option"] == nil {
+		t.Fatalf("nodes = %+v", sub.Nodes)
+	}
+
+	xrayOnly := amneziaKey(t, map[string]any{"containers": []any{map[string]any{"container": "amnezia-xray"}}})
+	if _, err := (&Fetcher{}).Fetch(context.Background(), xrayOnly); !errors.Is(err, ErrUnsupported) || !strings.Contains(err.Error(), "amnezia-xray") {
+		t.Errorf("xray-only key: %v", err)
+	}
+	if _, err := (&Fetcher{}).Fetch(context.Background(), "vpn://%%%"); err == nil {
+		t.Error("garbage key accepted")
+	}
+}
+
+func TestPastedShareLinkIsASubscription(t *testing.T) {
+	sub, err := (&Fetcher{}).Fetch(context.Background(), "  trojan://secret@tr.example.net:443#Solo\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sub.Nodes) != 1 || sub.Info.Title != "Solo" {
+		t.Errorf("sub = %+v", sub)
 	}
 }

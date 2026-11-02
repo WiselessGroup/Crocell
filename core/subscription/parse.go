@@ -35,6 +35,15 @@ func (f *Fetcher) parse(ctx context.Context, body []byte, depth int) (*parsed, e
 		return nil, fmt.Errorf("subscription: empty body")
 	}
 
+	// Before the JSON check: a config starts with "[Interface]".
+	if looksLikeWgConf(body) {
+		p, err := parseWgConf(body)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrUnsupported, err)
+		}
+		return &parsed{format: FormatConfig, nodes: toNodes([]map[string]any{p})}, nil
+	}
+
 	if body[0] == '{' || body[0] == '[' {
 		// sing-box and Xray JSON configs. Next on the list.
 		return nil, fmt.Errorf("%w: JSON configs are not supported yet", ErrUnsupported)
@@ -48,16 +57,51 @@ func (f *Fetcher) parse(ctx context.Context, body []byte, depth int) (*parsed, e
 
 func parseLinks(body []byte) (*parsed, error) {
 	decoded := convert.DecodeBase64(body)
+	if looksLikeWgConf(decoded) {
+		p, err := parseWgConf(decoded)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrUnsupported, err)
+		}
+		return &parsed{format: FormatConfig, nodes: toNodes([]map[string]any{p})}, nil
+	}
 
-	proxies, err := convert.ConvertsV2Ray(decoded)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrUnsupported, err)
+	// WireGuard's kinds of links are ours; the converter takes the rest.
+	var ours []map[string]any
+	var others [][]byte
+	for _, line := range bytes.Split(decoded, []byte("\n")) {
+		line = bytes.TrimSpace(line)
+		scheme, _, _ := strings.Cut(string(line), "://")
+		switch strings.ToLower(scheme) {
+		case "wireguard", "wg", "awg", "amneziawg":
+			p, err := parseWgLink(string(line))
+			if err != nil {
+				return nil, fmt.Errorf("%w: %v", ErrUnsupported, err)
+			}
+			ours = append(ours, p)
+		case "vpn":
+			ps, err := parseAmneziaKey(string(line))
+			if err != nil {
+				return nil, err
+			}
+			ours = append(ours, ps...)
+		default:
+			others = append(others, line)
+		}
+	}
+
+	var proxies []map[string]any
+	if rest := bytes.TrimSpace(bytes.Join(others, []byte("\n"))); len(rest) > 0 || len(ours) == 0 {
+		var err error
+		proxies, err = convert.ConvertsV2Ray(rest)
+		if err != nil && len(ours) == 0 {
+			return nil, fmt.Errorf("%w: %v", ErrUnsupported, err)
+		}
 	}
 
 	return &parsed{
 		format: FormatLinks,
 		info:   infoFromComments(decoded),
-		nodes:  toNodes(proxies),
+		nodes:  uniqueNames(toNodes(append(proxies, ours...))),
 	}, nil
 }
 

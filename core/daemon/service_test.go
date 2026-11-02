@@ -579,3 +579,20 @@ func TestErrorsComeInTheClientsLanguage(t *testing.T) {
 		t.Errorf("error = %v, want it in Russian", err)
 	}
 }
+
+// A pasted config carries a private key: nothing of it may show in the list.
+func TestPastedConfigIsNotShown(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	conf := "[Interface]\nPrivateKey = SECRETKEY\nAddress = 10.8.1.2/32\nJc = 4\n[Peer]\nPublicKey = b\nEndpoint = awg.example.net:51820\n"
+	sub, err := h.client.AddSubscription(ctx, &pb.AddSubscriptionRequest{Url: conf})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(sub.UrlMasked, "SECRETKEY") || strings.Contains(sub.UrlMasked, "[Interface]") {
+		t.Errorf("masked = %q", sub.UrlMasked)
+	}
+	if len(sub.Nodes) != 1 || sub.Nodes[0].Type != "amneziawg" {
+		t.Errorf("nodes = %v", sub.Nodes)
+	}
+}
