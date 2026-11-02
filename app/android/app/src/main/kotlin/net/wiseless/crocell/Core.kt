@@ -36,6 +36,7 @@ object Core {
     fun start(context: Context) {
         val app = context.applicationContext
         try {
+            app.packageManager.getPackageInfo(app.packageName, 0).versionName?.let { Mobile.setVersion(it) }
             Mobile.start(
                 File(app.noBackupFilesDir, "state").path,
                 socketPath(app),

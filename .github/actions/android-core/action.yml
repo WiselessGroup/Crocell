@@ -1,0 +1,37 @@
+name: Android core
+description: >
+  Gives app/android/app/libs/crocellcore.aar, from cache when the core's sources
+  have not changed. The version is not inside the AAR (the app passes it at
+  start), so one build serves every release until the core changes.
+runs:
+  using: composite
+  steps:
+    - id: aar
+      uses: actions/cache@v4
+      with:
+        path: app/android/app/libs/crocellcore.aar
+        key: android-aar-${{ hashFiles('core/**/*.go', '!core/**/*_test.go', 'core/go.mod', 'core/go.sum', 'scripts/build-android-core.sh') }}
+    - if: steps.aar.outputs.cache-hit != 'true'
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: core/go.mod
+        # The shared cache holds linux/amd64 objects from the core job; the
+        # step below keeps Android's own.
+        cache: false
+    - if: steps.aar.outputs.cache-hit != 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: android-go-${{ hashFiles('core/go.sum') }}-${{ github.run_id }}
+        restore-keys: |
+          android-go-${{ hashFiles('core/go.sum') }}-
+          android-go-
+    - if: steps.aar.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+      run: |
+        go install golang.org/x/mobile/cmd/gomobile@latest golang.org/x/mobile/cmd/gobind@latest
+        scripts/build-android-core.sh

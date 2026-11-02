@@ -19,6 +19,7 @@ import (
 
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/daemon"
+	"git.wiseless.net/fureunoir/crocell/core/internal/version"
 	"git.wiseless.net/fureunoir/crocell/core/logbuf"
 	"git.wiseless.net/fureunoir/crocell/core/probe"
 	"git.wiseless.net/fureunoir/crocell/core/procs"
@@ -46,6 +47,10 @@ var (
 	srv    *grpc.Server
 	cancel context.CancelFunc
 )
+
+// SetVersion tells the core its release. The app passes it: the library
+// itself carries none, so one build serves every release until the core changes.
+func SetVersion(v string) { version.Version = v }
 
 // Start runs the core. dataDir holds the encrypted state, socket is where
 // the client connects, pkg is the app's own package (kept out of the

@@ -141,6 +141,20 @@ jobs:
           path: dist/Crocell-arm64.dmg
           if-no-files-found: error
 
+  # On master, only when the core changed: builds the AAR ahead of time, in the
+  # background, because a tag can restore caches from master but not from an
+  # earlier tag. With the AAR ready a release's Android build takes minutes.
+  android-core:
+    if: github.server_url == 'https://github.com' && github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: ./.github/actions/android-core
+
   android:
     if: github.server_url == 'https://github.com' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
@@ -151,15 +165,15 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: core/go.mod
-          cache-dependency-path: core/go.sum
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+          # Its own: the shared one is saved first by a job with no Android
+          # artifacts in it.
+          cache-key: 'flutter-android-:version:-:arch:-:hash:'
+      - uses: ./.github/actions/android-core
       - name: Signing key
         env:
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
@@ -175,11 +189,8 @@ jobs:
           fi
       - name: Build
         env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        run: |
-          go install golang.org/x/mobile/cmd/gomobile@latest golang.org/x/mobile/cmd/gobind@latest
-          scripts/build-android.sh "$(scripts/version.sh)"
+        run: scripts/build-android.sh "$(scripts/version.sh)"
       - uses: actions/upload-artifact@v7
         with:
           name: android

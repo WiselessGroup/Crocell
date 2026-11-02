@@ -3,9 +3,9 @@
 # Needs Go, the Android SDK with an NDK, and gomobile:
 #   go install golang.org/x/mobile/cmd/gomobile@latest golang.org/x/mobile/cmd/gobind@latest
 #
-#   scripts/build-android-core.sh [version]
+# The version is not built in: the app passes it at start, so the same core
+# gives the same file and CI can reuse it across releases.
 set -euo pipefail
-version="${1:-dev}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 if [[ -z ${ANDROID_NDK_HOME:-} ]]; then
@@ -18,6 +18,6 @@ cd "$root/core"
 # x86_64 for the emulator.
 gomobile bind -target="${CROCELL_ANDROID_TARGETS:-android/arm64,android/arm}" -androidapi 24 \
   -javapkg=net.wiseless.crocell.core -tags with_gvisor -trimpath \
-  -ldflags="-s -w -X git.wiseless.net/fureunoir/crocell/core/internal/version.Version=$version" \
+  -ldflags="-s -w" \
   -o "$root/app/android/app/libs/crocellcore.aar" ./mobile
 rm -f "$root/app/android/app/libs/crocellcore-sources.jar"
