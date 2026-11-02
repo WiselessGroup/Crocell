@@ -95,7 +95,9 @@ func findProcessName(network string, ip netip.Addr, srcPort int) (uint32, string
 // pinned on whatever process happened to be last, and a rule for one
 // program caught traffic of another. It also missed IPv4 connections made
 // from dual-stack sockets (Firefox), which the kernel lists under AF_INET6
-// as ::ffff:a.b.c.d.
+// as ::ffff:a.b.c.d. An exact address wins; a UDP socket on 0.0.0.0 or :: is
+// the owner when no socket has the exact one, since games send from those
+// and their packets arrive here with the TUN address as the source.
 func resolveSocketByNetlink(network string, ip netip.Addr, srcPort int) (uid uint32, inode uint32, err error) {
 	ip = ip.Unmap()
 	if ip.Is4() {
@@ -147,6 +149,8 @@ func lookupSocket(family uint8, network string, ip netip.Addr, srcPort int) (uin
 	}
 
 	want := ip.Unmap()
+	var wildUID, wildInode uint32
+	wildFound := false
 	for _, msg := range messages {
 		if len(msg.Data) < inetDiagResponseSize {
 			continue
@@ -172,12 +176,18 @@ func lookupSocket(family uint8, network string, ip netip.Addr, srcPort int) (uin
 			continue
 		}
 		if src != want {
+			if request.Protocol == unix.IPPROTO_UDP && src.IsUnspecified() && !wildFound {
+				wildUID, wildInode, wildFound = response.UID, response.INode, true
+			}
 			continue
 		}
 
 		return response.UID, response.INode, nil
 	}
 
+	if wildFound {
+		return wildUID, wildInode, nil
+	}
 	return 0, 0, ErrNotFound
 }
 

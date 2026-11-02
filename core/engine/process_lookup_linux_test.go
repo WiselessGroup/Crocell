@@ -49,6 +49,43 @@ func TestProgramLookup(t *testing.T) {
 	}
 }
 
+// Games keep UDP sockets on 0.0.0.0 and never connect them, while their
+// packets reach mihomo from the TUN address. A rule for the game has to
+// find such a socket by its port.
+func TestProgramLookupWildcardUDP(t *testing.T) {
+	tunAddr := netip.MustParseAddr("198.18.0.1")
+	self, _ := os.Executable()
+
+	v4, err := net.ListenUDP("udp4", &net.UDPAddr{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer v4.Close()
+	_, path, err := process.FindProcessName("udp", tunAddr, v4.LocalAddr().(*net.UDPAddr).Port)
+	if err != nil || path != self {
+		t.Errorf("0.0.0.0 socket: found %q, %v; want this test binary", path, err)
+	}
+
+	if dual, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv6unspecified}); err == nil {
+		defer dual.Close()
+		_, path, err := process.FindProcessName("udp", tunAddr, dual.LocalAddr().(*net.UDPAddr).Port)
+		if err != nil || path != self {
+			t.Errorf(":: socket: found %q, %v; want this test binary", path, err)
+		}
+	}
+
+	// A wildcard address says nothing about a TCP connection's owner: a
+	// listener on the same port must not claim it.
+	l, err := net.Listen("tcp4", "0.0.0.0:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	if _, path, err := process.FindProcessName("tcp", tunAddr, l.Addr().(*net.TCPAddr).Port); err == nil {
+		t.Errorf("TCP listener claimed a connection from another address: %q", path)
+	}
+}
+
 type mappedConn struct{ fd, port int }
 
 // Go's net package turns a v4-mapped address into an AF_INET socket, so
