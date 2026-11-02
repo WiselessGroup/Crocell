@@ -1,0 +1,63 @@
+name: Bug / Ошибка
+description: Something doesn't work. Что-то не работает.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        English or Russian, both are fine. Можно по-русски.
+
+        **Don't post subscription links, `vless://` links or configs: they are keys to your VPN.**
+        **Не публикуйте ссылки на подписки, ссылки `vless://` и конфиги: это ключи от вашего VPN.**
+  - type: input
+    id: version
+    attributes:
+      label: Crocell version / Версия
+      description: It's in Settings and on the first line of the logs. Есть в настройках и в первой строке логов.
+      placeholder: 0.6.0
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System / Система
+      options:
+        - Linux
+        - Windows
+        - macOS
+        - Android
+    validations:
+      required: true
+  - type: input
+    id: system-details
+    attributes:
+      label: System version / Версия системы
+      placeholder: Fedora 44 GNOME, Windows 11, Android 15…
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode / Режим
+      options:
+        - Proxy / Прокси
+        - Tunnel (TUN) / Туннель
+        - Not connecting yet / До подключения не дошло
+    validations:
+      required: true
+  - type: input
+    id: protocol
+    attributes:
+      label: Node protocol / Протокол ноды
+      placeholder: VLESS Reality, Hysteria2, AmneziaWG…
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened / Что случилось
+      description: What you did, what you expected, what you got. Что делали, чего ждали, что вышло.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Логи
+      description: The "Logs" button copies them with subscription links taken out. Check the text before posting. Кнопка «Логи» копирует их без ссылок на подписки. Просмотрите текст перед отправкой.
+      render: text

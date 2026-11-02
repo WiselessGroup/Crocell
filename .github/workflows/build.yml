@@ -11,7 +11,7 @@ on:
   push:
     branches: [master]
     tags: ['v*']
-    paths-ignore: ['**.md', '.github/release-notes/**', 'assets/screenshots/**']
+    paths-ignore: ['**.md', '.github/release-notes/**', '.github/ISSUE_TEMPLATE/**', 'assets/screenshots/**']
   pull_request:
   workflow_dispatch:
 

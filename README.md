@@ -6,7 +6,8 @@
 
 <p align="center">
   A VPN client you don't have to study first.<br>
-  Linux · Windows · macOS · Android
+  Linux · Windows · macOS · Android<br>
+  VLESS Reality · XHTTP · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC · WireGuard · AmneziaWG
 </p>
 
 <p align="center">
@@ -29,6 +30,8 @@
 Paste your subscription link, pick a node, press the button. That's the whole first screen. No wall of toggles, no "ping 5000" that means nothing to anyone.
 
 Under the hood it's [mihomo](https://github.com/MetaCubeX/mihomo), so it speaks every modern protocol. On top of that it does the things I kept missing in other clients: it shows where a node really exits, it checks that traffic actually goes through the VPN (and tells you when it stops), and it lets you send a site or a program around the tunnel without editing YAML.
+
+It's free and open source, with no accounts, no ads and no telemetry. Crocell is only the client, so you bring a subscription from your provider or a server of your own.
 
 ## Download
 
@@ -62,12 +65,25 @@ On a desktop the VPN is held by a small system service, so closing or updating t
 - Picks up new settings on its own: change a rule while connected and the tunnel quietly reconnects.
 - Turns on and off without opening the window: a Quick Settings tile on Android, and a toggle in GNOME's quick settings (Settings → "Add to GNOME quick settings" installs it).
 - Lets you pick the picture on the button and, on Windows and Android, the app icon with its background. macOS picks between two and follows the system's light or dark look.
-- Copies its logs with one button, subscription links taken out, for when something breaks and you want to tell us.
+- Copies its logs with one button, subscription links taken out, for when something breaks and you want to [tell us](https://github.com/WiselessGroup/Crocell/issues/new/choose).
 - Keeps subscriptions and settings encrypted with AES-256-GCM. On Linux the key is sealed with `systemd-creds` (TPM when there is one), on Android it sits in the Keystore. A copied state file is useless anywhere else.
 
 <p align="center">
   <img src="assets/screenshots/rules-dark-en.png" width="820" alt="Routing rules: three lists, grouped by kind">
 </p>
+
+## Questions
+
+**Is this a VPN service?** No. Crocell has no servers and sells nothing. You need a subscription or a config from a provider, or your own server.
+
+**Will it read my provider's subscription?** If it's V2Ray/Xray links, base64 of them or Clash/mihomo YAML, it should. If it doesn't, [tell us](https://github.com/WiselessGroup/Crocell/issues/new?template=bug_report.yml), but keep the link itself to yourself: it's the key to your VPN.
+
+**What does the app connect to on its own?** Here's the whole list:
+
+- the subscription links you added;
+- Cloudflare's trace page, through the node, to see where that node exits;
+- the DNS servers from Settings, through the tunnel (1.1.1.1 and 8.8.8.8 unless you change them);
+- GitHub, for the update check and the geosite/geoip databases.
 
 ## How it's built
 
@@ -107,6 +123,11 @@ cd ../app && flutter run -d linux
 
 The packages come out of `scripts/`: `build-appimage.sh`, `build-windows.sh`, `build-macos.sh` and `build-android.sh`, each taking a version.
 
+## Contributing
+
+Bug reports help the most, especially for subscriptions and networks I can't test myself. [CONTRIBUTING.md](CONTRIBUTING.md) has the setup and the rules, [AGENTS.md](AGENTS.md) is for coding agents, and vulnerabilities go through [SECURITY.md](SECURITY.md).
+
+If Crocell saved you from editing a YAML file, a star helps other people find it.
 
 ## License
 

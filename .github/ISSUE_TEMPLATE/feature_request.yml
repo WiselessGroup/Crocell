@@ -1,0 +1,16 @@
+name: Idea / Идея
+description: Something Crocell should do. Чего не хватает в Crocell.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do? / Что вы пытаетесь сделать?
+      description: The situation, not the solution. Сама ситуация, а не готовое решение.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could it work? / Как это могло бы работать?
+      description: Could the app work it out by itself, without a new setting? Может ли приложение решить это само, без новой настройки?
