@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/brand/crocell-emblem.svg" width="200" alt="Crocell">
+  <img src="assets/brand/crocell-glyph.svg" width="160" alt="Crocell">
 </p>
 
 <h1 align="center">Crocell</h1>
@@ -53,6 +53,7 @@ On a desktop the VPN is held by a small system service, so closing or updating t
 ## What it does
 
 - Takes subscriptions in any shape: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `tuic://` links, base64 of them, or Clash/mihomo YAML with `proxy-providers`. It figures out the format itself and reads the title, traffic and expiry the provider sends.
+- Takes WireGuard and AmneziaWG too: paste a config, an `awg://` link or a `vpn://` key from AmneziaVPN.
 - Handles VLESS Reality and Vision, XHTTP, Hysteria2 with obfs, and the rest of what mihomo supports.
 - Shows each node as a flag and an exit city after a check, not as a latency number. If the name says Netherlands and the exit says Germany, you'll see that. Nodes that failed their check can be hidden with one switch.
 - Runs as a system proxy (no admin rights, for apps that respect it) or as a TUN tunnel for the whole system. On Android the same choice means the whole phone through the VPN, or a local proxy for the apps you point at it.
@@ -60,6 +61,7 @@ On a desktop the VPN is held by a small system service, so closing or updating t
 - Checks the connection right after connecting and every couple of minutes, and sends a notification if traffic stops getting through.
 - Picks up new settings on its own: change a rule while connected and the tunnel quietly reconnects.
 - Turns on and off without opening the window: a Quick Settings tile on Android, and a toggle in GNOME's quick settings (Settings → "Add to GNOME quick settings" installs it).
+- Lets you pick the picture on the button and, on Windows and Android, the app icon with its background. macOS picks between two and follows the system's light or dark look.
 - Copies its logs with one button, subscription links taken out, for when something breaks and you want to tell us.
 - Keeps subscriptions and settings encrypted with AES-256-GCM. On Linux the key is sealed with `systemd-creds` (TPM when there is one), on Android it sits in the Keystore. A copied state file is useless anywhere else.
 

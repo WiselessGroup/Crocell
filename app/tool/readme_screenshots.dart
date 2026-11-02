@@ -125,6 +125,8 @@ void main() {
 
   for (final (name, language, size, brightness, screen, hostKind) in cases) {
     if (!name.contains(only)) continue;
+    // The rest are for checking by eye: only with OUT, never into the README's.
+    if (Platform.environment['OUT'] == null && !name.startsWith('home-dark') && !name.startsWith('rules-dark')) continue;
     testWidgets(name, (tester) async {
       lang = language;
       final fonts = '$artifacts/material_fonts';
