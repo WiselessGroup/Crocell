@@ -5,6 +5,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 
+import 'brand/app_icon.dart';
+import 'brand/appearance.dart';
 import 'data/core_api.dart';
 import 'data/state.dart';
 import 'l10n.dart';
@@ -17,10 +19,11 @@ import 'ui/home.dart';
 import 'update/how_to_update.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  initialAppearance = await Appearance.load();
   final overrides = <Override>[];
   if (Platform.isAndroid) {
     // The core runs inside the app here; the platform side knows its socket.
-    WidgetsFlutterBinding.ensureInitialized();
     final socket = await androidCore.invokeMethod<String>('socketPath');
     overrides.add(coreEndpointProvider.overrideWithValue(CoreEndpoint.unix(socket!)));
   }
@@ -38,6 +41,8 @@ class CrocellApp extends ConsumerWidget {
     ref.watch(connectionAlertsProvider);
     // A click on "new version" opens how to update.
     ref.watch(updatePromptProvider);
+    // The Dock or taskbar icon, as chosen in "Customize".
+    ref.watch(appIconProvider);
 
     return MaterialApp(
       title: 'Crocell',

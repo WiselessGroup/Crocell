@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../brand/appearance.dart';
 import '../l10n.dart';
 import '../theme.dart';
 
-/// The figure from the logo. Wings spread when connected.
+/// The picture from the logo: the glyph or the figure, as the person chose.
+/// Wings spread when connected.
 ///
-/// Layers come from assets/brand/crocell-mark-winged.svg split by
-/// scripts/brand-layers.py, all three share one viewBox so they stack exactly.
+/// Layers come from the brand SVGs (scripts/brand-layers.py for the figure),
+/// all sharing one viewBox so they stack exactly.
 class ConnectButton extends StatefulWidget {
   const ConnectButton({
     super.key,
     required this.connected,
     required this.onPressed,
+    this.art = AppArt.glyphRed,
     this.size = 240,
     this.label,
   });
+
+  final AppArt art;
 
   final bool connected;
 
@@ -30,13 +35,7 @@ class ConnectButton extends StatefulWidget {
   State<ConnectButton> createState() => _ConnectButtonState();
 }
 
-class _ConnectButtonState extends State<ConnectButton>
-    with SingleTickerProviderStateMixin {
-  // Shoulder pivots, from the data-pivot attributes in the SVG
-  // (viewBox 99 59 1055 1055), as Alignment.
-  static const _leftPivot = Alignment(-0.274, -0.249);
-  static const _rightPivot = Alignment(0.238, -0.249);
-
+class _ConnectButtonState extends State<ConnectButton> with SingleTickerProviderStateMixin {
   bool _hover = false;
   bool _focus = false;
 
@@ -81,7 +80,9 @@ class _ConnectButtonState extends State<ConnectButton>
       button: true,
       enabled: widget.onPressed != null,
       toggled: widget.connected,
-      label: widget.label ?? (widget.connected ? tr('Отключить VPN', 'Disconnect VPN') : tr('Подключить VPN', 'Connect VPN')),
+      label:
+          widget.label ??
+          (widget.connected ? tr('Отключить VPN', 'Disconnect VPN') : tr('Подключить VPN', 'Connect VPN')),
       excludeSemantics: true,
       child: SizedBox.square(
         dimension: size,
@@ -109,13 +110,14 @@ class _ConnectButtonState extends State<ConnectButton>
                     fit: StackFit.expand,
                     children: [
                       _Glow(intensity: t.clamp(0, 1)),
-                      _Disc(
-                        connected: widget.connected,
-                        lit: (_hover || _focus) && widget.onPressed != null,
+                      _Disc(connected: widget.connected, lit: (_hover || _focus) && widget.onPressed != null),
+                      Center(
+                        child: FractionallySizedBox(
+                          widthFactor: widget.art.isGlyph ? 0.62 : 1,
+                          heightFactor: widget.art.isGlyph ? 0.62 : 1,
+                          child: ArtLayers(art: widget.art, spread: t),
+                        ),
                       ),
-                      _wing('wing-left', _leftPivot, t, sign: 1),
-                      _wing('wing-right', _rightPivot, t, sign: -1),
-                      SvgPicture.asset('assets/brand/figure.svg'),
                     ],
                   );
                 },
@@ -126,19 +128,59 @@ class _ConnectButtonState extends State<ConnectButton>
       ),
     );
   }
+}
 
-  Widget _wing(String name, Alignment pivot, double t, {required int sign}) {
+/// The picture itself, wings at [spread] (0 folded, 1 open). Also the preview
+/// in "Customize", so a choice looks there as it will on the button.
+class ArtLayers extends StatelessWidget {
+  const ArtLayers({super.key, required this.art, this.spread = 1, this.iconBackground});
+
+  final AppArt art;
+  final double spread;
+
+  /// Set when previewing the app icon: glyph colours adapt to it.
+  final IconBackground? iconBackground;
+
+  // Shoulder pivots as Alignment. The figure's come from the data-pivot
+  // attributes in the SVG (viewBox 99 59 1055 1055), the glyph's from where
+  // its wings meet the body (11, 12.4 and 21, 12.4 of 32).
+  static const _figureLeft = Alignment(-0.274, -0.249), _figureRight = Alignment(0.238, -0.249);
+  static const _glyphLeft = Alignment(-0.3125, -0.225), _glyphRight = Alignment(0.3125, -0.225);
+
+  @override
+  Widget build(BuildContext context) {
+    if (art.isGlyph) {
+      final bg = iconBackground;
+      ColorFilter tint(Color c) => ColorFilter.mode(bg == null ? c : onIconBackground(c, bg), BlendMode.srcIn);
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          _wing(SvgPicture.asset('assets/brand/glyph-wing-left.svg', colorFilter: tint(art.wings)), _glyphLeft, 1),
+          _wing(SvgPicture.asset('assets/brand/glyph-wing-right.svg', colorFilter: tint(art.wings)), _glyphRight, -1),
+          SvgPicture.asset('assets/brand/glyph-figure.svg', colorFilter: tint(art.figure)),
+          SvgPicture.asset('assets/brand/glyph-star.svg', colorFilter: tint(art.star)),
+        ],
+      );
+    }
+    final filter = art == AppArt.crocellGrey ? greyscale : null;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        _wing(SvgPicture.asset('assets/brand/wing-left.svg', colorFilter: filter), _figureLeft, 1),
+        _wing(SvgPicture.asset('assets/brand/wing-right.svg', colorFilter: filter), _figureRight, -1),
+        SvgPicture.asset('assets/brand/figure.svg', colorFilter: filter),
+      ],
+    );
+  }
+
+  Widget _wing(Widget picture, Alignment pivot, int sign) {
     // Folded: tucked behind the shoulders, small and invisible.
     return Opacity(
-      opacity: t.clamp(0, 1),
+      opacity: spread.clamp(0, 1),
       child: Transform.rotate(
         alignment: pivot,
-        angle: sign * (1 - t) * 0.9,
-        child: Transform.scale(
-          alignment: pivot,
-          scale: 0.4 + 0.6 * t,
-          child: SvgPicture.asset('assets/brand/$name.svg'),
-        ),
+        angle: sign * (1 - spread) * 0.9,
+        child: Transform.scale(alignment: pivot, scale: 0.4 + 0.6 * spread, child: picture),
       ),
     );
   }
@@ -192,10 +234,7 @@ class _Disc extends StatelessWidget {
             // Always a dark medallion: the figure is white, and on a light
             // disc it lost its silhouette. In the light theme the dark disc
             // is also the button's edge.
-            gradient: const RadialGradient(
-              center: Alignment(0, -0.3),
-              colors: [Color(0xFF2A2021), Color(0xFF120D0D)],
-            ),
+            gradient: const RadialGradient(center: Alignment(0, -0.3), colors: [Color(0xFF2A2021), Color(0xFF120D0D)]),
             border: Border.all(color: ring, width: connected ? 3 : 2),
           ),
         ),

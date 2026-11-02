@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="icon_bg_dark">#0E0B0B</color>
+    <color name="icon_bg_paper">#FBF8F7</color>
+    <color name="icon_bg_crimson">#860111</color>
+    <color name="icon_bg_ember">#D4572A</color>
+</resources>

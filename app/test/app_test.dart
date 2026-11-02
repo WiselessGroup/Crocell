@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:crocell/brand/appearance.dart';
 import 'package:crocell/data/core_api.dart';
 import 'package:crocell/data/state.dart';
 import 'package:crocell/host.dart';
@@ -302,6 +303,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(core.calls.last, startsWith('settings TUNNEL_MODE_TUN'));
     expect(find.textContaining('127.0.0.1:7890'), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('customize: a choice on Android, nothing to choose on Linux', (tester) async {
+    await pumpApp(tester, FakeCore(subs: [sampleSubscription()]), size: const Size(1000, 2000), overrides: [
+      hostProvider.overrideWithValue(const Host(HostKind.android)),
+    ]);
+    final button = tester.element(find.byType(ConnectButton));
+    await tester.tap(find.byTooltip('Настройки'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Оформление'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Белый'));
+    await tester.pumpAndSettle();
+    expect(ProviderScope.containerOf(button).read(appearanceProvider).art, AppArt.glyphWhite);
+    expect(find.text('Фон иконки'), findsOneWidget);
+    await unmount(tester);
+
+    await pumpApp(tester, FakeCore(subs: [sampleSubscription()]), size: const Size(1000, 2000), overrides: [
+      hostProvider.overrideWithValue(const Host(HostKind.appImage)),
+    ]);
+    expect(tester.widget<ConnectButton>(find.byType(ConnectButton)).art, AppArt.crocell);
+    await tester.tap(find.byTooltip('Настройки'));
+    await tester.pumpAndSettle();
+    expect(find.text('Оформление'), findsNothing);
     await unmount(tester);
   });
 

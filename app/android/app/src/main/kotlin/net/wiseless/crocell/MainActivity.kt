@@ -16,6 +16,10 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "socketPath" -> result.success(Core.socketPath(this))
                 "startError" -> result.success(Core.startError)
+                "setIcon" -> {
+                    AppIcons.select(this, call.arguments as String)
+                    result.success(null)
+                }
                 "hideNotification" -> result.success(Prefs.hideNotification(this))
                 "setHideNotification" -> {
                     val hide = call.arguments as Boolean

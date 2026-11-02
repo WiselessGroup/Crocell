@@ -4,6 +4,8 @@
 #include <flutter/standard_method_codec.h>
 
 #include <optional>
+#include <variant>
+#include <vector>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -29,21 +31,40 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
 
-  // crocell/window: "present" raises the window, for notification clicks.
+  // crocell/window: "present" raises the window, for notification clicks;
+  // "setIcon" changes the taskbar icon.
   window_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       flutter_controller_->engine()->messenger(), "crocell/window",
       &flutter::StandardMethodCodec::GetInstance());
   window_channel_->SetMethodCallHandler(
       [this](const flutter::MethodCall<flutter::EncodableValue>& call,
              std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-        if (call.method_name() != "present") {
-          result->NotImplemented();
-          return;
-        }
         HWND hwnd = GetHandle();
-        if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
-        SetForegroundWindow(hwnd);
-        result->Success();
+        if (call.method_name() == "present") {
+          if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
+          SetForegroundWindow(hwnd);
+          result->Success();
+        } else if (call.method_name() == "setIcon") {
+          // A PNG, which icon resources may be since Vista. The window owns
+          // the handle from here on; the old one is released.
+          const auto* png = std::get_if<std::vector<uint8_t>>(call.arguments());
+          if (png != nullptr && !png->empty()) {
+            HICON icon = CreateIconFromResourceEx(
+                const_cast<PBYTE>(png->data()), static_cast<DWORD>(png->size()),
+                TRUE, 0x00030000, 256, 256, LR_DEFAULTCOLOR);
+            if (icon != nullptr) {
+              HICON old_big = reinterpret_cast<HICON>(SendMessage(
+                  hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(icon)));
+              HICON old_small = reinterpret_cast<HICON>(SendMessage(
+                  hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(icon)));
+              if (old_big != nullptr) DestroyIcon(old_big);
+              if (old_small != nullptr && old_small != old_big) DestroyIcon(old_small);
+            }
+          }
+          result->Success();
+        } else {
+          result->NotImplemented();
+        }
       });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../brand/appearance.dart';
 import '../data/core_api.dart';
 import '../data/state.dart';
 import '../l10n.dart';
@@ -78,6 +79,7 @@ class ConnectPanel extends ConsumerWidget {
                 children: [
                   const ServiceOutdatedBanner(),
                   ConnectButton(
+                    art: ref.watch(appearanceProvider).art,
                     connected: connected,
                     onPressed: onPressed,
                     size: buttonSize,

@@ -6,7 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   // flutter_svg only understands a subset of SVG. If a redrawn logo uses
   // something it can't parse, the connect button silently renders nothing.
-  for (final name in ['wing-left', 'wing-right', 'figure']) {
+  for (final name in [
+    'wing-left',
+    'wing-right',
+    'figure',
+    'glyph-wing-left',
+    'glyph-wing-right',
+    'glyph-figure',
+    'glyph-star',
+  ]) {
     testWidgets('$name.svg parses', (tester) async {
       final svg = File('assets/brand/$name.svg').readAsStringSync();
       final info = await tester.runAsync(

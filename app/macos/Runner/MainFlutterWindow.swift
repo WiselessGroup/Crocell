@@ -10,14 +10,25 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
-    // crocell/window: "present" raises the window, for notification clicks.
+    // crocell/window: "present" raises the window, for notification clicks;
+    // "setIcon" changes the Dock icon.
     let channel = FlutterMethodChannel(
       name: "crocell/window", binaryMessenger: flutterViewController.engine.binaryMessenger)
     channel.setMethodCallHandler { [weak self] call, result in
-      guard call.method == "present" else { return result(FlutterMethodNotImplemented) }
-      NSApp.activate(ignoringOtherApps: true)
-      self?.makeKeyAndOrderFront(nil)
-      result(nil)
+      switch call.method {
+      case "present":
+        NSApp.activate(ignoringOtherApps: true)
+        self?.makeKeyAndOrderFront(nil)
+        result(nil)
+      case "setIcon":
+        // The Dock icon of the running app, as chosen in Customize.
+        if let data = call.arguments as? FlutterStandardTypedData, let image = NSImage(data: data.data) {
+          NSApp.applicationIconImage = image
+        }
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
     }
 
     super.awakeFromNib()

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../brand/appearance.dart';
 import '../data/core_api.dart';
 import '../data/state.dart';
 import '../host.dart';
@@ -10,6 +11,7 @@ import '../service/gnome.dart';
 import '../theme.dart';
 import '../version.dart';
 import 'common.dart';
+import 'customize_dialog.dart';
 import 'logs_dialog.dart';
 import 'routing_panel.dart';
 
@@ -74,6 +76,12 @@ class SettingsScreen extends ConsumerWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
+                        if (ref.watch(hostProvider).artChoices.isNotEmpty)
+                          OutlinedButton.icon(
+                            onPressed: () => showCustomize(context),
+                            icon: const Icon(Icons.palette_outlined),
+                            label: Text(tr('Оформление', 'Customize')),
+                          ),
                         OutlinedButton.icon(
                           onPressed: () => showLogs(context),
                           icon: const Icon(Icons.receipt_long_outlined),
