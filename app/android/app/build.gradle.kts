@@ -61,6 +61,20 @@ android {
     packaging {
         // The Go core is one large .so per ABI; stored compressed in the APK.
         jniLibs.useLegacyPackaging = true
+
+        // Only the ABIs this build asked for. Plugins bring small .so files
+        // for all of them, and a device picks its ABI by the folder being
+        // there: x86_64 without libflutter or the core would crash on start.
+        (project.findProperty("target-platform") as String?)?.split(",")?.let { targets ->
+            mapOf(
+                "android-arm" to "armeabi-v7a",
+                "android-arm64" to "arm64-v8a",
+                "android-x64" to "x86_64",
+                "android-x86" to "x86",
+            ).forEach { (target, abi) ->
+                if (target !in targets) jniLibs.excludes += "lib/$abi/**"
+            }
+        }
     }
 }
 

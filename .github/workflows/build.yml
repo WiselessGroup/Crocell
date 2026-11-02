@@ -141,19 +141,33 @@ jobs:
           path: dist/Crocell-arm64.dmg
           if-no-files-found: error
 
-  # On master, only when the core changed: builds the AAR ahead of time, in the
-  # background, because a tag can restore caches from master but not from an
-  # earlier tag. With the AAR ready a release's Android build takes minutes.
+  # Warms the caches a release's Android build restores: a tag can restore
+  # caches from master but not from an earlier tag. Takes seconds unless the
+  # core (AAR) or the Gradle files changed.
   android-core:
     if: github.server_url == 'https://github.com' && github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-java@v6
+      - id: java
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
       - uses: ./.github/actions/android-core
+      - if: steps.java.outputs.cache-hit != 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+          cache-key: 'flutter-android-:version:-:arch:-:hash:'
+      # Fills both: Gradle's dependencies and build cache, Flutter's Android
+      # engine. Signed with the debug key and thrown away.
+      - if: steps.java.outputs.cache-hit != 'true'
+        working-directory: app
+        run: flutter build apk --release --target-platform android-arm,android-arm64
 
   android:
     if: github.server_url == 'https://github.com' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
