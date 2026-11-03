@@ -23,6 +23,7 @@ final systemProxyControllerProvider = Provider<void>((ref) {
   if (!proxy.isSupported) return;
 
   var pointedAt = 0;
+  var applying = false;
   var busy = Future<void>.value();
 
   // Leftovers from a crash: the daemon is not ours to trust yet.
@@ -35,8 +36,12 @@ final systemProxyControllerProvider = Provider<void>((ref) {
             status.tunnelMode == TunnelMode.TUNNEL_MODE_SYSTEM_PROXY
         ? status.mixedPort
         : 0;
-    if (want == pointedAt) return;
+    // The GNOME extension puts the proxy back when the service goes away for
+    // a while. If the service then comes back connected, point at it again.
+    final takenBack = want > 0 && want == pointedAt && !applying && !proxy.isActive;
+    if (want == pointedAt && !takenBack) return;
     pointedAt = want;
+    applying = true;
 
     busy = busy.then((_) async {
       try {
@@ -48,6 +53,8 @@ final systemProxyControllerProvider = Provider<void>((ref) {
         ref.read(systemProxyErrorProvider.notifier).set(null);
       } catch (e) {
         ref.read(systemProxyErrorProvider.notifier).set('$e');
+      } finally {
+        applying = false;
       }
     });
   }, fireImmediately: true);

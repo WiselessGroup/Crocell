@@ -1,6 +1,10 @@
 package sysproxy
 
 import (
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -89,3 +93,40 @@ var errNotFound = &notFound{}
 type notFound struct{}
 
 func (*notFound) Error() string { return "not found" }
+
+func TestRestoreSavedPutsBackWhatTheAppSaved(t *testing.T) {
+	store := fakeGsettings{}
+	store.install(t)
+	file := filepath.Join(t.TempDir(), "sysproxy.json")
+	saved := `{"backend":"gnome","values":["'none'","['localhost']","''","0","''","0","''","0"]}`
+	if err := os.WriteFile(file, []byte(saved), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := RestoreSaved(file); err != nil {
+		t.Fatal(err)
+	}
+	if store["org.gnome.system.proxy mode"] != "'none'" || store["org.gnome.system.proxy.socks port"] != "0" {
+		t.Errorf("store = %v", store)
+	}
+	if _, err := os.Stat(file); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the file should be gone: %v", err)
+	}
+	// Run again: nothing left to do, and that is fine.
+	if err := RestoreSaved(file); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRestoreSavedLeavesOtherDesktopsAlone(t *testing.T) {
+	fakeGsettings{}.install(t)
+	file := filepath.Join(t.TempDir(), "sysproxy.json")
+	if err := os.WriteFile(file, []byte(`{"backend":"kde","values":["1"]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := RestoreSaved(file); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(file); err != nil {
+		t.Errorf("the file is for the app to handle: %v", err)
+	}
+}

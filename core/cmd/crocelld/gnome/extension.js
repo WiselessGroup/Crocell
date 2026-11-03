@@ -1,20 +1,33 @@
-// Crocell in GNOME Quick Settings: a toggle that connects to the last node
-// and disconnects, with the node's name under it. It runs `crocelld watch`
-// for the state and `crocelld connect|disconnect` on click; the service
-// does the rest, so nothing here needs privileges.
-import GObject from 'gi://GObject';
+// Crocell in GNOME Quick Settings: a toggle with a menu. A click on the toggle
+// connects to the last node or disconnects, the arrow opens the menu: the most
+// used nodes, refreshing subscriptions, the app, quitting. It runs `crocelld
+// watch` for the state and other `crocelld` commands for the rest; the service
+// does the work, so nothing here needs privileges.
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
+import Shell from 'gi://Shell';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {QuickToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
 const russian = GLib.get_language_names().some(l => /^(ru|be|kk)/.test(l));
 const t = (ru, en) => (russian ? ru : en);
 
+// Red is everything but connected. A symbolic icon takes its colour from CSS,
+// so with no style it follows the panel.
+const RED = 'color: #E9524E;';
+const DIM_OPACITY = 128;
+const FAVORITES_SHOWN = 3;
+
+// How long the tunnel must stay down before the system proxy is put back: long
+// enough for a restarting service to come back.
+const PROXY_RESTORE_DELAY_SECONDS = 3;
+
 const CrocellToggle = GObject.registerClass(
-class CrocellToggle extends QuickToggle {
+class CrocellToggle extends QuickMenuToggle {
     _init(gicon, onClick) {
         super._init({title: 'Crocell', gicon, toggleMode: false});
         this.connect('clicked', onClick);
@@ -26,15 +39,29 @@ class CrocellIndicator extends SystemIndicator {
     _init(ext) {
         super._init();
         this._crocelld = ext.crocelld;
-        const gicon = Gio.icon_new_for_string(`${ext.path}/crocell-symbolic.svg`);
+        this._gicon = Gio.icon_new_for_string(`${ext.path}/crocell-symbolic.svg`);
         this._icon = this._addIndicator();
-        this._icon.gicon = gicon;
-        this._icon.visible = false;
-        this._toggle = new CrocellToggle(gicon, () => this._click());
+        this._icon.gicon = this._gicon;
+        this._toggle = new CrocellToggle(this._gicon, () => this._click());
         this.quickSettingsItems.push(this._toggle);
+        this._buildMenu();
         this._state = 'unavailable';
         this._show({state: 'unavailable'});
         this._watch();
+    }
+
+    _buildMenu() {
+        const menu = this._toggle.menu;
+        this._action = menu.addAction('', () => this._click());
+        menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this._favorites = new PopupMenu.PopupMenuSection();
+        menu.addMenuItem(this._favorites);
+        this._favoritesEnd = new PopupMenu.PopupSeparatorMenuItem();
+        menu.addMenuItem(this._favoritesEnd);
+        this._refresh = menu.addAction(t('Обновить все подписки', 'Refresh all subscriptions'), () => this._refreshAll());
+        menu.addAction(t('Открыть Crocell', 'Open Crocell'), () => this._openApp());
+        menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this._quit = menu.addAction(t('Выйти совсем', 'Quit completely'), () => this._run(['quit']));
     }
 
     _watch() {
@@ -77,27 +104,99 @@ class CrocellIndicator extends SystemIndicator {
         });
     }
 
-    _show({state, node}) {
+    _show({state, node, favorites}) {
         this._state = state;
         const on = state === 'connected';
+        const busy = state === 'connecting' || state === 'disconnecting';
+        const available = state !== 'unavailable';
         this._toggle.checked = on;
-        this._icon.visible = on;
-        this._toggle.subtitle = {
+        this._icon.style = on || busy ? '' : RED;
+        this._icon.opacity = busy ? DIM_OPACITY : 255;
+
+        const subtitle = {
             connected: node || t('Подключено', 'Connected'),
             connecting: t('Подключаюсь…', 'Connecting…'),
             disconnecting: t('Отключаюсь…', 'Disconnecting…'),
             failed: t('Не удалось подключиться', 'Could not connect'),
             unavailable: t('Служба не запущена', 'Service not running'),
         }[state] ?? (node || t('Отключено', 'Off'));
-        this._toggle.reactive = state !== 'unavailable';
+        this._toggle.subtitle = subtitle;
+        this._toggle.menu.setHeader(this._gicon, 'Crocell', subtitle);
+
+        this._action.label.text = on ? t('Отключить', 'Disconnect') : t('Подключить', 'Connect');
+        this._action.visible = available;
+        this._action.setSensitive(!busy);
+        this._refresh.visible = available;
+        this._quit.visible = available;
+        this._showFavorites(available ? favorites ?? [] : [], node);
+        this._followProxy(state);
+    }
+
+    // The service's list has one more than the menu shows, for when the
+    // current node is among them.
+    _showFavorites(favorites, current) {
+        this._favorites.removeAll();
+        const others = favorites.filter(f => f.name !== current).slice(0, FAVORITES_SHOWN);
+        for (const f of others)
+            this._favorites.addAction(f.name, () => this._run(['connect', f.subscription, f.node]));
+        this._favoritesEnd.visible = others.length > 0;
+    }
+
+    // The app points the system proxy at the service and puts it back, but it
+    // may be closed when the tunnel goes away. The browser then has no internet
+    // until someone opens the app. The extension runs as the person, whose
+    // setting this is. With the app open, one of the two gets there first and
+    // the other finds nothing to do.
+    _followProxy(state) {
+        if (this._proxyTimer) {
+            GLib.source_remove(this._proxyTimer);
+            this._proxyTimer = 0;
+        }
+        if (state !== 'disconnected' && state !== 'failed' && state !== 'unavailable')
+            return;
+        this._proxyTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, PROXY_RESTORE_DELAY_SECONDS, () => {
+            this._proxyTimer = 0;
+            this._run(['restore-proxy']);
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _click() {
         if (this._state === 'connecting' || this._state === 'disconnecting')
             return;
-        const cmd = this._state === 'connected' ? 'disconnect' : 'connect';
+        if (this._state === 'unavailable') {
+            this._openApp();
+            return;
+        }
+        this._run([this._state === 'connected' ? 'disconnect' : 'connect']);
+    }
+
+    _refreshAll() {
+        this._run(['refresh-all'], () => Main.notify('Crocell',
+            t('Не все подписки обновились', 'Some subscriptions did not refresh')));
+    }
+
+    _openApp() {
+        const apps = Shell.AppSystem.get_default();
+        const info = apps.get_installed().find(a => a.get_name() === 'Crocell');
+        if (info)
+            apps.lookup_app(info.get_id())?.activate();
+        else
+            Main.notify('Crocell', t('Не нашёл приложение Crocell', 'Could not find the Crocell app'));
+    }
+
+    _run(args, onFail) {
         try {
-            Gio.Subprocess.new([this._crocelld, cmd], Gio.SubprocessFlags.NONE);
+            const proc = Gio.Subprocess.new([this._crocelld, ...args], Gio.SubprocessFlags.NONE);
+            if (onFail) {
+                proc.wait_check_async(null, (p, res) => {
+                    try {
+                        p.wait_check_finish(res);
+                    } catch (e) {
+                        onFail();
+                    }
+                });
+            }
         } catch (e) {
             logError(e, 'Crocell');
         }
@@ -107,6 +206,8 @@ class CrocellIndicator extends SystemIndicator {
         this._destroyed = true;
         if (this._timer)
             GLib.source_remove(this._timer);
+        if (this._proxyTimer)
+            GLib.source_remove(this._proxyTimer);
         this._proc?.force_exit();
         this.quickSettingsItems.forEach(item => item.destroy());
         super.destroy();

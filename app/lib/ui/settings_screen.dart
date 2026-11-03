@@ -9,6 +9,7 @@ import '../l10n.dart';
 import '../platform/android.dart';
 import '../service/gnome.dart';
 import '../theme.dart';
+import '../update/releases.dart';
 import '../version.dart';
 import 'common.dart';
 import 'customize_dialog.dart';
@@ -104,7 +105,9 @@ class SettingsScreen extends ConsumerWidget {
                               }
                             },
                             icon: const Icon(Icons.toggle_on_outlined),
-                            label: Text(tr('Добавить в быстрые настройки GNOME', 'Add to GNOME quick settings')),
+                            label: Text(gnomeToggleOutdated(ref.watch(currentVersionProvider))
+                                ? tr('Обновить в быстрых настройках GNOME', 'Update in GNOME quick settings')
+                                : tr('Добавить в быстрые настройки GNOME', 'Add to GNOME quick settings')),
                           ),
                       ],
                     ),

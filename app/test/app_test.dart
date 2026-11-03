@@ -33,12 +33,21 @@ class RecordingNotifications implements Notifications {
 class RecordingProxy extends SystemProxy {
   RecordingProxy() : super(stateFile: '/nonexistent/crocell-test-sysproxy.json');
   final log = <String>[];
+  var active = false;
   @override
   bool get isSupported => true;
   @override
-  Future<void> enable(int port) async => log.add('enable $port');
+  bool get isActive => active;
   @override
-  Future<void> restore() async => log.add('restore');
+  Future<void> enable(int port) async {
+    active = true;
+    log.add('enable $port');
+  }
+  @override
+  Future<void> restore() async {
+    active = false;
+    log.add('restore');
+  }
 }
 
 Future<FakeCore> pumpApp(
@@ -171,6 +180,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(core.calls, ['disconnect']);
     expect(proxy.log.last, 'restore');
+    await unmount(tester);
+  });
+
+  testWidgets('system proxy is pointed again after the GNOME extension put it back', (tester) async {
+    final proxy = RecordingProxy();
+    final core = await pumpApp(
+      tester,
+      FakeCore(subs: [sampleSubscription()], status: Status(
+        state: ConnectionState.CONNECTION_STATE_CONNECTED,
+        tunnelMode: TunnelMode.TUNNEL_MODE_SYSTEM_PROXY,
+        mixedPort: 7890,
+      )),
+      proxy: proxy,
+    );
+    expect(proxy.log.where((l) => l == 'enable 7890'), hasLength(1));
+
+    proxy.active = false; // what restore-proxy leaves behind
+    core.push(core.current.deepCopy()..checking = true);
+    await tester.pumpAndSettle();
+    expect(proxy.log.where((l) => l == 'enable 7890'), hasLength(2));
+
+    core.push(core.current.deepCopy()..checking = false);
+    await tester.pumpAndSettle();
+    expect(proxy.log.where((l) => l == 'enable 7890'), hasLength(2), reason: 'once is enough');
     await unmount(tester);
   });
 
@@ -347,7 +380,7 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.menu, (call) async => null);
-    await pumpApp(tester, FakeCore(), overrides: [hostProvider.overrideWithValue(const Host(HostKind.macos))]);
+    await pumpApp(tester, FakeCore());
 
     Iterable<PlatformMenuItem> flat(List<PlatformMenuItem> items) => items.expand((i) => switch (i) {
           PlatformMenu(:final menus) => flat(menus),

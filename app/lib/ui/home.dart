@@ -1,9 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/state.dart';
-import '../host.dart';
 import '../l10n.dart';
 import '../update/how_to_update.dart';
 import 'add_subscription.dart';
@@ -90,7 +90,7 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
 
-    if (ref.watch(hostProvider).kind != HostKind.macos) return screen;
+    if (defaultTargetPlatform != TargetPlatform.macOS) return screen;
     return MacMenu(
       // The menu is there on every screen; settings open once, from home.
       onSettings: reachable == true ? () {

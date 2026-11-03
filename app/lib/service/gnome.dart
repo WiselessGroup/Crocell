@@ -11,6 +11,17 @@ bool gnomeToggleAvailable(Host host, [Map<String, String>? env]) {
   return desktop.toUpperCase().contains('GNOME');
 }
 
+/// The extension is there, but from another version of the app. The Shell does
+/// not update it by itself: a new one takes a reinstall and a new login.
+bool gnomeToggleOutdated(String appVersion, [Map<String, String>? env]) {
+  env ??= Platform.environment;
+  final data = env['XDG_DATA_HOME'] ?? '${env['HOME'] ?? ''}/.local/share';
+  final dir = '$data/gnome-shell/extensions/crocell@wiseless.net';
+  if (!Directory(dir).existsSync()) return false;
+  final file = File('$dir/crocell-version');
+  return !file.existsSync() || file.readAsStringSync().trim() != appVersion;
+}
+
 /// Installs and enables the extension. Runs as the person, not root:
 /// extensions live in the home directory.
 Future<void> installGnomeToggle(Host host) async {

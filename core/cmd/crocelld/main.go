@@ -7,6 +7,7 @@
 //	crocelld uninstall       stop and remove it
 //	crocelld connect | disconnect | watch | refresh-all | quit    control the running service
 //	crocelld gnome-extension install | uninstall    the GNOME quick toggle
+//	crocelld restore-proxy   put back the desktop proxy settings the app saved
 package main
 
 import (
@@ -40,6 +41,8 @@ func main() {
 			exit(uninstall())
 		case "connect", "disconnect", "watch", "refresh-all", "quit":
 			exit(ctl(os.Args[1], os.Args[2:]))
+		case "restore-proxy":
+			exit(restoreProxy())
 		case "gnome-extension":
 			exit(gnomeExtension(os.Args[2:]))
 		}

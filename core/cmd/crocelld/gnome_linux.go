@@ -9,6 +9,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"git.wiseless.net/fureunoir/crocell/core/internal/version"
+	"git.wiseless.net/fureunoir/crocell/core/sysproxy"
 )
 
 //go:embed gnome
@@ -57,6 +60,10 @@ func gnomeExtension(args []string) error {
 		if err := os.WriteFile(filepath.Join(dir, "crocelld-path"), []byte(serviceBinary()), 0o644); err != nil {
 			return err
 		}
+		// The app compares it with its own, to offer an update.
+		if err := os.WriteFile(filepath.Join(dir, "crocell-version"), []byte(version.Version), 0o644); err != nil {
+			return err
+		}
 		enableGnomeExtension()
 		fmt.Println("Installed. Log out and back in once, then Crocell is in Quick Settings.")
 		return nil
@@ -65,6 +72,23 @@ func gnomeExtension(args []string) error {
 		return os.RemoveAll(dir)
 	}
 	return fmt.Errorf("unknown command %q: install or uninstall", cmd)
+}
+
+// restoreProxy puts the desktop's proxy settings back, for when the service
+// went away with the app closed. Same file the app keeps them in.
+func restoreProxy() error {
+	if os.Geteuid() == 0 {
+		return errors.New("run this as yourself, not root: these are your settings")
+	}
+	dir := os.Getenv("XDG_STATE_HOME")
+	if dir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		dir = filepath.Join(home, ".local", "state")
+	}
+	return sysproxy.RestoreSaved(filepath.Join(dir, "crocell", "sysproxy.json"))
 }
 
 // serviceBinary is the crocelld the toggle runs: the installed copy, since
