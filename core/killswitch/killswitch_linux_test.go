@@ -50,7 +50,11 @@ func TestRulesInAnIsolatedNamespace(t *testing.T) {
 		t.Fatalf("not an empty namespace: %v", ifaces)
 	}
 
-	run(t, "ip", "link", "set", "lo", "up")
+	// Some systems (GitHub's runners among them) grant a user namespace but
+	// keep its capabilities from it.
+	if out, err := exec.Command("ip", "link", "set", "lo", "up").CombinedOutput(); err != nil {
+		t.Skipf("no network administration in this namespace: %v\n%s", err, out)
+	}
 	if err := exec.Command("ip", "link", "add", "dummy0", "type", "dummy").Run(); err != nil {
 		t.Skipf("no dummy interfaces: %v", err)
 	}
