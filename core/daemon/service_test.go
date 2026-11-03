@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"net"
 	"net/http"
@@ -594,5 +595,22 @@ func TestPastedConfigIsNotShown(t *testing.T) {
 	}
 	if len(sub.Nodes) != 1 || sub.Nodes[0].Type != "amneziawg" {
 		t.Errorf("nodes = %v", sub.Nodes)
+	}
+}
+
+func TestSubLinkBecomesTheSameSubscription(t *testing.T) {
+	h := newHarness(t)
+	plain := h.add(t)
+	wrapped, err := h.client.AddSubscription(context.Background(), &pb.AddSubscriptionRequest{
+		Url: "sub://" + base64.RawStdEncoding.EncodeToString([]byte(h.subURL)) + "#tail",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wrapped.GetId() != plain.GetId() {
+		t.Errorf("id %s, want %s", wrapped.GetId(), plain.GetId())
+	}
+	if !strings.HasPrefix(wrapped.GetUrlMasked(), "http") {
+		t.Errorf("masked = %q", wrapped.GetUrlMasked())
 	}
 }

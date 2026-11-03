@@ -637,7 +637,12 @@ func (s *Service) ListSubscriptions(context.Context, *pb.ListSubscriptionsReques
 }
 
 func (s *Service) AddSubscription(ctx context.Context, req *pb.AddSubscriptionRequest) (*pb.Subscription, error) {
-	url := req.GetUrl()
+	// Unwrapped first, so the link scrub looks for is the one errors quote,
+	// and the same subscription keeps one id however it was pasted.
+	url, err := subscription.Unwrap(req.GetUrl())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 	fetched, err := s.fetcher.Fetch(ctx, url)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, scrub(err.Error(), url))

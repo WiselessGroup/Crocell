@@ -284,3 +284,59 @@ func TestPastedShareLinkIsASubscription(t *testing.T) {
 		t.Errorf("sub = %+v", sub)
 	}
 }
+
+func TestShadowrocketSubLink(t *testing.T) {
+	const link = "https://sub.example.net/s/ab?c=d>>~"
+	cases := map[string]string{
+		"unpadded with label": "sub://" + base64.RawStdEncoding.EncodeToString([]byte(link)) + "#tail",
+		"padded":              "sub://" + base64.StdEncoding.EncodeToString([]byte(link)),
+		"url-safe":            "sub://" + base64.RawURLEncoding.EncodeToString([]byte(link)) + "#tail",
+		"spaces and case":     "  SUB://" + base64.RawStdEncoding.EncodeToString([]byte(link)) + "\n",
+	}
+	for name, input := range cases {
+		t.Run(name, func(t *testing.T) {
+			got, err := Unwrap(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != link {
+				t.Errorf("got %q", got)
+			}
+		})
+	}
+
+	for _, plain := range []string{"https://sub.example.net/x", "trojan://secret@tr.example.net:443#Solo"} {
+		if got, err := Unwrap(plain); err != nil || got != plain {
+			t.Errorf("Unwrap(%q) = %q, %v", plain, got, err)
+		}
+	}
+}
+
+func TestBadSubLinkErrorKeepsTheInputOut(t *testing.T) {
+	for _, input := range []string{
+		"sub://not base64 secretkey",
+		"sub://" + base64.RawStdEncoding.EncodeToString([]byte("trojan://secretkey@tr.example.net:443")),
+	} {
+		_, err := Unwrap(input)
+		if err == nil {
+			t.Fatalf("no error for %q", input)
+		}
+		if strings.Contains(err.Error(), "secretkey") {
+			t.Errorf("error quotes the input: %v", err)
+		}
+	}
+}
+
+func TestFetchFollowsSubLink(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(readFixture(t, "links.txt"))
+	}))
+	defer srv.Close()
+	sub, err := (&Fetcher{}).Fetch(context.Background(), "sub://"+base64.RawStdEncoding.EncodeToString([]byte(srv.URL))+"#tail")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sub.URL != srv.URL || len(sub.Nodes) == 0 {
+		t.Errorf("url = %q, %d nodes", sub.URL, len(sub.Nodes))
+	}
+}

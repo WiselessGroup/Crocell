@@ -7,6 +7,7 @@ package subscription
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -96,10 +97,35 @@ func IsLink(input string) bool {
 	return strings.HasPrefix(input, "https://") || strings.HasPrefix(input, "http://")
 }
 
+// Unwrap turns the sub:// link Shadowrocket exports into the https link inside
+// it: "sub://" + base64 of the link, usually unpadded, then "#" and a label.
+// The label can be a piece of the link's key, so it is dropped, not kept as a
+// title. Anything else comes back as is. Errors never quote the input.
+func Unwrap(input string) (string, error) {
+	input = strings.TrimSpace(input)
+	if !strings.HasPrefix(strings.ToLower(input), "sub://") {
+		return input, nil
+	}
+	payload, _, _ := strings.Cut(input[len("sub://"):], "#")
+	payload = strings.TrimRight(payload, "=")
+	decoded, err := base64.RawStdEncoding.DecodeString(payload)
+	if err != nil {
+		decoded, err = base64.RawURLEncoding.DecodeString(payload)
+	}
+	link := strings.TrimSpace(string(decoded))
+	if err != nil || !IsLink(link) {
+		return "", errors.New("subscription: this sub:// link has no subscription link inside")
+	}
+	return link, nil
+}
+
 // Fetch downloads a subscription and resolves it into nodes. Anything that is
 // not an http(s) link is taken as the subscription's body itself.
 func (f *Fetcher) Fetch(ctx context.Context, url string) (*Subscription, error) {
-	url = strings.TrimSpace(url)
+	url, err := Unwrap(url)
+	if err != nil {
+		return nil, err
+	}
 	if !IsLink(url) {
 		return f.fromText(ctx, url)
 	}

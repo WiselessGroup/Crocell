@@ -340,6 +340,18 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('add: a sub:// link from Shadowrocket goes to the core', (tester) async {
+    final core = await pumpApp(tester, FakeCore());
+    await tester.tap(find.byType(ConnectButton));
+    await tester.pumpAndSettle();
+    const link = 'sub://aHR0cHM6Ly9zdWIuZXhhbXBsZS5uZXQvcw#tail';
+    await tester.enterText(find.byType(TextField), link);
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить'));
+    await tester.pumpAndSettle();
+    expect(core.calls.first, 'add $link');
+    await unmount(tester);
+  });
+
   testWidgets('add: a WireGuard config can be pasted as text', (tester) async {
     final core = await pumpApp(tester, FakeCore());
     await tester.tap(find.byType(ConnectButton));
