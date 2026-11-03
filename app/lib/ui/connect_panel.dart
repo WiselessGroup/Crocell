@@ -97,7 +97,11 @@ class ConnectPanel extends ConsumerWidget {
                   if (subs.isEmpty)
                     _EmptyCard(onAdd: () => showAddSubscription(context))
                   else
-                    _NodeCard(selected: selected, onTap: onOpenNodes),
+                    _NodeCard(
+                      selected: selected,
+                      onTap: onOpenNodes,
+                      auto: ref.watch(settingsProvider).value?.autoNode ?? false,
+                    ),
                   const SizedBox(height: 16),
                   const _ModePicker(),
                   const _SystemProxyWarning(),
@@ -230,10 +234,11 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _NodeCard extends StatelessWidget {
-  const _NodeCard({required this.selected, required this.onTap});
+  const _NodeCard({required this.selected, required this.onTap, this.auto = false});
 
   final ({Subscription sub, Node node})? selected;
   final VoidCallback? onTap;
+  final bool auto;
 
   @override
   Widget build(BuildContext context) {
@@ -268,6 +273,14 @@ class _NodeCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (auto)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Tooltip(
+                    message: tr('Crocell выбирает ноду сам', 'Crocell picks the node by itself'),
+                    child: Icon(Icons.autorenew_rounded, size: 18, color: t.muted),
+                  ),
+                ),
               if (onTap != null) Icon(Icons.chevron_right_rounded, color: t.muted),
             ],
           ),

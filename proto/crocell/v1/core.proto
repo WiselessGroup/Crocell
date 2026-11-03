@@ -267,6 +267,9 @@ message Settings {
   bool disable_ipv6 = 9;
   bool allow_lan = 10;   // others on the network may use the proxy port
   bool connect_on_start = 11;
+  // Move to another node of the subscription by itself when this one stops
+  // working. A node picked by hand stays while it works.
+  bool auto_node = 12;
 }
 
 message GetSettingsRequest {}

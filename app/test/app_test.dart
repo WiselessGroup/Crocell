@@ -398,6 +398,22 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('settings: picking the node by itself goes to the core and shows on the first screen', (tester) async {
+    final core = await pumpApp(tester, FakeCore(subs: [sampleSubscription()]), size: const Size(420, 2400));
+    expect(find.byIcon(Icons.autorenew_rounded), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Выбирать ноду сам'));
+    await tester.pumpAndSettle();
+    expect(core.settings.autoNode, isTrue);
+
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.autorenew_rounded), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets('add: a sub:// link from Shadowrocket goes to the core', (tester) async {
     final core = await pumpApp(tester, FakeCore());
     await tester.tap(find.byType(ConnectButton));

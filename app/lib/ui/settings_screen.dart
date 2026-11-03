@@ -41,6 +41,19 @@ class SettingsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(tr('Выбирать ноду сам', 'Pick the node by itself')),
+                      subtitle: Text(tr(
+                        'Если нода перестала работать, Crocell перейдёт на следующую рабочую из этой подписки. '
+                            'Нода, выбранная вручную, остаётся, пока работает.',
+                        'If a node stops working, Crocell moves to the next working one in this subscription. '
+                            'A node you pick by hand stays for as long as it works.',
+                      )),
+                      value: value.autoNode,
+                      onChanged: (on) => ref.read(settingsProvider.notifier).edit((s) => s.autoNode = on),
+                    ),
+                    const SizedBox(height: 32),
                     _Heading(tr('Маршрутизация', 'Routing')),
                     Text(
                       tr(

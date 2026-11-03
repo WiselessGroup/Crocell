@@ -2038,6 +2038,7 @@ class Settings extends $pb.GeneratedMessage {
     $core.bool? disableIpv6,
     $core.bool? allowLan,
     $core.bool? connectOnStart,
+    $core.bool? autoNode,
   }) {
     final result = Settings._();
     if (tunnelMode != null) result.tunnelMode = tunnelMode;
@@ -2050,6 +2051,7 @@ class Settings extends $pb.GeneratedMessage {
     if (disableIpv6 != null) result.disableIpv6 = disableIpv6;
     if (allowLan != null) result.allowLan = allowLan;
     if (connectOnStart != null) result.connectOnStart = connectOnStart;
+    if (autoNode != null) result.autoNode = autoNode;
     return result;
   }
 
@@ -2081,6 +2083,7 @@ class Settings extends $pb.GeneratedMessage {
     ..aOB(9, _omitFieldNames ? '' : 'disableIpv6')
     ..aOB(10, _omitFieldNames ? '' : 'allowLan')
     ..aOB(11, _omitFieldNames ? '' : 'connectOnStart')
+    ..aOB(12, _omitFieldNames ? '' : 'autoNode')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2190,6 +2193,17 @@ class Settings extends $pb.GeneratedMessage {
   $core.bool hasConnectOnStart() => $_has(9);
   @$pb.TagNumber(11)
   void clearConnectOnStart() => $_clearField(11);
+
+  /// Move to another node of the subscription by itself when this one stops
+  /// working. A node picked by hand stays while it works.
+  @$pb.TagNumber(12)
+  $core.bool get autoNode => $_getBF(10);
+  @$pb.TagNumber(12)
+  set autoNode($core.bool value) => $_setBool(10, value);
+  @$pb.TagNumber(12)
+  $core.bool hasAutoNode() => $_has(10);
+  @$pb.TagNumber(12)
+  void clearAutoNode() => $_clearField(12);
 }
 
 class GetSettingsRequest extends $pb.GeneratedMessage {

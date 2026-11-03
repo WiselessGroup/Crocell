@@ -1758,8 +1758,11 @@ type Settings struct {
 	DisableIpv6    bool                   `protobuf:"varint,9,opt,name=disable_ipv6,json=disableIpv6,proto3" json:"disable_ipv6,omitempty"`
 	AllowLan       bool                   `protobuf:"varint,10,opt,name=allow_lan,json=allowLan,proto3" json:"allow_lan,omitempty"` // others on the network may use the proxy port
 	ConnectOnStart bool                   `protobuf:"varint,11,opt,name=connect_on_start,json=connectOnStart,proto3" json:"connect_on_start,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Move to another node of the subscription by itself when this one stops
+	// working. A node picked by hand stays while it works.
+	AutoNode      bool `protobuf:"varint,12,opt,name=auto_node,json=autoNode,proto3" json:"auto_node,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Settings) Reset() {
@@ -1858,6 +1861,13 @@ func (x *Settings) GetAllowLan() bool {
 func (x *Settings) GetConnectOnStart() bool {
 	if x != nil {
 		return x.ConnectOnStart
+	}
+	return false
+}
+
+func (x *Settings) GetAutoNode() bool {
+	if x != nil {
+		return x.AutoNode
 	}
 	return false
 }
@@ -2461,7 +2471,7 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\vGeoSettings\x12!\n" +
 	"\fgeoip_source\x18\x01 \x01(\tR\vgeoipSource\x12%\n" +
 	"\x0egeosite_source\x18\x02 \x01(\tR\rgeositeSource\x12!\n" +
-	"\fupdate_hours\x18\x03 \x01(\rR\vupdateHours\"\xae\x03\n" +
+	"\fupdate_hours\x18\x03 \x01(\rR\vupdateHours\"\xcb\x03\n" +
 	"\bSettings\x127\n" +
 	"\vtunnel_mode\x18\x01 \x01(\x0e2\x16.crocell.v1.TunnelModeR\n" +
 	"tunnelMode\x12\x1d\n" +
@@ -2475,7 +2485,8 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\fdisable_ipv6\x18\t \x01(\bR\vdisableIpv6\x12\x1b\n" +
 	"\tallow_lan\x18\n" +
 	" \x01(\bR\ballowLan\x12(\n" +
-	"\x10connect_on_start\x18\v \x01(\bR\x0econnectOnStartJ\x04\b\x02\x10\x03\"\x14\n" +
+	"\x10connect_on_start\x18\v \x01(\bR\x0econnectOnStart\x12\x1b\n" +
+	"\tauto_node\x18\f \x01(\bR\bautoNodeJ\x04\b\x02\x10\x03\"\x14\n" +
 	"\x12GetSettingsRequest\"\x16\n" +
 	"\x14ListProcessesRequest\"G\n" +
 	"\aProcess\x12\x12\n" +

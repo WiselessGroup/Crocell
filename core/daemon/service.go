@@ -37,6 +37,8 @@ type Engine interface {
 	Stop()
 	Select(name string) error
 	Traffic() engine.Traffic
+	// Current names the node in use, which with AutoNode the engine picks.
+	Current() string
 }
 
 type realEngine struct{}
@@ -45,6 +47,7 @@ func (realEngine) Start(o engine.Options) error { return engine.Start(o) }
 func (realEngine) Stop()                        { engine.Stop() }
 func (realEngine) Select(name string) error     { return engine.Select(name) }
 func (realEngine) Traffic() engine.Traffic      { return engine.CurrentTraffic() }
+func (realEngine) Current() string              { return engine.Current() }
 
 // Config sets the service up. Only StateDir is required.
 type Config struct {
@@ -143,6 +146,7 @@ type connection struct {
 	port   int
 
 	counted time.Time // node usage is counted up to here
+	auto    bool      // the engine moves between nodes by itself
 
 	check    *pb.ProbeResult
 	checking bool
@@ -279,6 +283,7 @@ func (s *Service) startChecksLocked() {
 				s.mu.Unlock()
 				return
 			}
+			s.followAutoNodeLocked()
 			s.conn.checking = true
 			s.notifyLocked()
 			s.mu.Unlock()
@@ -347,7 +352,41 @@ func sleep(ctx context.Context, d time.Duration) bool {
 func (s *Service) GetStatus(context.Context, *pb.GetStatusRequest) (*pb.Status, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.followAutoNodeLocked()
 	return s.statusLocked(), nil
+}
+
+// followAutoNodeLocked notices that the engine moved to another node. It has no
+// way of telling us, so whoever is about to report the node looks first. The new
+// node becomes the one to resume, and its check starts over.
+func (s *Service) followAutoNodeLocked() {
+	c := &s.conn
+	if !c.auto || c.state != pb.ConnectionState_CONNECTION_STATE_CONNECTED {
+		return
+	}
+	name := s.eng.Current()
+	sub := s.findSubLocked(c.subID)
+	if name == "" || sub == nil {
+		return
+	}
+	if n, ok := sub.node(c.nodeID); ok && n.Name == name {
+		return
+	}
+	for _, n := range sub.Nodes {
+		if n.Name != name {
+			continue
+		}
+		log.Printf("crocelld: moved to %q by itself", name)
+		s.countUsageLocked()
+		c.nodeID, c.check = n.ID, nil
+		s.st.Last = selection{SubscriptionID: sub.ID, NodeID: n.ID}
+		if err := s.store.save(s.st); err != nil {
+			log.Printf("crocelld: save state: %v", err)
+		}
+		s.startChecksLocked()
+		s.notifyLocked()
+		return
+	}
 }
 
 func (s *Service) statusLocked() *pb.Status {
@@ -396,6 +435,7 @@ func (s *Service) WatchStatus(_ *pb.WatchStatusRequest, stream grpc.ServerStream
 
 	for {
 		s.mu.Lock()
+		s.followAutoNodeLocked()
 		st := s.statusLocked()
 		changed := s.changed
 		s.mu.Unlock()
@@ -478,7 +518,7 @@ func (s *Service) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.Stat
 		log.Printf("crocelld: connected to %q (%s)", node.Name, mode)
 		s.setConn(connection{
 			state: pb.ConnectionState_CONNECTION_STATE_CONNECTED, subID: sub.ID, nodeID: node.ID,
-			mode: mode, port: opts.MixedPort, since: time.Now(),
+			mode: mode, port: opts.MixedPort, since: time.Now(), auto: opts.AutoNode,
 		})
 		s.mu.Lock()
 		s.startChecksLocked()
@@ -505,6 +545,7 @@ func (s *Service) engineOptionsLocked(sub *storedSub, node storedNode) (engine.O
 		MixedPort: set.MixedPort,
 		Nodes:     sub.engineNodes(),
 		Selected:  node.Name,
+		AutoNode:  set.AutoNode,
 		Rules:     rules,
 		Final:     engine.Proxy,
 		IPv6:      !set.DisableIPv6,

@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"git.wiseless.net/fureunoir/crocell/core/subscription"
 )
 
 func freePort(t *testing.T) int {
@@ -48,5 +50,32 @@ func TestStopThenStartReopens(t *testing.T) {
 		if listening(port) {
 			t.Fatalf("round %d: mixed port %d still open after Stop", round, port)
 		}
+	}
+}
+
+// Fallback nodes go to closed local ports: the group's health check runs at
+// once on start, and this keeps it off the network.
+func TestAutoNodeStartsWhereAskedAndCanBeMoved(t *testing.T) {
+	closed := func(name string) subscription.Node {
+		return subscription.Node{Name: name, Type: "socks5", Server: "127.0.0.1", Port: "1", Proxy: map[string]any{
+			"name": name, "type": "socks5", "server": "127.0.0.1", "port": 1,
+		}}
+	}
+	opts := Options{
+		HomeDir: t.TempDir(), LogLevel: "silent", AutoNode: true, Selected: "second",
+		Nodes: []subscription.Node{closed("first"), closed("second")},
+	}
+	if err := Start(opts); err != nil {
+		t.Fatal(err)
+	}
+	defer Stop()
+	if got := Current(); got != "second" && got != "first" {
+		t.Errorf("current = %q", got)
+	}
+	if err := Select("first"); err != nil {
+		t.Errorf("select: %v", err)
+	}
+	if err := Select("nobody"); err == nil {
+		t.Error("selecting a node that is not there should fail")
 	}
 }

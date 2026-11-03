@@ -297,3 +297,16 @@ func TestAmneziaWGThroughMihomo(t *testing.T) {
 		t.Fatalf("mihomo dropped the node: %v", cfg.Proxies)
 	}
 }
+
+func TestNodeGroupByChoice(t *testing.T) {
+	if g := nodeGroup([]string{"a"}, false); g["type"] != "select" || g["url"] != nil {
+		t.Errorf("manual: %v", g)
+	}
+	g := nodeGroup([]string{"a", "b"}, true)
+	if g["type"] != "fallback" || g["url"] != autoCheckURL || g["lazy"] != true {
+		t.Errorf("auto: %v", g)
+	}
+	if !strings.HasSuffix(autoCheckURL, "/cdn-cgi/trace") {
+		t.Errorf("the README promises the trace page, got %s", autoCheckURL)
+	}
+}

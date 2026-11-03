@@ -33,7 +33,12 @@ type fakeEngine struct {
 	selected []string
 	stopped  int
 	failWith error
+	current  string // the node the engine moved to by itself
 }
+
+func (f *fakeEngine) Current() string { f.mu.Lock(); defer f.mu.Unlock(); return f.current }
+
+func (f *fakeEngine) moveTo(name string) { f.mu.Lock(); f.current = name; f.mu.Unlock() }
 
 func (f *fakeEngine) Start(o engine.Options) error {
 	f.mu.Lock()
@@ -612,5 +617,64 @@ func TestSubLinkBecomesTheSameSubscription(t *testing.T) {
 	}
 	if !strings.HasPrefix(wrapped.GetUrlMasked(), "http") {
 		t.Errorf("masked = %q", wrapped.GetUrlMasked())
+	}
+}
+
+func TestAutoNodeReachesTheEngineAndTheStatusFollows(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	sub := h.add(t)
+	first, second := sub.GetNodes()[0], sub.GetNodes()[1]
+
+	set, err := h.client.GetSettings(ctx, &pb.GetSettingsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	set.AutoNode = true
+	if set, err = h.client.UpdateSettings(ctx, set); err != nil || !set.GetAutoNode() {
+		t.Fatalf("settings = %v, %v", set, err)
+	}
+	if _, err := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.GetId(), NodeId: first.GetId()}); err != nil {
+		t.Fatal(err)
+	}
+	if !h.eng.last().AutoNode || h.eng.last().Selected != first.GetName() {
+		t.Errorf("options = %+v", h.eng.last())
+	}
+
+	// The first node dies, and the engine goes on to the second.
+	h.eng.moveTo(second.GetName())
+	st := waitStatus(t, h, func(st *pb.Status) bool { return st.GetNodeId() == second.GetId() })
+	if st.GetNodeName() != second.GetName() {
+		t.Errorf("name = %q", st.GetNodeName())
+	}
+
+	// The node to resume is the one it moved to.
+	if _, err := h.client.Disconnect(ctx, &pb.DisconnectRequest{}); err != nil {
+		t.Fatal(err)
+	}
+	st, err = h.client.GetStatus(ctx, &pb.GetStatusRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.GetNodeId() != second.GetId() {
+		t.Errorf("resume = %q", st.GetNodeId())
+	}
+}
+
+func TestWithoutAutoNodeTheStatusIgnoresTheEngine(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	sub := h.add(t)
+	first, second := sub.GetNodes()[0], sub.GetNodes()[1]
+	if _, err := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.GetId(), NodeId: first.GetId()}); err != nil {
+		t.Fatal(err)
+	}
+	h.eng.moveTo(second.GetName())
+	st, err := h.client.GetStatus(ctx, &pb.GetStatusRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.GetNodeId() != first.GetId() {
+		t.Errorf("node = %q", st.GetNodeId())
 	}
 }

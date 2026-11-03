@@ -99,6 +99,7 @@ func settingsToProto(s settings) *pb.Settings {
 		DisableIpv6:    s.DisableIPv6,
 		AllowLan:       s.AllowLAN,
 		ConnectOnStart: s.ConnectOnStart,
+		AutoNode:       s.AutoNode,
 		Dns: &pb.DnsSettings{
 			Servers:       s.DNS.Servers,
 			DirectServers: s.DNS.DirectServers,
@@ -131,6 +132,7 @@ func settingsFromProto(p *pb.Settings) (settings, error) {
 		DisableIPv6:    p.GetDisableIpv6(),
 		AllowLAN:       p.GetAllowLan(),
 		ConnectOnStart: p.GetConnectOnStart(),
+		AutoNode:       p.GetAutoNode(),
 		DNS: dnsSettings{
 			Servers:       clean(p.GetDns().GetServers()),
 			DirectServers: clean(p.GetDns().GetDirectServers()),

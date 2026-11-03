@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/metacubex/mihomo/adapter/outboundgroup"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub"
 	"github.com/metacubex/mihomo/hub/executor"
@@ -35,6 +34,10 @@ type Options struct {
 	LogLevel  string // silent, error, warning, info, debug
 	Nodes     []subscription.Node
 	Selected  string // node name, first node when empty
+
+	// AutoNode moves off a node that stopped working to the next one that
+	// works. Selected is only where it starts.
+	AutoNode bool
 
 	// Tun captures the whole system instead of waiting for apps to use the
 	// proxy. Needs root / CAP_NET_ADMIN on desktop, VpnService on Android.
@@ -149,7 +152,8 @@ func selectLocked(name string) error {
 	if !ok {
 		return errors.New("engine: selector missing")
 	}
-	sel, ok := group.Adapter().(*outboundgroup.Selector)
+	// A selector, or a fallback group that stays on this node while it lives.
+	sel, ok := group.Adapter().(interface{ Set(string) error })
 	if !ok {
 		return errors.New("engine: selector has unexpected type")
 	}
@@ -166,9 +170,17 @@ func Selected() string {
 	if !running {
 		return ""
 	}
+	return nowLocked()
+}
+
+// Current is Selected for the status, which is read every second and must not
+// wait for a Start in progress. Empty when nothing runs.
+func Current() string { return nowLocked() }
+
+func nowLocked() string {
 	if group, ok := tunnel.Proxies()[GroupName]; ok {
-		if sel, ok := group.Adapter().(*outboundgroup.Selector); ok {
-			return sel.Now()
+		if g, ok := group.Adapter().(interface{ Now() string }); ok {
+			return g.Now()
 		}
 	}
 	return ""
@@ -239,11 +251,7 @@ func buildConfig(opts Options) ([]byte, error) {
 			"store-selected": false,
 		},
 		"proxies": proxies,
-		"proxy-groups": []map[string]any{{
-			"name":    GroupName,
-			"type":    "select",
-			"proxies": names,
-		}},
+		"proxy-groups": []map[string]any{nodeGroup(names, opts.AutoNode)},
 	}
 
 	rules, err := buildRules(opts.Rules, opts.Final)
@@ -286,6 +294,31 @@ func buildConfig(opts Options) ([]byte, error) {
 		return nil, fmt.Errorf("engine: marshal config: %w", err)
 	}
 	return out, nil
+}
+
+// autoCheckURL is what proves a node alive: a real request through it, the same
+// trace the node checks use, not a ping to its entrance. Every few minutes, and
+// only while the tunnel carries traffic (mihomo's "lazy").
+const (
+	autoCheckURL     = "https://www.cloudflare.com/cdn-cgi/trace"
+	autoCheckSeconds = 300
+)
+
+// nodeGroup is the group every rule sends traffic to. fallback rather than
+// url-test: it stays on a working node, where url-test hops to whichever
+// answered a few milliseconds faster and drops open connections for it.
+func nodeGroup(names []string, auto bool) map[string]any {
+	if !auto {
+		return map[string]any{"name": GroupName, "type": "select", "proxies": names}
+	}
+	return map[string]any{
+		"name":     GroupName,
+		"type":     "fallback",
+		"proxies":  names,
+		"url":      autoCheckURL,
+		"interval": autoCheckSeconds,
+		"lazy":     true,
+	}
 }
 
 // withFingerprint makes sure every TLS proxy has a client-fingerprint.

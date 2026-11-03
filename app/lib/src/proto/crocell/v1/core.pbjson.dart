@@ -623,6 +623,7 @@ const Settings$json = {
     {'1': 'disable_ipv6', '3': 9, '4': 1, '5': 8, '10': 'disableIpv6'},
     {'1': 'allow_lan', '3': 10, '4': 1, '5': 8, '10': 'allowLan'},
     {'1': 'connect_on_start', '3': 11, '4': 1, '5': 8, '10': 'connectOnStart'},
+    {'1': 'auto_node', '3': 12, '4': 1, '5': 8, '10': 'autoNode'},
   ],
   '9': [
     {'1': 2, '2': 3},
@@ -638,7 +639,8 @@ final $typed_data.Uint8List settingsDescriptor = $convert.base64Decode(
     'aW5hbEFjdGlvbhIpCgNkbnMYByABKAsyFy5jcm9jZWxsLnYxLkRuc1NldHRpbmdzUgNkbnMSKQ'
     'oDZ2VvGAggASgLMhcuY3JvY2VsbC52MS5HZW9TZXR0aW5nc1IDZ2VvEiEKDGRpc2FibGVfaXB2'
     'NhgJIAEoCFILZGlzYWJsZUlwdjYSGwoJYWxsb3dfbGFuGAogASgIUghhbGxvd0xhbhIoChBjb2'
-    '5uZWN0X29uX3N0YXJ0GAsgASgIUg5jb25uZWN0T25TdGFydEoECAIQAw==');
+    '5uZWN0X29uX3N0YXJ0GAsgASgIUg5jb25uZWN0T25TdGFydBIbCglhdXRvX25vZGUYDCABKAhS'
+    'CGF1dG9Ob2RlSgQIAhAD');
 
 @$core.Deprecated('Use getSettingsRequestDescriptor instead')
 const GetSettingsRequest$json = {

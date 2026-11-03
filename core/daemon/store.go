@@ -61,6 +61,7 @@ type settings struct {
 	DisableIPv6    bool        `json:"disable_ipv6"`
 	AllowLAN       bool        `json:"allow_lan"`
 	ConnectOnStart bool        `json:"connect_on_start"`
+	AutoNode       bool        `json:"auto_node,omitempty"`
 
 	// Before 0.2 there were only per-program rules. Read once, migrated
 	// into Rules, never written again.
