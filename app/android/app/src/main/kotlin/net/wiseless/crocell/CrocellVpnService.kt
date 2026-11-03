@@ -194,7 +194,8 @@ class CrocellVpnService : VpnService() {
             this, 1, Intent(this, CrocellVpnService::class.java).setAction(ACTION_DISCONNECT), PendingIntent.FLAG_IMMUTABLE,
         )
         val n = Notification.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(AppIcons.small(this))
+            .setLargeIcon(AppIcons.large(this))
             .setContentTitle(getString(R.string.vpn_connected))
             .setContentText(
                 if (proxyPort > 0) getString(R.string.proxy_running, proxyPort) else getString(R.string.vpn_tap_to_open),

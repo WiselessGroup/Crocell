@@ -64,7 +64,7 @@ class CrocellTile : TileService() {
 
     private fun render(state: String) {
         val tile = qsTile ?: return
-        tile.icon = Icon.createWithResource(this, R.drawable.ic_notification)
+        tile.icon = Icon.createWithResource(this, AppIcons.small(this))
         tile.label = getString(R.string.tile_label)
         tile.state = if (state == "connected") Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

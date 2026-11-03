@@ -49,6 +49,10 @@ for d in mdpi:1 hdpi:1.5 xhdpi:2 xxhdpi:3 xxxhdpi:4; do
   rm -f "$res/mipmap-$name/ic_launcher_foreground.png"
   magick "$mono" -resize ${small}x${small} -alpha extract -background white -alpha shape \
     "$res/drawable-$name/ic_notification.png"
+  # The status bar icon when the person chose the figure. Status bar icons are
+  # a single colour, so only its shape carries over.
+  magick "$figure" -resize ${small}x${small} -alpha extract -background white -alpha shape \
+    "$res/drawable-$name/ic_notification_crocell.png"
 done
 rm -f "$res/mipmap-anydpi-v26/ic_launcher.xml" "$res/values/ic_launcher_background.xml"
 

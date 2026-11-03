@@ -78,16 +78,20 @@ class CustomizeDialog extends ConsumerWidget {
               const SizedBox(height: 16),
               Text(switch (host.kind) {
                 HostKind.android => tr(
-                  'Иконка на рабочем столе сменится через несколько секунд. Если значок пропадёт, добавьте его заново из списка приложений.',
-                  'The home screen icon changes in a few seconds. If it disappears, add it again from the app list.',
+                  'Иконка на рабочем столе сменится через несколько секунд. Если значок пропадёт, добавьте его заново из списка приложений. '
+                      'В окне обновления и в настройках Android значок останется стандартным, а в шторке может зависеть от телефона.',
+                  'The home screen icon changes in a few seconds. If it disappears, add it again from the app list. '
+                      'The update dialog and Android settings keep the standard icon, and the notification shade may depend on the phone.',
                 ),
                 HostKind.macos => tr(
-                  'Фон значка следует за светлым или тёмным оформлением системы. В Dock значок меняется, пока Crocell запущен.',
-                  'The icon background follows the system\'s light or dark look. The Dock icon changes while Crocell is running.',
+                  'Фон значка следует за светлым или тёмным оформлением системы. В Dock значок меняется, пока Crocell запущен. '
+                      'В уведомлениях останется стандартный.',
+                  'The icon background follows the system\'s light or dark look. The Dock icon changes while Crocell is running. '
+                      'Notifications keep the standard one.',
                 ),
                 _ => tr(
-                  'На панели задач значок меняется, пока Crocell запущен.',
-                  'The taskbar icon changes while Crocell is running.',
+                  'На панели задач значок меняется, пока Crocell запущен. В уведомлениях останется стандартный.',
+                  'The taskbar icon changes while Crocell is running. Notifications keep the standard one.',
                 ),
               }, style: note),
             ],

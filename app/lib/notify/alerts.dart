@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../brand/app_icon.dart';
+import '../brand/appearance.dart';
 import '../data/core_api.dart';
 import '../data/state.dart';
 import '../l10n.dart';
@@ -22,6 +24,9 @@ abstract interface class Notifications {
 }
 
 class SystemNotifications implements Notifications {
+  SystemNotifications({this.look});
+
+  final Appearance Function()? look;
   final _plugin = FlutterLocalNotificationsPlugin();
   final _taps = StreamController<String>.broadcast();
   Future<bool?>? _ready;
@@ -65,6 +70,29 @@ class SystemNotifications implements Notifications {
     } catch (_) {}
   }
 
+  /// The picture from "Customize": large beside the text, and its shape in the
+  /// status bar, where icons come in one colour. Who draws what is up to the
+  /// launcher. Android's own surfaces may still use the icon in the package.
+  Future<AndroidNotificationDetails?> _androidDetails() async {
+    if (!Platform.isAndroid) return null;
+    final look = this.look?.call();
+    Uint8List? large;
+    if (look != null) {
+      try {
+        large = await renderAppIcon(look.art, look.background);
+      } catch (e) {
+        appLog('notification icon: $e');
+      }
+    }
+    return AndroidNotificationDetails(
+      'alerts',
+      tr('Состояние VPN', 'VPN status'),
+      channelDescription: tr('Сбои подключения и новые версии Crocell', 'Connection failures and new Crocell versions'),
+      icon: look == null || look.art.isGlyph ? 'ic_notification' : 'ic_notification_crocell',
+      largeIcon: large == null ? null : ByteArrayAndroidBitmap(large),
+    );
+  }
+
   @override
   Stream<String> get taps => _taps.stream;
 
@@ -81,8 +109,7 @@ class SystemNotifications implements Notifications {
         body: body,
         payload: payload,
         notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails('alerts', tr('Состояние VPN', 'VPN status'),
-              channelDescription: tr('Сбои подключения и новые версии Crocell', 'Connection failures and new Crocell versions')),
+          android: await _androidDetails(),
         ),
       );
     } catch (_) {
@@ -103,7 +130,7 @@ Future<void> presentWindow() async {
 }
 
 final notificationsProvider = Provider<Notifications>((ref) {
-  final n = SystemNotifications();
+  final n = SystemNotifications(look: () => ref.read(appearanceProvider));
   n.start();
   return n;
 });
