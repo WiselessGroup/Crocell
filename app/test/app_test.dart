@@ -8,7 +8,9 @@ import 'package:crocell/main.dart';
 import 'package:crocell/notify/alerts.dart';
 import 'package:crocell/sysproxy/controller.dart';
 import 'package:crocell/sysproxy/sysproxy.dart';
+import 'package:crocell/ui/settings_screen.dart';
 import 'package:crocell/widgets/connect_button.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -337,6 +339,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
+
+  testWidgets('mac: the app menu has Settings, and it opens them once', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.menu, (call) async => null);
+    await pumpApp(tester, FakeCore(), overrides: [hostProvider.overrideWithValue(const Host(HostKind.macos))]);
+
+    Iterable<PlatformMenuItem> flat(List<PlatformMenuItem> items) => items.expand((i) => switch (i) {
+          PlatformMenu(:final menus) => flat(menus),
+          PlatformMenuItemGroup(:final members) => flat(members),
+          _ => [i],
+        });
+    final item = flat(tester.widget<PlatformMenuBar>(find.byType(PlatformMenuBar)).menus)
+        .firstWhere((i) => i.label == 'Настройки…');
+    item.onSelected!();
+    await tester.pumpAndSettle();
+    item.onSelected!();
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
     await unmount(tester);
   });
 

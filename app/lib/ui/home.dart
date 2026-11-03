@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/state.dart';
+import '../host.dart';
 import '../l10n.dart';
 import '../update/how_to_update.dart';
 import 'add_subscription.dart';
 import 'connect_panel.dart';
 import 'daemon_missing.dart';
+import 'mac_menu.dart';
 import 'nodes_view.dart';
 import 'settings_screen.dart';
 
@@ -25,7 +27,7 @@ class HomeScreen extends ConsumerWidget {
     void openSettings() =>
         Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
 
-    return CallbackShortcuts(
+    final screen = CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.comma, control: true): openSettings,
         const SingleActivator(LogicalKeyboardKey.comma, meta: true): openSettings,
@@ -86,6 +88,15 @@ class HomeScreen extends ConsumerWidget {
           );
         }),
       ),
+    );
+
+    if (ref.watch(hostProvider).kind != HostKind.macos) return screen;
+    return MacMenu(
+      // The menu is there on every screen; settings open once, from home.
+      onSettings: reachable == true ? () {
+        if (ModalRoute.of(context)?.isCurrent ?? true) openSettings();
+      } : null,
+      child: screen,
     );
   }
 }
