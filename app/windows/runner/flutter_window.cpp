@@ -3,6 +3,7 @@
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
 
+#include <cwchar>
 #include <optional>
 #include <variant>
 #include <vector>
@@ -31,8 +32,9 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
 
-  // crocell/window: "present" raises the window, for notification clicks;
-  // "setIcon" changes the taskbar icon.
+  // crocell/window: "present" raises the window, for notification clicks and
+  // the tray; "setIcon" changes the taskbar icon; "setHideOnClose" keeps the
+  // app in the tray when the window closes.
   window_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
       flutter_controller_->engine()->messenger(), "crocell/window",
       &flutter::StandardMethodCodec::GetInstance());
@@ -41,8 +43,14 @@ bool FlutterWindow::OnCreate() {
              std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
         HWND hwnd = GetHandle();
         if (call.method_name() == "present") {
+          // Hidden in the tray, or never shown after a --hidden start.
+          if (!IsWindowVisible(hwnd)) this->Show();
           if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
           SetForegroundWindow(hwnd);
+          result->Success();
+        } else if (call.method_name() == "setHideOnClose") {
+          const auto* on = std::get_if<bool>(call.arguments());
+          hide_on_close_ = on != nullptr && *on;
           result->Success();
         } else if (call.method_name() == "setIcon") {
           // A PNG, which icon resources may be since Vista. The window owns
@@ -68,8 +76,10 @@ bool FlutterWindow::OnCreate() {
       });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+  // Started with the system: the app stays in the tray until someone opens it.
+  const bool start_hidden = wcsstr(GetCommandLineW(), L"--hidden") != nullptr;
+  flutter_controller_->engine()->SetNextFrameCallback([this, start_hidden]() {
+    if (!start_hidden) this->Show();
   });
 
   // Flutter can complete the first frame before the "show window" callback is
@@ -105,6 +115,16 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   switch (message) {
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
+      break;
+    case WM_CLOSE:
+      if (hide_on_close_) {
+        ShowWindow(hwnd, SW_HIDE);
+        return 0;
+      }
+      break;
+    case WM_ENDSESSION:
+      // Logging off, or an installer asking the app to close: really close.
+      if (wparam) hide_on_close_ = false;
       break;
   }
 

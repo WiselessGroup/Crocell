@@ -7,6 +7,7 @@ import '../data/state.dart';
 import '../host.dart';
 import '../l10n.dart';
 import '../platform/android.dart';
+import '../platform/autostart.dart';
 import '../service/gnome.dart';
 import '../theme.dart';
 import '../update/releases.dart';
@@ -60,6 +61,10 @@ class SettingsScreen extends ConsumerWidget {
                     _Heading(tr('Базы geosite и geoip', 'Geosite and geoip databases')),
                     const _GeoCard(),
                     const SizedBox(height: 32),
+                    if (ref.watch(autostartProvider) case final autostart?) ...[
+                      _AutostartTile(autostart: autostart),
+                      const SizedBox(height: 32),
+                    ],
                     _Advanced(settings: value),
                     const SizedBox(height: 32),
                     _Heading(tr('О Crocell', 'About Crocell')),
@@ -526,6 +531,48 @@ class _HideNotificationState extends State<_HideNotification> {
               setState(() => _hide = v);
               try {
                 await setHideVpnNotification(v);
+              } catch (e) {
+                if (context.mounted) showError(context, e);
+              }
+            },
+    );
+  }
+}
+
+/// "Start with Windows". The tunnel does not depend on it: the service starts by
+/// itself. This is for the tray icon and the window.
+class _AutostartTile extends StatefulWidget {
+  const _AutostartTile({required this.autostart});
+  final Autostart autostart;
+
+  @override
+  State<_AutostartTile> createState() => _AutostartTileState();
+}
+
+class _AutostartTileState extends State<_AutostartTile> {
+  bool? _on;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.autostart.isEnabled().then((on) {
+      if (mounted) setState(() => _on = on);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(tr('Запускать вместе с Windows', 'Start with Windows')),
+      subtitle: Text(tr('Значок в трее, окно не открывается.', 'An icon in the tray, no window.')),
+      value: _on ?? false,
+      onChanged: _on == null
+          ? null
+          : (on) async {
+              try {
+                await widget.autostart.setEnabled(on);
+                if (mounted) setState(() => _on = on);
               } catch (e) {
                 if (context.mounted) showError(context, e);
               }

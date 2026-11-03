@@ -52,5 +52,26 @@ for d in mdpi:1 hdpi:1.5 xhdpi:2 xxhdpi:3 xxxhdpi:4; do
 done
 rm -f "$res/mipmap-anydpi-v26/ic_launcher.xml" "$res/values/ic_launcher_background.xml"
 
+# Tray: the glyph's shape in one colour. Red without a connection; while
+# connected, Windows picks white or black by its taskbar and macOS tints the
+# template to match the menu bar. Half opacity while connecting.
+tray="$app/assets/tray"
+mkdir -p "$tray"
+tray_png() { # size colour opacity out
+  magick "$mono" -resize "$1x$1" -alpha extract "$tmp/mask.png"
+  magick -size "$1x$1" "xc:$2" "$tmp/mask.png" -alpha off -compose CopyOpacity -composite \
+    -channel A -evaluate multiply "$3" +channel "$4"
+}
+for c in red:#E9524E:1:tray_red white:#FFFFFF:1:tray_white black:#000000:1:tray_black \
+    white_dim:#FFFFFF:0.5:tray_white_dim black_dim:#000000:0.5:tray_black_dim; do
+  IFS=: read -r _ colour alpha out <<<"$c"
+  files=()
+  for s in 16 20 24 32 48; do tray_png "$s" "$colour" "$alpha" "$tmp/t$s.png"; files+=("$tmp/t$s.png"); done
+  magick "${files[@]}" "$tray/$out.ico"
+done
+tray_png 44 "#000000" 1 "$tray/tray_mac.png"
+tray_png 44 "#000000" 0.5 "$tray/tray_mac_dim.png"
+tray_png 44 "#E9524E" 1 "$tray/tray_mac_red.png"
+
 python3 "$root/scripts/android-icon-aliases.py"
 echo "icons written"

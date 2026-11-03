@@ -63,7 +63,13 @@ Filename: "{app}\crocelld.exe"; Parameters: "install"; StatusMsg: "{cm:Installin
 Filename: "{app}\crocell.exe"; Description: "{cm:LaunchProgram,Crocell}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [UninstallRun]
+; The app sits in the tray and holds its files open.
+Filename: "{sys}\taskkill.exe"; Parameters: "/f /im crocell.exe"; Flags: runhidden waituntilterminated; RunOnceId: "crocellapp"
 Filename: "{app}\crocelld.exe"; Parameters: "uninstall"; Flags: runhidden waituntilterminated; RunOnceId: "crocelld"
+
+[Registry]
+; The app writes this itself on first start; only its removal is ours.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "Crocell"; Flags: dontcreatekey uninsdeletevalue
 
 [Code]
 // An update replaces crocelld.exe, which the running service holds open:
@@ -75,6 +81,9 @@ var
 begin
   Result := '';
   Old := ExpandConstant('{app}\crocelld.exe');
-  if FileExists(Old) then
+  if FileExists(Old) then begin
+    // The app may be sitting in the tray, holding its files open.
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /im crocell.exe', '', SW_HIDE, ewWaitUntilTerminated, Code);
     Exec(Old, 'uninstall', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  end;
 end;

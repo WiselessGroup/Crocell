@@ -74,6 +74,13 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     _replace(sub);
   }
 
+  /// Every subscription with a link. Says which ones did not make it.
+  Future<RefreshAllSubscriptionsResponse> refreshAll() async {
+    final result = await _api.refreshAllSubscriptions();
+    state = AsyncData(await _api.listSubscriptions());
+    return result;
+  }
+
   Future<void> remove(String id) async {
     await _api.removeSubscription(id);
     state = AsyncData([

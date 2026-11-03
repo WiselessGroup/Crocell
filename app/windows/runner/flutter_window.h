@@ -33,6 +33,9 @@ class FlutterWindow : public Win32Window {
 
   // Lets Dart bring the window to the front.
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> window_channel_;
+
+  // Set once the tray icon is up: closing the window then only hides it.
+  bool hide_on_close_ = false;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

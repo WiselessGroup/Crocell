@@ -21,6 +21,7 @@ abstract interface class CoreApi {
   Future<Subscription> addSubscription(String url);
   Future<Subscription> refreshSubscription(String id);
   Future<void> removeSubscription(String id);
+  Future<RefreshAllSubscriptionsResponse> refreshAllSubscriptions();
 
   Stream<ProbeResult> probeNodes(String subscriptionId, {List<String> nodeIds});
 
@@ -33,6 +34,9 @@ abstract interface class CoreApi {
 
   /// The core's recent log, subscription links taken out.
   Future<String> getLogs();
+
+  /// "Quit completely": the service disconnects and exits.
+  Future<void> shutdown();
 }
 
 /// Something went wrong in a way the person can read.
@@ -165,6 +169,10 @@ class GrpcCoreApi implements CoreApi {
       _call(() => _client.removeSubscription(RemoveSubscriptionRequest(id: id)));
 
   @override
+  Future<RefreshAllSubscriptionsResponse> refreshAllSubscriptions() =>
+      _call(() => _client.refreshAllSubscriptions(RefreshAllSubscriptionsRequest()));
+
+  @override
   Stream<ProbeResult> probeNodes(String subscriptionId, {List<String> nodeIds = const []}) =>
       _stream(() => _client.probeNodes(ProbeNodesRequest(subscriptionId: subscriptionId, nodeIds: nodeIds)));
 
@@ -188,6 +196,9 @@ class GrpcCoreApi implements CoreApi {
 
   @override
   Future<String> getLogs() async => (await _call(() => _client.getLogs(GetLogsRequest()))).text;
+
+  @override
+  Future<void> shutdown() => _call(() => _client.shutdown(ShutdownRequest()));
 
   Future<void> close() => _channel.shutdown();
 }

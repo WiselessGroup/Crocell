@@ -35,7 +35,7 @@ class FakeCore implements CoreApi {
 
   @override
   Future<Status> connect({String subscriptionId = '', String nodeId = ''}) async {
-    calls.add('connect');
+    calls.add(nodeId.isEmpty ? 'connect' : 'connect $nodeId');
     push(current.deepCopy()
       ..state = ConnectionState.CONNECTION_STATE_CONNECTED
       ..tunnelMode = settings.tunnelMode
@@ -77,6 +77,21 @@ class FakeCore implements CoreApi {
   Future<void> removeSubscription(String id) async {
     calls.add('remove $id');
     subs = subs.where((s) => s.id != id).toList();
+  }
+
+  @override
+  Future<RefreshAllSubscriptionsResponse> refreshAllSubscriptions() async {
+    calls.add('refresh all');
+    return RefreshAllSubscriptionsResponse(refreshed: subs.length, failed: refreshFailures);
+  }
+
+  List<RefreshFailure> refreshFailures = [];
+
+  @override
+  Future<void> shutdown() async {
+    calls.add('shutdown');
+    if (unavailable) throw const CoreError('Служба Crocell не отвечает', unavailable: true);
+    push(current.deepCopy()..quitting = true);
   }
 
   @override

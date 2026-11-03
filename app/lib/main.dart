@@ -13,8 +13,10 @@ import 'l10n.dart';
 import 'platform/android.dart';
 
 import 'notify/alerts.dart';
+import 'quit.dart';
 import 'sysproxy/controller.dart';
 import 'theme.dart';
+import 'tray/tray.dart';
 import 'ui/home.dart';
 import 'update/how_to_update.dart';
 
@@ -43,6 +45,10 @@ class CrocellApp extends ConsumerWidget {
     ref.watch(updatePromptProvider);
     // The Dock or taskbar icon, as chosen in "Customize".
     ref.watch(appIconProvider);
+    // The icon in the Windows tray or the macOS menu bar.
+    ref.watch(trayControllerProvider);
+    // Closes the app when the service was told to quit.
+    ref.watch(quitOnRequestProvider);
 
     return MaterialApp(
       title: 'Crocell',
