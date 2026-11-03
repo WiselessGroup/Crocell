@@ -22,6 +22,9 @@ type state struct {
 	Subscriptions []*storedSub `json:"subscriptions"`
 	Settings      settings     `json:"settings"`
 	Last          selection    `json:"last"`
+	// How much each node gets used, by "subscription/node". Stays here: it
+	// shapes the menus and goes nowhere else.
+	Usage map[string]nodeUsage `json:"usage,omitempty"`
 	// The phone's mode starts as the tunnel, not the desktop's proxy. Set
 	// once on Android, so a later choice of proxy sticks.
 	MobileModeSet bool `json:"mobile_mode_set,omitempty"`
@@ -34,6 +37,11 @@ type storedSub struct {
 	Info      subscription.Info   `json:"info"`
 	Nodes     []storedNode        `json:"nodes"`
 	FetchedAt time.Time           `json:"fetched_at"`
+}
+
+type nodeUsage struct {
+	Connected time.Duration `json:"connected"`
+	LastUsed  time.Time     `json:"last_used"`
 }
 
 type storedNode struct {

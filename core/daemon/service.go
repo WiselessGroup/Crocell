@@ -76,6 +76,11 @@ type Config struct {
 	// connection picks them up. Adding three rules in a row restarts the
 	// tunnel once, not three times. Default: DefaultReconnectDelay.
 	ReconnectDelay time.Duration
+	// Shutdown ends the process, for "quit completely". Nil where the service
+	// is not ours to stop: the core inside the Android app.
+	Shutdown func()
+	// Now is the clock node usage is counted by. Default: time.Now.
+	Now func() time.Time
 }
 
 const (
@@ -104,6 +109,8 @@ type Service struct {
 	tun      TunProvider   // Android only
 	programs func() ([]procs.Process, error)
 	pkg      string
+	shutdown func()
+	now      func() time.Time
 
 	// op serialises connect/disconnect/reconfigure, which can take seconds
 	// (TUN setup). mu guards the fields below and is never held across them.
@@ -117,6 +124,8 @@ type Service struct {
 
 	stopChecks context.CancelFunc // ends the running check loop, if any
 	reconnect  *time.Timer        // pending pick-up of new settings
+	usageSaved time.Time          // when node usage last reached the disk
+	quitting   bool               // Shutdown was called
 
 	geo      *geo.Manager
 	geoMu    sync.Mutex // one update at a time
@@ -132,6 +141,8 @@ type connection struct {
 	err    string
 	mode   pb.TunnelMode
 	port   int
+
+	counted time.Time // node usage is counted up to here
 
 	check    *pb.ProbeResult
 	checking bool
@@ -154,6 +165,11 @@ func New(cfg Config) (*Service, error) {
 		tun:      cfg.Tun,
 		programs: cfg.Programs,
 		pkg:      cfg.Package,
+		shutdown: cfg.Shutdown,
+		now:      cfg.Now,
+	}
+	if s.now == nil {
+		s.now = time.Now
 	}
 	if s.eng == nil {
 		s.eng = realEngine{}
@@ -211,6 +227,10 @@ func (s *Service) Close() {
 	if s.reconnect != nil {
 		s.reconnect.Stop()
 	}
+	s.countUsageLocked()
+	if err := s.store.save(s.st); err != nil {
+		log.Printf("crocelld: save state: %v", err)
+	}
 	s.mu.Unlock()
 	s.eng.Stop()
 	if s.tun != nil {
@@ -227,6 +247,10 @@ func (s *Service) notifyLocked() {
 func (s *Service) setConn(c connection) {
 	s.mu.Lock()
 	s.endChecksLocked()
+	s.countUsageLocked()
+	if c.state == pb.ConnectionState_CONNECTION_STATE_CONNECTED {
+		c.counted = s.now()
+	}
 	s.conn = c
 	s.notifyLocked()
 	s.mu.Unlock()
@@ -288,6 +312,8 @@ func (s *Service) startChecksLocked() {
 				failed++
 				wait = min(downCheckInterval, s.every)
 			}
+			s.countUsageLocked()
+			s.saveUsageSoonLocked()
 			s.conn.check, s.conn.checking = r, false
 			s.notifyLocked()
 			s.mu.Unlock()
@@ -340,6 +366,13 @@ func (s *Service) statusLocked() *pb.Status {
 		LiveCheck:      c.check,
 		Checking:       c.checking,
 		CoreVersion:    version.Version,
+		Favorites:      s.favoritesLocked(),
+		Quitting:       s.quitting,
+	}
+	if sub := s.findSubLocked(c.subID); sub != nil {
+		if n, ok := sub.node(c.nodeID); ok {
+			st.NodeName = n.Name
+		}
 	}
 	if c.state == pb.ConnectionState_CONNECTION_STATE_CONNECTED {
 		st.ConnectedSince = timestamppb.New(c.since)
@@ -556,7 +589,31 @@ func (s *Service) Disconnect(context.Context, *pb.DisconnectRequest) (*pb.Status
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.store.save(s.st); err != nil {
+		log.Printf("crocelld: save state: %v", err)
+	}
 	return s.statusLocked(), nil
+}
+
+// quitGrace lets the status with Quitting set reach the clients before the
+// server stops.
+const quitGrace = 300 * time.Millisecond
+
+// Shutdown disconnects and ends the process. The last connection stays
+// remembered, so the next start carries on from there.
+func (s *Service) Shutdown(context.Context, *pb.ShutdownRequest) (*pb.ShutdownResponse, error) {
+	if s.shutdown == nil {
+		return nil, status.Error(codes.Unimplemented, "there is no service to stop here")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.quitting {
+		s.quitting = true
+		s.notifyLocked()
+		log.Printf("crocelld: asked to quit")
+		time.AfterFunc(quitGrace, s.shutdown)
+	}
+	return &pb.ShutdownResponse{}, nil
 }
 
 // SelectNode switches nodes. Within the connected subscription that is
@@ -604,6 +661,7 @@ func (s *Service) SelectNode(ctx context.Context, req *pb.SelectNodeRequest) (*p
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.countUsageLocked()
 	s.conn.nodeID = node.ID
 	s.conn.check = nil
 	s.startChecksLocked() // a new node: check it right away
@@ -656,6 +714,7 @@ func (s *Service) AddSubscription(ctx context.Context, req *pb.AddSubscriptionRe
 	} else {
 		s.st.Subscriptions = append(s.st.Subscriptions, stored)
 	}
+	s.forgetUsageLocked(stored.ID, stored.Nodes)
 	if err := s.store.save(s.st); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -671,6 +730,47 @@ func (s *Service) RefreshSubscription(ctx context.Context, req *pb.RefreshSubscr
 		return nil, status.Error(codes.NotFound, "no such subscription")
 	}
 	return s.AddSubscription(ctx, &pb.AddSubscriptionRequest{Url: sub.URL})
+}
+
+// RefreshAllSubscriptions fetches every subscription that has a link to fetch.
+// Pasted text has nothing to go back to. A few at a time: one provider being
+// down should not hold up the rest for its whole timeout.
+func (s *Service) RefreshAllSubscriptions(ctx context.Context, _ *pb.RefreshAllSubscriptionsRequest) (*pb.RefreshAllSubscriptionsResponse, error) {
+	s.mu.Lock()
+	var subs []storedSub
+	for _, sub := range s.st.Subscriptions {
+		if subscription.IsLink(sub.URL) {
+			subs = append(subs, *sub)
+		}
+	}
+	s.mu.Unlock()
+
+	failures := make([]*pb.RefreshFailure, len(subs))
+	sem := make(chan struct{}, 4)
+	var wg sync.WaitGroup
+	for i, sub := range subs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			if _, err := s.AddSubscription(ctx, &pb.AddSubscriptionRequest{Url: sub.URL}); err != nil {
+				log.Printf("crocelld: refresh %q: %s", sub.Info.Title, status.Convert(err).Message())
+				failures[i] = &pb.RefreshFailure{SubscriptionId: sub.ID, Title: sub.Info.Title, Error: status.Convert(err).Message()}
+			}
+		}()
+	}
+	wg.Wait()
+
+	resp := &pb.RefreshAllSubscriptionsResponse{}
+	for _, f := range failures {
+		if f != nil {
+			resp.Failed = append(resp.Failed, f)
+		} else {
+			resp.Refreshed++
+		}
+	}
+	return resp, nil
 }
 
 func (s *Service) RemoveSubscription(ctx context.Context, req *pb.RemoveSubscriptionRequest) (*pb.RemoveSubscriptionResponse, error) {
@@ -689,6 +789,7 @@ func (s *Service) RemoveSubscription(ctx context.Context, req *pb.RemoveSubscrip
 	if s.st.Last.SubscriptionID == req.GetId() {
 		s.st.Last = selection{}
 	}
+	s.forgetUsageLocked(req.GetId(), nil)
 	if err := s.store.save(s.st); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

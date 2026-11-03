@@ -5,7 +5,7 @@
 //	crocelld                 run in the foreground
 //	crocelld install         install and start the system service
 //	crocelld uninstall       stop and remove it
-//	crocelld connect | disconnect | watch    control the running service
+//	crocelld connect | disconnect | watch | refresh-all | quit    control the running service
 //	crocelld gnome-extension install | uninstall    the GNOME quick toggle
 package main
 
@@ -38,8 +38,8 @@ func main() {
 			exit(install(os.Args[2:]))
 		case "uninstall":
 			exit(uninstall())
-		case "connect", "disconnect", "watch":
-			exit(ctl(os.Args[1]))
+		case "connect", "disconnect", "watch", "refresh-all", "quit":
+			exit(ctl(os.Args[1], os.Args[2:]))
 		case "gnome-extension":
 			exit(gnomeExtension(os.Args[2:]))
 		}
@@ -100,7 +100,11 @@ func serve(ctx context.Context, args []string) error {
 	if err := secureStateDir(*stateDir); err != nil {
 		return err
 	}
-	svc, err := daemon.New(daemon.Config{StateDir: *stateDir})
+	// "Quit completely" ends the service the way a stop signal would, with a
+	// clean exit: restart policies only act on failures.
+	ctx, quit := context.WithCancel(ctx)
+	defer quit()
+	svc, err := daemon.New(daemon.Config{StateDir: *stateDir, Shutdown: quit})
 	if err != nil {
 		return err
 	}

@@ -141,6 +141,16 @@ const Status$json = {
     },
     {'1': 'checking', '3': 10, '4': 1, '5': 8, '10': 'checking'},
     {'1': 'core_version', '3': 11, '4': 1, '5': 9, '10': 'coreVersion'},
+    {
+      '1': 'favorites',
+      '3': 12,
+      '4': 3,
+      '5': 11,
+      '6': '.crocell.v1.FavoriteNode',
+      '10': 'favorites'
+    },
+    {'1': 'node_name', '3': 13, '4': 1, '5': 9, '10': 'nodeName'},
+    {'1': 'quitting', '3': 14, '4': 1, '5': 8, '10': 'quitting'},
   ],
 };
 
@@ -154,7 +164,24 @@ final $typed_data.Uint8List statusDescriptor = $convert.base64Decode(
     'UYByABKA4yFi5jcm9jZWxsLnYxLlR1bm5lbE1vZGVSCnR1bm5lbE1vZGUSHQoKbWl4ZWRfcG9y'
     'dBgIIAEoDVIJbWl4ZWRQb3J0EjYKCmxpdmVfY2hlY2sYCSABKAsyFy5jcm9jZWxsLnYxLlByb2'
     'JlUmVzdWx0UglsaXZlQ2hlY2sSGgoIY2hlY2tpbmcYCiABKAhSCGNoZWNraW5nEiEKDGNvcmVf'
-    'dmVyc2lvbhgLIAEoCVILY29yZVZlcnNpb24=');
+    'dmVyc2lvbhgLIAEoCVILY29yZVZlcnNpb24SNgoJZmF2b3JpdGVzGAwgAygLMhguY3JvY2VsbC'
+    '52MS5GYXZvcml0ZU5vZGVSCWZhdm9yaXRlcxIbCglub2RlX25hbWUYDSABKAlSCG5vZGVOYW1l'
+    'EhoKCHF1aXR0aW5nGA4gASgIUghxdWl0dGluZw==');
+
+@$core.Deprecated('Use favoriteNodeDescriptor instead')
+const FavoriteNode$json = {
+  '1': 'FavoriteNode',
+  '2': [
+    {'1': 'subscription_id', '3': 1, '4': 1, '5': 9, '10': 'subscriptionId'},
+    {'1': 'node_id', '3': 2, '4': 1, '5': 9, '10': 'nodeId'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+  ],
+};
+
+/// Descriptor for `FavoriteNode`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List favoriteNodeDescriptor = $convert.base64Decode(
+    'CgxGYXZvcml0ZU5vZGUSJwoPc3Vic2NyaXB0aW9uX2lkGAEgASgJUg5zdWJzY3JpcHRpb25JZB'
+    'IXCgdub2RlX2lkGAIgASgJUgZub2RlSWQSEgoEbmFtZRgDIAEoCVIEbmFtZQ==');
 
 @$core.Deprecated('Use trafficDescriptor instead')
 const Traffic$json = {
@@ -392,6 +419,53 @@ const RemoveSubscriptionResponse$json = {
 /// Descriptor for `RemoveSubscriptionResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List removeSubscriptionResponseDescriptor =
     $convert.base64Decode('ChpSZW1vdmVTdWJzY3JpcHRpb25SZXNwb25zZQ==');
+
+@$core.Deprecated('Use refreshAllSubscriptionsRequestDescriptor instead')
+const RefreshAllSubscriptionsRequest$json = {
+  '1': 'RefreshAllSubscriptionsRequest',
+};
+
+/// Descriptor for `RefreshAllSubscriptionsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List refreshAllSubscriptionsRequestDescriptor =
+    $convert.base64Decode('Ch5SZWZyZXNoQWxsU3Vic2NyaXB0aW9uc1JlcXVlc3Q=');
+
+@$core.Deprecated('Use refreshAllSubscriptionsResponseDescriptor instead')
+const RefreshAllSubscriptionsResponse$json = {
+  '1': 'RefreshAllSubscriptionsResponse',
+  '2': [
+    {'1': 'refreshed', '3': 1, '4': 1, '5': 13, '10': 'refreshed'},
+    {
+      '1': 'failed',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.crocell.v1.RefreshFailure',
+      '10': 'failed'
+    },
+  ],
+};
+
+/// Descriptor for `RefreshAllSubscriptionsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List refreshAllSubscriptionsResponseDescriptor =
+    $convert.base64Decode(
+        'Ch9SZWZyZXNoQWxsU3Vic2NyaXB0aW9uc1Jlc3BvbnNlEhwKCXJlZnJlc2hlZBgBIAEoDVIJcm'
+        'VmcmVzaGVkEjIKBmZhaWxlZBgCIAMoCzIaLmNyb2NlbGwudjEuUmVmcmVzaEZhaWx1cmVSBmZh'
+        'aWxlZA==');
+
+@$core.Deprecated('Use refreshFailureDescriptor instead')
+const RefreshFailure$json = {
+  '1': 'RefreshFailure',
+  '2': [
+    {'1': 'subscription_id', '3': 1, '4': 1, '5': 9, '10': 'subscriptionId'},
+    {'1': 'title', '3': 2, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'error', '3': 3, '4': 1, '5': 9, '10': 'error'},
+  ],
+};
+
+/// Descriptor for `RefreshFailure`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List refreshFailureDescriptor = $convert.base64Decode(
+    'Cg5SZWZyZXNoRmFpbHVyZRInCg9zdWJzY3JpcHRpb25faWQYASABKAlSDnN1YnNjcmlwdGlvbk'
+    'lkEhQKBXRpdGxlGAIgASgJUgV0aXRsZRIUCgVlcnJvchgDIAEoCVIFZXJyb3I=');
 
 @$core.Deprecated('Use probeNodesRequestDescriptor instead')
 const ProbeNodesRequest$json = {
@@ -639,6 +713,24 @@ const Logs$json = {
 /// Descriptor for `Logs`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List logsDescriptor =
     $convert.base64Decode('CgRMb2dzEhIKBHRleHQYASABKAlSBHRleHQ=');
+
+@$core.Deprecated('Use shutdownRequestDescriptor instead')
+const ShutdownRequest$json = {
+  '1': 'ShutdownRequest',
+};
+
+/// Descriptor for `ShutdownRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List shutdownRequestDescriptor =
+    $convert.base64Decode('Cg9TaHV0ZG93blJlcXVlc3Q=');
+
+@$core.Deprecated('Use shutdownResponseDescriptor instead')
+const ShutdownResponse$json = {
+  '1': 'ShutdownResponse',
+};
+
+/// Descriptor for `ShutdownResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List shutdownResponseDescriptor =
+    $convert.base64Decode('ChBTaHV0ZG93blJlc3BvbnNl');
 
 @$core.Deprecated('Use getGeoInfoRequestDescriptor instead')
 const GetGeoInfoRequest$json = {

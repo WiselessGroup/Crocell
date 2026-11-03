@@ -100,6 +100,16 @@ class CoreClient extends $grpc.Client {
     return $createUnaryCall(_$removeSubscription, request, options: options);
   }
 
+  /// Every subscription with a link. One failing does not stop the rest.
+  $grpc.ResponseFuture<$0.RefreshAllSubscriptionsResponse>
+      refreshAllSubscriptions(
+    $0.RefreshAllSubscriptionsRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$refreshAllSubscriptions, request,
+        options: options);
+  }
+
   /// Node quality: entry, exit, latency. Streams results as they come.
   $grpc.ResponseStream<$0.ProbeResult> probeNodes(
     $0.ProbeNodesRequest request, {
@@ -157,6 +167,16 @@ class CoreClient extends $grpc.Client {
     return $createUnaryCall(_$getLogs, request, options: options);
   }
 
+  /// "Quit completely": the service disconnects and exits, and clients that
+  /// see Status.quitting close too. Not available where the core lives inside
+  /// the app (Android).
+  $grpc.ResponseFuture<$0.ShutdownResponse> shutdown(
+    $0.ShutdownRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$shutdown, request, options: options);
+  }
+
   // method descriptors
 
   static final _$getStatus = $grpc.ClientMethod<$0.GetStatusRequest, $0.Status>(
@@ -202,6 +222,12 @@ class CoreClient extends $grpc.Client {
       '/crocell.v1.Core/RemoveSubscription',
       ($0.RemoveSubscriptionRequest value) => value.writeToBuffer(),
       $0.RemoveSubscriptionResponse.fromBuffer);
+  static final _$refreshAllSubscriptions = $grpc.ClientMethod<
+          $0.RefreshAllSubscriptionsRequest,
+          $0.RefreshAllSubscriptionsResponse>(
+      '/crocell.v1.Core/RefreshAllSubscriptions',
+      ($0.RefreshAllSubscriptionsRequest value) => value.writeToBuffer(),
+      $0.RefreshAllSubscriptionsResponse.fromBuffer);
   static final _$probeNodes =
       $grpc.ClientMethod<$0.ProbeNodesRequest, $0.ProbeResult>(
           '/crocell.v1.Core/ProbeNodes',
@@ -235,6 +261,11 @@ class CoreClient extends $grpc.Client {
       '/crocell.v1.Core/GetLogs',
       ($0.GetLogsRequest value) => value.writeToBuffer(),
       $0.Logs.fromBuffer);
+  static final _$shutdown =
+      $grpc.ClientMethod<$0.ShutdownRequest, $0.ShutdownResponse>(
+          '/crocell.v1.Core/Shutdown',
+          ($0.ShutdownRequest value) => value.writeToBuffer(),
+          $0.ShutdownResponse.fromBuffer);
 }
 
 @$pb.GrpcServiceName('crocell.v1.Core')
@@ -313,6 +344,15 @@ abstract class CoreServiceBase extends $grpc.Service {
         ($core.List<$core.int> value) =>
             $0.RemoveSubscriptionRequest.fromBuffer(value),
         ($0.RemoveSubscriptionResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.RefreshAllSubscriptionsRequest,
+            $0.RefreshAllSubscriptionsResponse>(
+        'RefreshAllSubscriptions',
+        refreshAllSubscriptions_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.RefreshAllSubscriptionsRequest.fromBuffer(value),
+        ($0.RefreshAllSubscriptionsResponse value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.ProbeNodesRequest, $0.ProbeResult>(
         'ProbeNodes',
         probeNodes_Pre,
@@ -365,6 +405,13 @@ abstract class CoreServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.GetLogsRequest.fromBuffer(value),
         ($0.Logs value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ShutdownRequest, $0.ShutdownResponse>(
+        'Shutdown',
+        shutdown_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.ShutdownRequest.fromBuffer(value),
+        ($0.ShutdownResponse value) => value.writeToBuffer()));
   }
 
   $async.Future<$0.Status> getStatus_Pre($grpc.ServiceCall $call,
@@ -442,6 +489,15 @@ abstract class CoreServiceBase extends $grpc.Service {
   $async.Future<$0.RemoveSubscriptionResponse> removeSubscription(
       $grpc.ServiceCall call, $0.RemoveSubscriptionRequest request);
 
+  $async.Future<$0.RefreshAllSubscriptionsResponse> refreshAllSubscriptions_Pre(
+      $grpc.ServiceCall $call,
+      $async.Future<$0.RefreshAllSubscriptionsRequest> $request) async {
+    return refreshAllSubscriptions($call, await $request);
+  }
+
+  $async.Future<$0.RefreshAllSubscriptionsResponse> refreshAllSubscriptions(
+      $grpc.ServiceCall call, $0.RefreshAllSubscriptionsRequest request);
+
   $async.Stream<$0.ProbeResult> probeNodes_Pre($grpc.ServiceCall $call,
       $async.Future<$0.ProbeNodesRequest> $request) async* {
     yield* probeNodes($call, await $request);
@@ -498,4 +554,12 @@ abstract class CoreServiceBase extends $grpc.Service {
 
   $async.Future<$0.Logs> getLogs(
       $grpc.ServiceCall call, $0.GetLogsRequest request);
+
+  $async.Future<$0.ShutdownResponse> shutdown_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ShutdownRequest> $request) async {
+    return shutdown($call, await $request);
+  }
+
+  $async.Future<$0.ShutdownResponse> shutdown(
+      $grpc.ServiceCall call, $0.ShutdownRequest request);
 }

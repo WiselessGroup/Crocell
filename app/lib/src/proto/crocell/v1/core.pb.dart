@@ -36,6 +36,9 @@ class Status extends $pb.GeneratedMessage {
     ProbeResult? liveCheck,
     $core.bool? checking,
     $core.String? coreVersion,
+    $core.Iterable<FavoriteNode>? favorites,
+    $core.String? nodeName,
+    $core.bool? quitting,
   }) {
     final result = Status._();
     if (state != null) result.state = state;
@@ -49,6 +52,9 @@ class Status extends $pb.GeneratedMessage {
     if (liveCheck != null) result.liveCheck = liveCheck;
     if (checking != null) result.checking = checking;
     if (coreVersion != null) result.coreVersion = coreVersion;
+    if (favorites != null) result.favorites.addAll(favorites);
+    if (nodeName != null) result.nodeName = nodeName;
+    if (quitting != null) result.quitting = quitting;
     return result;
   }
 
@@ -81,6 +87,10 @@ class Status extends $pb.GeneratedMessage {
         subBuilder: ProbeResult.$_createMessage)
     ..aOB(10, _omitFieldNames ? '' : 'checking')
     ..aOS(11, _omitFieldNames ? '' : 'coreVersion')
+    ..pPM<FavoriteNode>(12, _omitFieldNames ? '' : 'favorites',
+        subBuilder: FavoriteNode.$_createMessage)
+    ..aOS(13, _omitFieldNames ? '' : 'nodeName')
+    ..aOB(14, _omitFieldNames ? '' : 'quitting')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -218,6 +228,113 @@ class Status extends $pb.GeneratedMessage {
   $core.bool hasCoreVersion() => $_has(10);
   @$pb.TagNumber(11)
   void clearCoreVersion() => $_clearField(11);
+
+  /// The most used nodes, most used first: time spent connected with the
+  /// internet working, not clicks. Up to four, the current one may be among
+  /// them, and the menus show three others.
+  @$pb.TagNumber(12)
+  $pb.PbList<FavoriteNode> get favorites => $_getList(11);
+
+  /// The name of node_id, for those without the subscription list.
+  @$pb.TagNumber(13)
+  $core.String get nodeName => $_getSZ(12);
+  @$pb.TagNumber(13)
+  set nodeName($core.String value) => $_setString(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasNodeName() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearNodeName() => $_clearField(13);
+
+  /// The service is about to exit because someone asked it to.
+  @$pb.TagNumber(14)
+  $core.bool get quitting => $_getBF(13);
+  @$pb.TagNumber(14)
+  set quitting($core.bool value) => $_setBool(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasQuitting() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearQuitting() => $_clearField(14);
+}
+
+class FavoriteNode extends $pb.GeneratedMessage {
+  factory FavoriteNode({
+    $core.String? subscriptionId,
+    $core.String? nodeId,
+    $core.String? name,
+  }) {
+    final result = FavoriteNode._();
+    if (subscriptionId != null) result.subscriptionId = subscriptionId;
+    if (nodeId != null) result.nodeId = nodeId;
+    if (name != null) result.name = name;
+    return result;
+  }
+
+  FavoriteNode._();
+
+  factory FavoriteNode.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FavoriteNode()..mergeFromBuffer(data, registry);
+  factory FavoriteNode.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FavoriteNode()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FavoriteNode',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: FavoriteNode.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'subscriptionId')
+    ..aOS(2, _omitFieldNames ? '' : 'nodeId')
+    ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FavoriteNode clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FavoriteNode copyWith(void Function(FavoriteNode) updates) =>
+      super.copyWith((message) => updates(message as FavoriteNode))
+          as FavoriteNode;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use FavoriteNode() / FavoriteNode.new instead')
+  static FavoriteNode create() => FavoriteNode._();
+  static $pb.GeneratedMessage $_createMessage() => FavoriteNode._();
+  @$core.override
+  FavoriteNode createEmptyInstance() => FavoriteNode._();
+  @$core.pragma('dart2js:noInline')
+  static FavoriteNode getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<FavoriteNode>(
+          FavoriteNode.$_createMessage);
+  static FavoriteNode? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get subscriptionId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set subscriptionId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSubscriptionId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSubscriptionId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get nodeId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set nodeId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasNodeId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearNodeId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get name => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set name($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearName() => $_clearField(3);
 }
 
 class Traffic extends $pb.GeneratedMessage {
@@ -1260,6 +1377,205 @@ class RemoveSubscriptionResponse extends $pb.GeneratedMessage {
   static RemoveSubscriptionResponse? _defaultInstance;
 }
 
+class RefreshAllSubscriptionsRequest extends $pb.GeneratedMessage {
+  factory RefreshAllSubscriptionsRequest() =>
+      RefreshAllSubscriptionsRequest._();
+
+  RefreshAllSubscriptionsRequest._();
+
+  factory RefreshAllSubscriptionsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RefreshAllSubscriptionsRequest()..mergeFromBuffer(data, registry);
+  factory RefreshAllSubscriptionsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RefreshAllSubscriptionsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RefreshAllSubscriptionsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: RefreshAllSubscriptionsRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RefreshAllSubscriptionsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RefreshAllSubscriptionsRequest copyWith(
+          void Function(RefreshAllSubscriptionsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as RefreshAllSubscriptionsRequest))
+          as RefreshAllSubscriptionsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RefreshAllSubscriptionsRequest() / RefreshAllSubscriptionsRequest.new instead')
+  static RefreshAllSubscriptionsRequest create() =>
+      RefreshAllSubscriptionsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RefreshAllSubscriptionsRequest._();
+  @$core.override
+  RefreshAllSubscriptionsRequest createEmptyInstance() =>
+      RefreshAllSubscriptionsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RefreshAllSubscriptionsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RefreshAllSubscriptionsRequest>(
+          RefreshAllSubscriptionsRequest.$_createMessage);
+  static RefreshAllSubscriptionsRequest? _defaultInstance;
+}
+
+class RefreshAllSubscriptionsResponse extends $pb.GeneratedMessage {
+  factory RefreshAllSubscriptionsResponse({
+    $core.int? refreshed,
+    $core.Iterable<RefreshFailure>? failed,
+  }) {
+    final result = RefreshAllSubscriptionsResponse._();
+    if (refreshed != null) result.refreshed = refreshed;
+    if (failed != null) result.failed.addAll(failed);
+    return result;
+  }
+
+  RefreshAllSubscriptionsResponse._();
+
+  factory RefreshAllSubscriptionsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RefreshAllSubscriptionsResponse()..mergeFromBuffer(data, registry);
+  factory RefreshAllSubscriptionsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RefreshAllSubscriptionsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RefreshAllSubscriptionsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: RefreshAllSubscriptionsResponse.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'refreshed', fieldType: $pb.PbFieldType.OU3)
+    ..pPM<RefreshFailure>(2, _omitFieldNames ? '' : 'failed',
+        subBuilder: RefreshFailure.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RefreshAllSubscriptionsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RefreshAllSubscriptionsResponse copyWith(
+          void Function(RefreshAllSubscriptionsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as RefreshAllSubscriptionsResponse))
+          as RefreshAllSubscriptionsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RefreshAllSubscriptionsResponse() / RefreshAllSubscriptionsResponse.new instead')
+  static RefreshAllSubscriptionsResponse create() =>
+      RefreshAllSubscriptionsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RefreshAllSubscriptionsResponse._();
+  @$core.override
+  RefreshAllSubscriptionsResponse createEmptyInstance() =>
+      RefreshAllSubscriptionsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RefreshAllSubscriptionsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RefreshAllSubscriptionsResponse>(
+          RefreshAllSubscriptionsResponse.$_createMessage);
+  static RefreshAllSubscriptionsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get refreshed => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set refreshed($core.int value) => $_setUnsignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRefreshed() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRefreshed() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<RefreshFailure> get failed => $_getList(1);
+}
+
+class RefreshFailure extends $pb.GeneratedMessage {
+  factory RefreshFailure({
+    $core.String? subscriptionId,
+    $core.String? title,
+    $core.String? error,
+  }) {
+    final result = RefreshFailure._();
+    if (subscriptionId != null) result.subscriptionId = subscriptionId;
+    if (title != null) result.title = title;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  RefreshFailure._();
+
+  factory RefreshFailure.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RefreshFailure()..mergeFromBuffer(data, registry);
+  factory RefreshFailure.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RefreshFailure()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RefreshFailure',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: RefreshFailure.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'subscriptionId')
+    ..aOS(2, _omitFieldNames ? '' : 'title')
+    ..aOS(3, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RefreshFailure clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RefreshFailure copyWith(void Function(RefreshFailure) updates) =>
+      super.copyWith((message) => updates(message as RefreshFailure))
+          as RefreshFailure;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RefreshFailure() / RefreshFailure.new instead')
+  static RefreshFailure create() => RefreshFailure._();
+  static $pb.GeneratedMessage $_createMessage() => RefreshFailure._();
+  @$core.override
+  RefreshFailure createEmptyInstance() => RefreshFailure._();
+  @$core.pragma('dart2js:noInline')
+  static RefreshFailure getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RefreshFailure>(
+          RefreshFailure.$_createMessage);
+  static RefreshFailure? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get subscriptionId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set subscriptionId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSubscriptionId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSubscriptionId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get title => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set title($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTitle() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTitle() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get error => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set error($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasError() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearError() => $_clearField(3);
+}
+
 class ProbeNodesRequest extends $pb.GeneratedMessage {
   factory ProbeNodesRequest({
     $core.String? subscriptionId,
@@ -2186,6 +2502,88 @@ class Logs extends $pb.GeneratedMessage {
   $core.bool hasText() => $_has(0);
   @$pb.TagNumber(1)
   void clearText() => $_clearField(1);
+}
+
+class ShutdownRequest extends $pb.GeneratedMessage {
+  factory ShutdownRequest() => ShutdownRequest._();
+
+  ShutdownRequest._();
+
+  factory ShutdownRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ShutdownRequest()..mergeFromBuffer(data, registry);
+  factory ShutdownRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ShutdownRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ShutdownRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: ShutdownRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ShutdownRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ShutdownRequest copyWith(void Function(ShutdownRequest) updates) =>
+      super.copyWith((message) => updates(message as ShutdownRequest))
+          as ShutdownRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ShutdownRequest() / ShutdownRequest.new instead')
+  static ShutdownRequest create() => ShutdownRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ShutdownRequest._();
+  @$core.override
+  ShutdownRequest createEmptyInstance() => ShutdownRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ShutdownRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ShutdownRequest>(
+          ShutdownRequest.$_createMessage);
+  static ShutdownRequest? _defaultInstance;
+}
+
+class ShutdownResponse extends $pb.GeneratedMessage {
+  factory ShutdownResponse() => ShutdownResponse._();
+
+  ShutdownResponse._();
+
+  factory ShutdownResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ShutdownResponse()..mergeFromBuffer(data, registry);
+  factory ShutdownResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ShutdownResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ShutdownResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: ShutdownResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ShutdownResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ShutdownResponse copyWith(void Function(ShutdownResponse) updates) =>
+      super.copyWith((message) => updates(message as ShutdownResponse))
+          as ShutdownResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ShutdownResponse() / ShutdownResponse.new instead')
+  static ShutdownResponse create() => ShutdownResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ShutdownResponse._();
+  @$core.override
+  ShutdownResponse createEmptyInstance() => ShutdownResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ShutdownResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ShutdownResponse>(
+          ShutdownResponse.$_createMessage);
+  static ShutdownResponse? _defaultInstance;
 }
 
 class GetGeoInfoRequest extends $pb.GeneratedMessage {

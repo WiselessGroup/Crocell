@@ -27,22 +27,24 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Core_GetStatus_FullMethodName           = "/crocell.v1.Core/GetStatus"
-	Core_WatchStatus_FullMethodName         = "/crocell.v1.Core/WatchStatus"
-	Core_Connect_FullMethodName             = "/crocell.v1.Core/Connect"
-	Core_Disconnect_FullMethodName          = "/crocell.v1.Core/Disconnect"
-	Core_SelectNode_FullMethodName          = "/crocell.v1.Core/SelectNode"
-	Core_ListSubscriptions_FullMethodName   = "/crocell.v1.Core/ListSubscriptions"
-	Core_AddSubscription_FullMethodName     = "/crocell.v1.Core/AddSubscription"
-	Core_RefreshSubscription_FullMethodName = "/crocell.v1.Core/RefreshSubscription"
-	Core_RemoveSubscription_FullMethodName  = "/crocell.v1.Core/RemoveSubscription"
-	Core_ProbeNodes_FullMethodName          = "/crocell.v1.Core/ProbeNodes"
-	Core_GetSettings_FullMethodName         = "/crocell.v1.Core/GetSettings"
-	Core_UpdateSettings_FullMethodName      = "/crocell.v1.Core/UpdateSettings"
-	Core_ListProcesses_FullMethodName       = "/crocell.v1.Core/ListProcesses"
-	Core_GetGeoInfo_FullMethodName          = "/crocell.v1.Core/GetGeoInfo"
-	Core_UpdateGeo_FullMethodName           = "/crocell.v1.Core/UpdateGeo"
-	Core_GetLogs_FullMethodName             = "/crocell.v1.Core/GetLogs"
+	Core_GetStatus_FullMethodName               = "/crocell.v1.Core/GetStatus"
+	Core_WatchStatus_FullMethodName             = "/crocell.v1.Core/WatchStatus"
+	Core_Connect_FullMethodName                 = "/crocell.v1.Core/Connect"
+	Core_Disconnect_FullMethodName              = "/crocell.v1.Core/Disconnect"
+	Core_SelectNode_FullMethodName              = "/crocell.v1.Core/SelectNode"
+	Core_ListSubscriptions_FullMethodName       = "/crocell.v1.Core/ListSubscriptions"
+	Core_AddSubscription_FullMethodName         = "/crocell.v1.Core/AddSubscription"
+	Core_RefreshSubscription_FullMethodName     = "/crocell.v1.Core/RefreshSubscription"
+	Core_RemoveSubscription_FullMethodName      = "/crocell.v1.Core/RemoveSubscription"
+	Core_RefreshAllSubscriptions_FullMethodName = "/crocell.v1.Core/RefreshAllSubscriptions"
+	Core_ProbeNodes_FullMethodName              = "/crocell.v1.Core/ProbeNodes"
+	Core_GetSettings_FullMethodName             = "/crocell.v1.Core/GetSettings"
+	Core_UpdateSettings_FullMethodName          = "/crocell.v1.Core/UpdateSettings"
+	Core_ListProcesses_FullMethodName           = "/crocell.v1.Core/ListProcesses"
+	Core_GetGeoInfo_FullMethodName              = "/crocell.v1.Core/GetGeoInfo"
+	Core_UpdateGeo_FullMethodName               = "/crocell.v1.Core/UpdateGeo"
+	Core_GetLogs_FullMethodName                 = "/crocell.v1.Core/GetLogs"
+	Core_Shutdown_FullMethodName                = "/crocell.v1.Core/Shutdown"
 )
 
 // CoreClient is the client API for Core service.
@@ -61,6 +63,8 @@ type CoreClient interface {
 	AddSubscription(ctx context.Context, in *AddSubscriptionRequest, opts ...grpc.CallOption) (*Subscription, error)
 	RefreshSubscription(ctx context.Context, in *RefreshSubscriptionRequest, opts ...grpc.CallOption) (*Subscription, error)
 	RemoveSubscription(ctx context.Context, in *RemoveSubscriptionRequest, opts ...grpc.CallOption) (*RemoveSubscriptionResponse, error)
+	// Every subscription with a link. One failing does not stop the rest.
+	RefreshAllSubscriptions(ctx context.Context, in *RefreshAllSubscriptionsRequest, opts ...grpc.CallOption) (*RefreshAllSubscriptionsResponse, error)
 	// Node quality: entry, exit, latency. Streams results as they come.
 	ProbeNodes(ctx context.Context, in *ProbeNodesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ProbeResult], error)
 	// Settings
@@ -74,6 +78,10 @@ type CoreClient interface {
 	// The core's recent log, for "copy the logs" in the app. Subscription
 	// links are taken out.
 	GetLogs(ctx context.Context, in *GetLogsRequest, opts ...grpc.CallOption) (*Logs, error)
+	// "Quit completely": the service disconnects and exits, and clients that
+	// see Status.quitting close too. Not available where the core lives inside
+	// the app (Android).
+	Shutdown(ctx context.Context, in *ShutdownRequest, opts ...grpc.CallOption) (*ShutdownResponse, error)
 }
 
 type coreClient struct {
@@ -183,6 +191,16 @@ func (c *coreClient) RemoveSubscription(ctx context.Context, in *RemoveSubscript
 	return out, nil
 }
 
+func (c *coreClient) RefreshAllSubscriptions(ctx context.Context, in *RefreshAllSubscriptionsRequest, opts ...grpc.CallOption) (*RefreshAllSubscriptionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RefreshAllSubscriptionsResponse)
+	err := c.cc.Invoke(ctx, Core_RefreshAllSubscriptions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreClient) ProbeNodes(ctx context.Context, in *ProbeNodesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ProbeResult], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &Core_ServiceDesc.Streams[1], Core_ProbeNodes_FullMethodName, cOpts...)
@@ -262,6 +280,16 @@ func (c *coreClient) GetLogs(ctx context.Context, in *GetLogsRequest, opts ...gr
 	return out, nil
 }
 
+func (c *coreClient) Shutdown(ctx context.Context, in *ShutdownRequest, opts ...grpc.CallOption) (*ShutdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ShutdownResponse)
+	err := c.cc.Invoke(ctx, Core_Shutdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CoreServer is the server API for Core service.
 // All implementations must embed UnimplementedCoreServer
 // for forward compatibility.
@@ -278,6 +306,8 @@ type CoreServer interface {
 	AddSubscription(context.Context, *AddSubscriptionRequest) (*Subscription, error)
 	RefreshSubscription(context.Context, *RefreshSubscriptionRequest) (*Subscription, error)
 	RemoveSubscription(context.Context, *RemoveSubscriptionRequest) (*RemoveSubscriptionResponse, error)
+	// Every subscription with a link. One failing does not stop the rest.
+	RefreshAllSubscriptions(context.Context, *RefreshAllSubscriptionsRequest) (*RefreshAllSubscriptionsResponse, error)
 	// Node quality: entry, exit, latency. Streams results as they come.
 	ProbeNodes(*ProbeNodesRequest, grpc.ServerStreamingServer[ProbeResult]) error
 	// Settings
@@ -291,6 +321,10 @@ type CoreServer interface {
 	// The core's recent log, for "copy the logs" in the app. Subscription
 	// links are taken out.
 	GetLogs(context.Context, *GetLogsRequest) (*Logs, error)
+	// "Quit completely": the service disconnects and exits, and clients that
+	// see Status.quitting close too. Not available where the core lives inside
+	// the app (Android).
+	Shutdown(context.Context, *ShutdownRequest) (*ShutdownResponse, error)
 	mustEmbedUnimplementedCoreServer()
 }
 
@@ -328,6 +362,9 @@ func (UnimplementedCoreServer) RefreshSubscription(context.Context, *RefreshSubs
 func (UnimplementedCoreServer) RemoveSubscription(context.Context, *RemoveSubscriptionRequest) (*RemoveSubscriptionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveSubscription not implemented")
 }
+func (UnimplementedCoreServer) RefreshAllSubscriptions(context.Context, *RefreshAllSubscriptionsRequest) (*RefreshAllSubscriptionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RefreshAllSubscriptions not implemented")
+}
 func (UnimplementedCoreServer) ProbeNodes(*ProbeNodesRequest, grpc.ServerStreamingServer[ProbeResult]) error {
 	return status.Error(codes.Unimplemented, "method ProbeNodes not implemented")
 }
@@ -348,6 +385,9 @@ func (UnimplementedCoreServer) UpdateGeo(context.Context, *UpdateGeoRequest) (*G
 }
 func (UnimplementedCoreServer) GetLogs(context.Context, *GetLogsRequest) (*Logs, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetLogs not implemented")
+}
+func (UnimplementedCoreServer) Shutdown(context.Context, *ShutdownRequest) (*ShutdownResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Shutdown not implemented")
 }
 func (UnimplementedCoreServer) mustEmbedUnimplementedCoreServer() {}
 func (UnimplementedCoreServer) testEmbeddedByValue()              {}
@@ -525,6 +565,24 @@ func _Core_RemoveSubscription_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Core_RefreshAllSubscriptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RefreshAllSubscriptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServer).RefreshAllSubscriptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Core_RefreshAllSubscriptions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServer).RefreshAllSubscriptions(ctx, req.(*RefreshAllSubscriptionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Core_ProbeNodes_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(ProbeNodesRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -644,6 +702,24 @@ func _Core_GetLogs_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Core_Shutdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ShutdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServer).Shutdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Core_Shutdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServer).Shutdown(ctx, req.(*ShutdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Core_ServiceDesc is the grpc.ServiceDesc for Core service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -684,6 +760,10 @@ var Core_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Core_RemoveSubscription_Handler,
 		},
 		{
+			MethodName: "RefreshAllSubscriptions",
+			Handler:    _Core_RefreshAllSubscriptions_Handler,
+		},
+		{
 			MethodName: "GetSettings",
 			Handler:    _Core_GetSettings_Handler,
 		},
@@ -706,6 +786,10 @@ var Core_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetLogs",
 			Handler:    _Core_GetLogs_Handler,
+		},
+		{
+			MethodName: "Shutdown",
+			Handler:    _Core_Shutdown_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
