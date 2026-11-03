@@ -414,6 +414,32 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('Kill Switch blocking: the first screen says so and disconnects', (tester) async {
+    final core = await pumpApp(
+      tester,
+      FakeCore(subs: [sampleSubscription()], status: Status(state: ConnectionState.CONNECTION_STATE_FAILED, killSwitchBlocking: true)),
+      size: const Size(420, 1000),
+    );
+    expect(find.text('Интернет заблокирован, пока нет туннеля'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'Отключить'));
+    await tester.pumpAndSettle();
+    expect(core.calls, contains('disconnect'));
+    await unmount(tester);
+  });
+
+  testWidgets('settings: Kill Switch works only in tunnel mode', (tester) async {
+    final core = FakeCore(subs: [sampleSubscription()]);
+    await pumpApp(tester, core, size: const Size(420, 4000),
+        overrides: [hostProvider.overrideWithValue(const Host(HostKind.linux))]);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Дополнительно'));
+    await tester.pumpAndSettle();
+    final tile = find.widgetWithText(SwitchListTile, 'Kill Switch');
+    expect(tester.widget<SwitchListTile>(tile).onChanged, isNull, reason: 'proxy mode');
+    await unmount(tester);
+  });
+
   testWidgets('add: a sub:// link from Shadowrocket goes to the core', (tester) async {
     final core = await pumpApp(tester, FakeCore());
     await tester.tap(find.byType(ConnectButton));
@@ -523,7 +549,7 @@ void main() {
   testWidgets('a refused geo link is explained next to the save button', (tester) async {
     final core = FakeCore(subs: [sampleSubscription()])
       ..refuseSettings = 'geosite.dat: по ссылке не база, а что-то другое, скорее всего веб-страница.';
-    await pumpApp(tester, core, size: const Size(1000, 1800));
+    await pumpApp(tester, core, size: const Size(1000, 2400));
     await tester.tap(find.byTooltip('Настройки'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Дополнительно'));

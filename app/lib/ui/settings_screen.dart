@@ -411,6 +411,27 @@ class _AdvancedState extends ConsumerState<_Advanced> {
               value: s.connectOnStart,
               onChanged: (v) => _edit((s) => s.connectOnStart = v),
             ),
+          if (android)
+            const _AndroidKillSwitch()
+          else if (ref.watch(hostProvider).kind != HostKind.macos)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Kill Switch'),
+              subtitle: Text(s.tunnelMode == TunnelMode.TUNNEL_MODE_TUN
+                  ? tr(
+                      'Пока VPN включён, трафик не уходит мимо туннеля. Упал туннель или служба: интернет заблокирован, пока '
+                          'туннель не вернётся или вы не нажмёте «Отключить». Пока служба не работает, не будет и локальной сети.',
+                      'While the VPN is on, traffic does not leave past the tunnel. If the tunnel or the service goes down, the '
+                          'internet stays blocked until the tunnel is back or you press Disconnect. While the service is down, '
+                          'the local network is out too.',
+                    )
+                  : tr(
+                      'Только в режиме туннеля. В режиме прокси программы, которые не слушают системный прокси, идут напрямую: так он устроен.',
+                      "Tunnel mode only. In proxy mode, programs that ignore the system proxy go direct: that's how it works.",
+                    )),
+              value: s.killSwitch,
+              onChanged: s.tunnelMode == TunnelMode.TUNNEL_MODE_TUN ? (v) => _edit((s) => s.killSwitch = v) : null,
+            ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('IPv6'),
@@ -590,6 +611,36 @@ class _AutostartTileState extends State<_AutostartTile> {
                 if (context.mounted) showError(context, e);
               }
             },
+    );
+  }
+}
+
+/// On a phone Android holds this switch, and an app can only point at it.
+class _AndroidKillSwitch extends StatelessWidget {
+  const _AndroidKillSwitch();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Kill Switch'),
+      subtitle: FutureBuilder<bool?>(
+        future: vpnLockdown(),
+        builder: (context, snap) {
+          final state = switch (snap.data) {
+            true => tr('Сейчас блокировка включена. ', 'Blocking is on now. '),
+            false => tr('Сейчас блокировка выключена. ', 'Blocking is off now. '),
+            null => '',
+          };
+          return Text(state + tr(
+            'На Android это системная настройка: «Постоянная VPN» и «Блокировать соединения без VPN». '
+                'Программы с правилом «напрямую» при такой блокировке могут потерять сеть.',
+            'On Android this is a system setting: "Always-on VPN" and "Block connections without VPN". '
+                'Programs with a "direct" rule may lose the network while it is on.',
+          ));
+        },
+      ),
+      trailing: TextButton(onPressed: openVpnSettings, child: Text(tr('Открыть', 'Open'))),
     );
   }
 }

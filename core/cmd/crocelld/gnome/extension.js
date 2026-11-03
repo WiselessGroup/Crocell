@@ -104,8 +104,9 @@ class CrocellIndicator extends SystemIndicator {
         });
     }
 
-    _show({state, node, favorites}) {
+    _show({state, node, favorites, blocked}) {
         this._state = state;
+        this._blocked = !!blocked;
         const on = state === 'connected';
         const busy = state === 'connecting' || state === 'disconnecting';
         const available = state !== 'unavailable';
@@ -113,7 +114,7 @@ class CrocellIndicator extends SystemIndicator {
         this._icon.style = on || busy ? '' : RED;
         this._icon.opacity = busy ? DIM_OPACITY : 255;
 
-        const subtitle = {
+        const subtitle = this._blocked ? t('Интернет заблокирован, нет туннеля', 'Internet blocked, no tunnel') : {
             connected: node || t('Подключено', 'Connected'),
             connecting: t('Подключаюсь…', 'Connecting…'),
             disconnecting: t('Отключаюсь…', 'Disconnecting…'),
@@ -123,7 +124,7 @@ class CrocellIndicator extends SystemIndicator {
         this._toggle.subtitle = subtitle;
         this._toggle.menu.setHeader(this._gicon, 'Crocell', subtitle);
 
-        this._action.label.text = on ? t('Отключить', 'Disconnect') : t('Подключить', 'Connect');
+        this._action.label.text = on || this._blocked ? t('Отключить', 'Disconnect') : t('Подключить', 'Connect');
         this._action.visible = available;
         this._action.setSensitive(!busy);
         this._refresh.visible = available;
@@ -168,7 +169,7 @@ class CrocellIndicator extends SystemIndicator {
             this._openApp();
             return;
         }
-        this._run([this._state === 'connected' ? 'disconnect' : 'connect']);
+        this._run([this._state === 'connected' || this._blocked ? 'disconnect' : 'connect']);
     }
 
     _refreshAll() {

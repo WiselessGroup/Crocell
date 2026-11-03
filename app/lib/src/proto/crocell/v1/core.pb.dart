@@ -39,6 +39,7 @@ class Status extends $pb.GeneratedMessage {
     $core.Iterable<FavoriteNode>? favorites,
     $core.String? nodeName,
     $core.bool? quitting,
+    $core.bool? killSwitchBlocking,
   }) {
     final result = Status._();
     if (state != null) result.state = state;
@@ -55,6 +56,8 @@ class Status extends $pb.GeneratedMessage {
     if (favorites != null) result.favorites.addAll(favorites);
     if (nodeName != null) result.nodeName = nodeName;
     if (quitting != null) result.quitting = quitting;
+    if (killSwitchBlocking != null)
+      result.killSwitchBlocking = killSwitchBlocking;
     return result;
   }
 
@@ -91,6 +94,7 @@ class Status extends $pb.GeneratedMessage {
         subBuilder: FavoriteNode.$_createMessage)
     ..aOS(13, _omitFieldNames ? '' : 'nodeName')
     ..aOB(14, _omitFieldNames ? '' : 'quitting')
+    ..aOB(15, _omitFieldNames ? '' : 'killSwitchBlocking')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -254,6 +258,17 @@ class Status extends $pb.GeneratedMessage {
   $core.bool hasQuitting() => $_has(13);
   @$pb.TagNumber(14)
   void clearQuitting() => $_clearField(14);
+
+  /// Kill Switch rules are up and there is no tunnel: the internet is cut off
+  /// on purpose until the tunnel is back or the person disconnects.
+  @$pb.TagNumber(15)
+  $core.bool get killSwitchBlocking => $_getBF(14);
+  @$pb.TagNumber(15)
+  set killSwitchBlocking($core.bool value) => $_setBool(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasKillSwitchBlocking() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearKillSwitchBlocking() => $_clearField(15);
 }
 
 class FavoriteNode extends $pb.GeneratedMessage {
@@ -2039,6 +2054,7 @@ class Settings extends $pb.GeneratedMessage {
     $core.bool? allowLan,
     $core.bool? connectOnStart,
     $core.bool? autoNode,
+    $core.bool? killSwitch,
   }) {
     final result = Settings._();
     if (tunnelMode != null) result.tunnelMode = tunnelMode;
@@ -2052,6 +2068,7 @@ class Settings extends $pb.GeneratedMessage {
     if (allowLan != null) result.allowLan = allowLan;
     if (connectOnStart != null) result.connectOnStart = connectOnStart;
     if (autoNode != null) result.autoNode = autoNode;
+    if (killSwitch != null) result.killSwitch = killSwitch;
     return result;
   }
 
@@ -2084,6 +2101,7 @@ class Settings extends $pb.GeneratedMessage {
     ..aOB(10, _omitFieldNames ? '' : 'allowLan')
     ..aOB(11, _omitFieldNames ? '' : 'connectOnStart')
     ..aOB(12, _omitFieldNames ? '' : 'autoNode')
+    ..aOB(13, _omitFieldNames ? '' : 'killSwitch')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2204,6 +2222,18 @@ class Settings extends $pb.GeneratedMessage {
   $core.bool hasAutoNode() => $_has(10);
   @$pb.TagNumber(12)
   void clearAutoNode() => $_clearField(12);
+
+  /// In tunnel mode: firewall rules stop traffic from leaving past the tunnel,
+  /// whatever happens to the tunnel or the service, until Disconnect. Android
+  /// has its own system setting for this and ignores the field.
+  @$pb.TagNumber(13)
+  $core.bool get killSwitch => $_getBF(11);
+  @$pb.TagNumber(13)
+  set killSwitch($core.bool value) => $_setBool(11, value);
+  @$pb.TagNumber(13)
+  $core.bool hasKillSwitch() => $_has(11);
+  @$pb.TagNumber(13)
+  void clearKillSwitch() => $_clearField(13);
 }
 
 class GetSettingsRequest extends $pb.GeneratedMessage {

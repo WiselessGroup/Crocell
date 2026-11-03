@@ -83,6 +83,9 @@ type watchLine struct {
 	State     string     `json:"state"` // connected, connecting, disconnecting, failed, disconnected, unavailable
 	Node      string     `json:"node,omitempty"`
 	Favorites []favorite `json:"favorites,omitempty"`
+	// Kill Switch has cut the internet off until the tunnel is back or someone
+	// disconnects, so "disconnect" is the thing to offer whatever the state.
+	Blocked bool `json:"blocked,omitempty"`
 }
 
 type favorite struct {
@@ -92,7 +95,7 @@ type favorite struct {
 }
 
 func lineFromStatus(st *pb.Status) watchLine {
-	l := watchLine{State: stateName(st.GetState()), Node: st.GetNodeName()}
+	l := watchLine{State: stateName(st.GetState()), Node: st.GetNodeName(), Blocked: st.GetKillSwitchBlocking()}
 	for _, f := range st.GetFavorites() {
 		l.Favorites = append(l.Favorites, favorite{Subscription: f.GetSubscriptionId(), Node: f.GetNodeId(), Name: f.GetName()})
 	}

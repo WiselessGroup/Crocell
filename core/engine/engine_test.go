@@ -310,3 +310,15 @@ func TestNodeGroupByChoice(t *testing.T) {
 		t.Errorf("the README promises the trace page, got %s", autoCheckURL)
 	}
 }
+
+func TestRoutingMarkIsInEveryConfig(t *testing.T) {
+	SetRoutingMark(0x2f0c)
+	t.Cleanup(func() { SetRoutingMark(0) })
+	cfg, err := buildConfig(Options{Nodes: testNodes(), HomeDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(cfg), "routing-mark: 12044") {
+		t.Errorf("config:\n%s", cfg)
+	}
+}

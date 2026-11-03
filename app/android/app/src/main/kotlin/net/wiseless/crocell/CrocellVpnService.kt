@@ -35,6 +35,12 @@ class CrocellVpnService : VpnService() {
         private val lock = Object()
         private var instance: CrocellVpnService? = null
 
+        /** Whether Android blocks connections without the VPN. It only tells a running VPN, from Android 10 on. */
+        fun lockdown(): Boolean? {
+            val service = synchronized(lock) { instance } ?: return null
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) service.isLockdownEnabled else null
+        }
+
         private const val EXTRA_PROXY_PORT = "proxy_port"
 
         /** Called by the core on its own thread: start the service, build the interface, return its fd. */

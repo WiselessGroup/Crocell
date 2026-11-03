@@ -97,6 +97,9 @@ message Status {
   string node_name = 13;
   // The service is about to exit because someone asked it to.
   bool quitting = 14;
+  // Kill Switch rules are up and there is no tunnel: the internet is cut off
+  // on purpose until the tunnel is back or the person disconnects.
+  bool kill_switch_blocking = 15;
 }
 
 message FavoriteNode {
@@ -270,6 +273,10 @@ message Settings {
   // Move to another node of the subscription by itself when this one stops
   // working. A node picked by hand stays while it works.
   bool auto_node = 12;
+  // In tunnel mode: firewall rules stop traffic from leaving past the tunnel,
+  // whatever happens to the tunnel or the service, until Disconnect. Android
+  // has its own system setting for this and ignores the field.
+  bool kill_switch = 13;
 }
 
 message GetSettingsRequest {}

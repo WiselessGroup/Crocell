@@ -4,7 +4,9 @@ go 1.26.10
 
 require (
 	github.com/metacubex/mihomo v1.19.33
+	github.com/metacubex/nftables v0.0.0-20260426003805-208c2c1ba2cb
 	github.com/sirupsen/logrus v1.9.4
+	github.com/tailscale/wf v0.0.0-20240214030419-6fbb0a674ee6
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/mobile v0.0.0-20261011034528-197770444867
 	golang.org/x/sys v0.49.0
@@ -13,6 +15,7 @@ require (
 )
 
 require (
+	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/RyuaNerin/go-krypto v1.3.0 // indirect
 	github.com/Yawning/aez v0.0.0-20211027044916-e49e68abd344 // indirect
 	github.com/ajg/form v1.7.1 // indirect
@@ -77,7 +80,6 @@ require (
 	github.com/metacubex/mhurl v0.1.0 // indirect
 	github.com/metacubex/mipstack v0.0.0-20261019124225-9a80a07eaeb9 // indirect
 	github.com/metacubex/mlkem v0.1.0 // indirect
-	github.com/metacubex/nftables v0.0.0-20260426003805-208c2c1ba2cb // indirect
 	github.com/metacubex/qpack v0.6.0 // indirect
 	github.com/metacubex/quic-go v0.61.1-0.20260727080200-2548683b76f4 // indirect
 	github.com/metacubex/randv2 v0.2.0 // indirect
@@ -135,6 +137,7 @@ require (
 	go4.org/netipx v0.0.0-20260823151212-3075585bcbeb // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e // indirect
+	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
@@ -143,6 +146,7 @@ require (
 	golang.org/x/time v0.10.0 // indirect
 	golang.org/x/tools v0.52.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240610135401-a8a62080eff3 // indirect
+	honnef.co/go/tools v0.4.5 // indirect
 )
 
 // Upstream mihomo plus Crocell's fixes, until the bleach fork takes over.

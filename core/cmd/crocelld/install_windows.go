@@ -74,6 +74,7 @@ func uninstall() error {
 	defer m.Disconnect()
 	s, err := m.OpenService(serviceName)
 	if err != nil {
+		liftKillSwitch()
 		fmt.Println("crocelld is not installed")
 		return nil
 	}
@@ -81,6 +82,7 @@ func uninstall() error {
 	if err := stopService(s); err != nil {
 		return err
 	}
+	liftKillSwitch()
 	if err := s.Delete(); err != nil {
 		return fmt.Errorf("delete service: %w", err)
 	}

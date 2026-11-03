@@ -2,6 +2,7 @@ package net.wiseless.crocell
 
 import android.content.Intent
 import android.net.VpnService
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -28,6 +29,11 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "batteryUnrestricted" -> result.success(Prefs.batteryUnrestricted(this))
+                "openVpnSettings" -> {
+                    startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
+                    result.success(null)
+                }
+                "vpnLockdown" -> result.success(CrocellVpnService.lockdown())
                 // Android shows its "allow VPN" dialog once; after that prepare() returns null.
                 "prepareVpn" -> {
                     val ask = VpnService.prepare(this)

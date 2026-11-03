@@ -290,9 +290,12 @@ type Status struct {
 	// The name of node_id, for those without the subscription list.
 	NodeName string `protobuf:"bytes,13,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
 	// The service is about to exit because someone asked it to.
-	Quitting      bool `protobuf:"varint,14,opt,name=quitting,proto3" json:"quitting,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Quitting bool `protobuf:"varint,14,opt,name=quitting,proto3" json:"quitting,omitempty"`
+	// Kill Switch rules are up and there is no tunnel: the internet is cut off
+	// on purpose until the tunnel is back or the person disconnects.
+	KillSwitchBlocking bool `protobuf:"varint,15,opt,name=kill_switch_blocking,json=killSwitchBlocking,proto3" json:"kill_switch_blocking,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Status) Reset() {
@@ -419,6 +422,13 @@ func (x *Status) GetNodeName() string {
 func (x *Status) GetQuitting() bool {
 	if x != nil {
 		return x.Quitting
+	}
+	return false
+}
+
+func (x *Status) GetKillSwitchBlocking() bool {
+	if x != nil {
+		return x.KillSwitchBlocking
 	}
 	return false
 }
@@ -1760,7 +1770,11 @@ type Settings struct {
 	ConnectOnStart bool                   `protobuf:"varint,11,opt,name=connect_on_start,json=connectOnStart,proto3" json:"connect_on_start,omitempty"`
 	// Move to another node of the subscription by itself when this one stops
 	// working. A node picked by hand stays while it works.
-	AutoNode      bool `protobuf:"varint,12,opt,name=auto_node,json=autoNode,proto3" json:"auto_node,omitempty"`
+	AutoNode bool `protobuf:"varint,12,opt,name=auto_node,json=autoNode,proto3" json:"auto_node,omitempty"`
+	// In tunnel mode: firewall rules stop traffic from leaving past the tunnel,
+	// whatever happens to the tunnel or the service, until Disconnect. Android
+	// has its own system setting for this and ignores the field.
+	KillSwitch    bool `protobuf:"varint,13,opt,name=kill_switch,json=killSwitch,proto3" json:"kill_switch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1868,6 +1882,13 @@ func (x *Settings) GetConnectOnStart() bool {
 func (x *Settings) GetAutoNode() bool {
 	if x != nil {
 		return x.AutoNode
+	}
+	return false
+}
+
+func (x *Settings) GetKillSwitch() bool {
+	if x != nil {
+		return x.KillSwitch
 	}
 	return false
 }
@@ -2361,7 +2382,7 @@ var File_crocell_v1_core_proto protoreflect.FileDescriptor
 const file_crocell_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"\x15crocell/v1/core.proto\x12\n" +
-	"crocell.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc7\x04\n" +
+	"crocell.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf9\x04\n" +
 	"\x06Status\x121\n" +
 	"\x05state\x18\x01 \x01(\x0e2\x1b.crocell.v1.ConnectionStateR\x05state\x12'\n" +
 	"\x0fsubscription_id\x18\x02 \x01(\tR\x0esubscriptionId\x12\x17\n" +
@@ -2380,7 +2401,8 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\fcore_version\x18\v \x01(\tR\vcoreVersion\x126\n" +
 	"\tfavorites\x18\f \x03(\v2\x18.crocell.v1.FavoriteNodeR\tfavorites\x12\x1b\n" +
 	"\tnode_name\x18\r \x01(\tR\bnodeName\x12\x1a\n" +
-	"\bquitting\x18\x0e \x01(\bR\bquitting\"d\n" +
+	"\bquitting\x18\x0e \x01(\bR\bquitting\x120\n" +
+	"\x14kill_switch_blocking\x18\x0f \x01(\bR\x12killSwitchBlocking\"d\n" +
 	"\fFavoriteNode\x12'\n" +
 	"\x0fsubscription_id\x18\x01 \x01(\tR\x0esubscriptionId\x12\x17\n" +
 	"\anode_id\x18\x02 \x01(\tR\x06nodeId\x12\x12\n" +
@@ -2471,7 +2493,7 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\vGeoSettings\x12!\n" +
 	"\fgeoip_source\x18\x01 \x01(\tR\vgeoipSource\x12%\n" +
 	"\x0egeosite_source\x18\x02 \x01(\tR\rgeositeSource\x12!\n" +
-	"\fupdate_hours\x18\x03 \x01(\rR\vupdateHours\"\xcb\x03\n" +
+	"\fupdate_hours\x18\x03 \x01(\rR\vupdateHours\"\xec\x03\n" +
 	"\bSettings\x127\n" +
 	"\vtunnel_mode\x18\x01 \x01(\x0e2\x16.crocell.v1.TunnelModeR\n" +
 	"tunnelMode\x12\x1d\n" +
@@ -2486,7 +2508,9 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\tallow_lan\x18\n" +
 	" \x01(\bR\ballowLan\x12(\n" +
 	"\x10connect_on_start\x18\v \x01(\bR\x0econnectOnStart\x12\x1b\n" +
-	"\tauto_node\x18\f \x01(\bR\bautoNodeJ\x04\b\x02\x10\x03\"\x14\n" +
+	"\tauto_node\x18\f \x01(\bR\bautoNode\x12\x1f\n" +
+	"\vkill_switch\x18\r \x01(\bR\n" +
+	"killSwitchJ\x04\b\x02\x10\x03\"\x14\n" +
 	"\x12GetSettingsRequest\"\x16\n" +
 	"\x14ListProcessesRequest\"G\n" +
 	"\aProcess\x12\x12\n" +

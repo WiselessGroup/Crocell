@@ -11,7 +11,9 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 
+	"github.com/metacubex/mihomo/component/dialer"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub"
 	"github.com/metacubex/mihomo/hub/executor"
@@ -90,7 +92,18 @@ const (
 var (
 	mu      sync.Mutex
 	running bool
+
+	routingMark atomic.Int32
 )
+
+// SetRoutingMark marks every connection mihomo makes from here on, for Kill
+// Switch: the firewall lets this mark through. Connections to nodes are made
+// with no config running too (node checks), so it applies right away and every
+// config repeats it, since mihomo takes the value from the latest config.
+func SetRoutingMark(mark int) {
+	routingMark.Store(int32(mark))
+	dialer.DefaultRoutingMark.Store(int32(mark))
+}
 
 // Start applies the config. Calling it again replaces the running config.
 func Start(opts Options) error {
@@ -211,12 +224,13 @@ func Shutdown() {
 
 func applyIdleLocked() {
 	idle, err := yaml.Marshal(map[string]any{
-		"mode":       "rule",
-		"log-level":  "warning",
-		"mixed-port": 0,
-		"tun":        map[string]any{"enable": false},
-		"dns":        map[string]any{"enable": false},
-		"rules":      []string{"MATCH,REJECT"},
+		"mode":         "rule",
+		"log-level":    "warning",
+		"mixed-port":   0,
+		"routing-mark": routingMark.Load(),
+		"tun":          map[string]any{"enable": false},
+		"dns":          map[string]any{"enable": false},
+		"rules":        []string{"MATCH,REJECT"},
 	})
 	if err == nil {
 		err = hub.Parse(idle)
@@ -250,8 +264,9 @@ func buildConfig(opts Options) ([]byte, error) {
 		"profile": map[string]any{
 			"store-selected": false,
 		},
-		"proxies": proxies,
+		"proxies":      proxies,
 		"proxy-groups": []map[string]any{nodeGroup(names, opts.AutoNode)},
+		"routing-mark": routingMark.Load(),
 	}
 
 	rules, err := buildRules(opts.Rules, opts.Final)

@@ -19,3 +19,11 @@ Future<bool> hideVpnNotification() async => await androidCore.invokeMethod<bool>
 /// Turning it on also brings up Android's "don't restrict in the
 /// background" request.
 Future<void> setHideVpnNotification(bool hide) => androidCore.invokeMethod<void>('setHideNotification', hide);
+
+/// Android's own "Always-on VPN" page, where blocking without a VPN is turned
+/// on. An app can't do that for itself.
+Future<void> openVpnSettings() => androidCore.invokeMethod<void>('openVpnSettings');
+
+/// Whether Android blocks connections without the VPN. Null while the VPN is
+/// off: the system only tells a running VPN service.
+Future<bool?> vpnLockdown() => androidCore.invokeMethod<bool>('vpnLockdown');

@@ -22,6 +22,10 @@ type state struct {
 	Subscriptions []*storedSub `json:"subscriptions"`
 	Settings      settings     `json:"settings"`
 	Last          selection    `json:"last"`
+	// Wanted is true from Connect until the person disconnects, across
+	// crashes and reboots. With Kill Switch on it says the rules belong up and
+	// the node should be reconnected.
+	Wanted bool `json:"wanted,omitempty"`
 	// How much each node gets used, by "subscription/node". Stays here: it
 	// shapes the menus and goes nowhere else.
 	Usage map[string]nodeUsage `json:"usage,omitempty"`
@@ -62,6 +66,7 @@ type settings struct {
 	AllowLAN       bool        `json:"allow_lan"`
 	ConnectOnStart bool        `json:"connect_on_start"`
 	AutoNode       bool        `json:"auto_node,omitempty"`
+	KillSwitch     bool        `json:"kill_switch,omitempty"`
 
 	// Before 0.2 there were only per-program rules. Read once, migrated
 	// into Rules, never written again.

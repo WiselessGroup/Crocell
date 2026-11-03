@@ -105,6 +105,7 @@ class ConnectPanel extends ConsumerWidget {
                   const SizedBox(height: 16),
                   const _ModePicker(),
                   const _SystemProxyWarning(),
+                  const _KillSwitchNotice(),
                 ],
               ),
             ),
@@ -479,6 +480,44 @@ class _ModesInfo extends StatelessWidget {
         ),
       ),
       actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('Понятно', 'Got it')))],
+    );
+  }
+}
+
+/// Otherwise it looks like the internet broke. Not on its own: "Disconnect" is
+/// right here, whatever state the connection is in.
+class _KillSwitchNotice extends ConsumerWidget {
+  const _KillSwitchNotice();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(statusProvider).value;
+    if (status == null || !status.killSwitchBlocking) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
+          Icon(Icons.gpp_maybe_outlined, size: 18, color: theme.colorScheme.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              tr('Интернет заблокирован, пока нет туннеля', 'Internet is blocked until the tunnel is back'),
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await ref.read(connectionProvider).disconnect();
+              } catch (e) {
+                if (context.mounted) showError(context, e);
+              }
+            },
+            child: Text(tr('Отключить', 'Disconnect')),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -38,6 +38,7 @@ class TrayEntry {
 const trayFavorites = 3;
 
 String trayTitle(Status? status) {
+  if (status?.killSwitchBlocking ?? false) return tr('Интернет заблокирован', 'Internet blocked');
   final node = status?.nodeName ?? '';
   return switch (status?.state) {
     null => tr('Служба не запущена', 'Service not running'),
@@ -58,7 +59,8 @@ List<TrayEntry> trayMenu(Status? status, TrayActions actions) {
   return [
     TrayEntry('Crocell: ${trayTitle(status)}'),
     if (status != null) ...[
-      if (status.isConnected)
+      // With Kill Switch up this is the way back to the internet.
+      if (status.isConnected || status.killSwitchBlocking)
         TrayEntry(tr('Отключить', 'Disconnect'), actions.disconnect)
       else
         TrayEntry(tr('Подключить', 'Connect'), status.isBusy ? null : actions.connect),

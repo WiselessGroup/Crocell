@@ -75,6 +75,13 @@ void main() {
     expect(labels.first, 'Crocell: Node b');
   });
 
+  test('Kill Switch has the internet cut off: the menu offers the way out', () {
+    final menu = trayMenu(Status(state: ConnectionState.CONNECTION_STATE_FAILED, killSwitchBlocking: true), NoActions());
+    expect(menu.first.label, 'Crocell: Интернет заблокирован');
+    expect(menu.map((e) => e.label), contains('Отключить'));
+    expect(menu.map((e) => e.label), isNot(contains('Подключить')));
+  });
+
   test('no service: only opening the app and leaving', () {
     final menu = trayMenu(null, NoActions());
     expect(menu.where((e) => e.onTap != null).map((e) => e.label),

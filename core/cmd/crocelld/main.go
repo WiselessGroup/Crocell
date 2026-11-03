@@ -29,6 +29,7 @@ import (
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/daemon"
 	"git.wiseless.net/fureunoir/crocell/core/internal/paths"
+	"git.wiseless.net/fureunoir/crocell/core/killswitch"
 	"git.wiseless.net/fureunoir/crocell/core/logbuf"
 )
 
@@ -107,7 +108,7 @@ func serve(ctx context.Context, args []string) error {
 	// clean exit: restart policies only act on failures.
 	ctx, quit := context.WithCancel(ctx)
 	defer quit()
-	svc, err := daemon.New(daemon.Config{StateDir: *stateDir, Shutdown: quit})
+	svc, err := daemon.New(daemon.Config{StateDir: *stateDir, Shutdown: quit, Firewall: killswitch.New()})
 	if err != nil {
 		return err
 	}

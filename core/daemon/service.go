@@ -26,6 +26,7 @@ import (
 	"git.wiseless.net/fureunoir/crocell/core/engine"
 	"git.wiseless.net/fureunoir/crocell/core/geo"
 	"git.wiseless.net/fureunoir/crocell/core/internal/version"
+	"git.wiseless.net/fureunoir/crocell/core/killswitch"
 	"git.wiseless.net/fureunoir/crocell/core/probe"
 	"git.wiseless.net/fureunoir/crocell/core/procs"
 	"git.wiseless.net/fureunoir/crocell/core/subscription"
@@ -82,6 +83,9 @@ type Config struct {
 	// Shutdown ends the process, for "quit completely". Nil where the service
 	// is not ours to stop: the core inside the Android app.
 	Shutdown func()
+	// Firewall holds the Kill Switch rules. Nil: there is no Kill Switch here
+	// (Android, and every test that doesn't bring a fake).
+	Firewall killswitch.Firewall
 	// Now is the clock node usage is counted by. Default: time.Now.
 	Now func() time.Time
 }
@@ -114,6 +118,7 @@ type Service struct {
 	pkg      string
 	shutdown func()
 	now      func() time.Time
+	fw       killswitch.Firewall
 
 	// op serialises connect/disconnect/reconfigure, which can take seconds
 	// (TUN setup). mu guards the fields below and is never held across them.
@@ -128,6 +133,7 @@ type Service struct {
 	stopChecks context.CancelFunc // ends the running check loop, if any
 	reconnect  *time.Timer        // pending pick-up of new settings
 	usageSaved time.Time          // when node usage last reached the disk
+	fwUp       bool               // the Kill Switch rules are in place
 	quitting   bool               // Shutdown was called
 
 	geo      *geo.Manager
@@ -171,6 +177,7 @@ func New(cfg Config) (*Service, error) {
 		pkg:      cfg.Package,
 		shutdown: cfg.Shutdown,
 		now:      cfg.Now,
+		fw:       cfg.Firewall,
 	}
 	if s.now == nil {
 		s.now = time.Now
@@ -180,6 +187,9 @@ func New(cfg Config) (*Service, error) {
 	}
 	if s.fetcher == nil {
 		s.fetcher = &subscription.Fetcher{}
+		if s.fw != nil {
+			s.fetcher.Client = s.ownClient(30 * time.Second)
+		}
 	}
 	if s.probe == nil {
 		s.probe = probe.Node
@@ -206,6 +216,9 @@ func New(cfg Config) (*Service, error) {
 	}
 	s.store.sealer = sealer
 	s.geo = &geo.Manager{Dir: s.homeDir, Client: cfg.GeoClient}
+	if s.geo.Client == nil && s.fw != nil {
+		s.geo.Client = s.ownClient(2 * time.Minute)
+	}
 
 	st, err := s.store.load()
 	if err != nil {
@@ -219,6 +232,14 @@ func New(cfg Config) (*Service, error) {
 		}
 	}
 	s.st = st
+	// Before anything else: a crash may have left rules behind, and a reboot
+	// took them away. Nothing to come back to means nothing to wait for.
+	if st.Wanted && s.findSubLocked(st.Last.SubscriptionID) == nil {
+		st.Wanted = false
+	}
+	if err := s.syncFirewall(); err != nil {
+		log.Printf("crocelld: Kill Switch: %v", err)
+	}
 	return s, nil
 }
 
@@ -235,10 +256,17 @@ func (s *Service) Close() {
 	if err := s.store.save(s.st); err != nil {
 		log.Printf("crocelld: save state: %v", err)
 	}
+	quitting := s.quitting
 	s.mu.Unlock()
 	s.eng.Stop()
 	if s.tun != nil {
 		s.tun.Close()
+	}
+	// Any other way out leaves the rules up: this is what they are for.
+	if quitting {
+		if err := s.syncFirewall(); err != nil {
+			log.Printf("crocelld: Kill Switch: %v", err)
+		}
 	}
 }
 
@@ -397,16 +425,17 @@ func (s *Service) statusLocked() *pb.Status {
 		c.subID, c.nodeID = s.st.Last.SubscriptionID, s.st.Last.NodeID
 	}
 	st := &pb.Status{
-		State:          c.state,
-		SubscriptionId: c.subID,
-		NodeId:         c.nodeID,
-		Error:          c.err,
-		TunnelMode:     c.mode,
-		LiveCheck:      c.check,
-		Checking:       c.checking,
-		CoreVersion:    version.Version,
-		Favorites:      s.favoritesLocked(),
-		Quitting:       s.quitting,
+		State:              c.state,
+		SubscriptionId:     c.subID,
+		NodeId:             c.nodeID,
+		Error:              c.err,
+		TunnelMode:         c.mode,
+		LiveCheck:          c.check,
+		Checking:           c.checking,
+		CoreVersion:        version.Version,
+		Favorites:          s.favoritesLocked(),
+		Quitting:           s.quitting,
+		KillSwitchBlocking: s.fwUp && c.state != pb.ConnectionState_CONNECTION_STATE_CONNECTED,
 	}
 	if sub := s.findSubLocked(c.subID); sub != nil {
 		if n, ok := sub.node(c.nodeID); ok {
@@ -485,6 +514,13 @@ func (s *Service) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.Stat
 		return nil, status.Error(codes.NotFound, "no such node")
 	}
 	opts, mode, err := s.engineOptionsLocked(sub, node)
+	if err == nil {
+		s.st.Wanted = true
+		s.st.Last = selection{SubscriptionID: sub.ID, NodeID: node.ID}
+		if err := s.store.save(s.st); err != nil {
+			log.Printf("crocelld: save state: %v", err)
+		}
+	}
 	s.mu.Unlock()
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -492,9 +528,17 @@ func (s *Service) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.Stat
 
 	s.setConn(connection{state: pb.ConnectionState_CONNECTION_STATE_CONNECTING, subID: sub.ID, nodeID: node.ID, mode: mode})
 
+	// The rules go up before the tunnel does. If they can't, no tunnel: the
+	// person asked for this protection and would think they have it.
+	err = s.syncFirewall()
+	if err != nil {
+		err = fmt.Errorf(say("Kill Switch не включился: %w", "Kill Switch did not turn on: %w"), err)
+	}
 	// Geo rules need the files in place: mihomo would otherwise try to fetch
 	// them itself in the middle of Start, with no word to the client.
-	err = s.ensureGeo(ctx, opts.Rules)
+	if err == nil {
+		err = s.ensureGeo(ctx, opts.Rules)
+	}
 	if err == nil && s.tun != nil {
 		if opts.Tun != nil {
 			err = s.openTun(&opts)
@@ -625,6 +669,12 @@ func (s *Service) Disconnect(context.Context, *pb.DisconnectRequest) (*pb.Status
 	s.eng.Stop()
 	if s.tun != nil {
 		s.tun.Close()
+	}
+	s.mu.Lock()
+	s.st.Wanted = false
+	s.mu.Unlock()
+	if err := s.syncFirewall(); err != nil {
+		log.Printf("crocelld: Kill Switch: %v", err)
 	}
 	s.setConn(connection{state: pb.ConnectionState_CONNECTION_STATE_DISCONNECTED})
 
@@ -929,6 +979,9 @@ func (s *Service) UpdateSettings(ctx context.Context, req *pb.Settings) (*pb.Set
 		if err := s.installGeo(downloads); err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
+	}
+	if err := s.syncFirewall(); err != nil {
+		return nil, status.Errorf(codes.Internal, say("Kill Switch: %v", "Kill Switch: %v"), err)
 	}
 
 	if connected {

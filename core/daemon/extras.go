@@ -200,7 +200,9 @@ func (s *Service) ensureGeo(ctx context.Context, rules []engine.Rule) error {
 // ctx ends. crocelld calls it; tests do not.
 func (s *Service) Run(ctx context.Context) {
 	s.mu.Lock()
-	connect := s.st.Settings.ConnectOnStart && s.st.Last.SubscriptionID != ""
+	// With Kill Switch up, a connection is the only way the rules ever lift
+	// again, so it comes back whatever connect_on_start says.
+	connect := (s.st.Settings.ConnectOnStart || s.firewallWantedLocked()) && s.st.Last.SubscriptionID != ""
 	s.mu.Unlock()
 	if connect {
 		if _, err := s.Connect(ctx, &pb.ConnectRequest{}); err != nil {

@@ -87,6 +87,8 @@ type harness struct {
 
 	checkMu  sync.Mutex
 	checkErr error // what the live check reports next
+
+	closeService func()
 }
 
 func (h *harness) setCheckErr(err error) {
@@ -136,6 +138,7 @@ func newHarness(t *testing.T, opts ...func(*Config)) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
+	h.closeService = svc.Close
 	t.Cleanup(svc.Close) // stops the check loop
 
 	lis := bufconn.Listen(1 << 20)
@@ -676,5 +679,241 @@ func TestWithoutAutoNodeTheStatusIgnoresTheEngine(t *testing.T) {
 	}
 	if st.GetNodeId() != first.GetId() {
 		t.Errorf("node = %q", st.GetNodeId())
+	}
+}
+
+// fakeFirewall is the firewall in tests. The real rules are only ever tried in
+// a namespace of their own, see core/killswitch.
+type fakeFirewall struct {
+	mu       sync.Mutex
+	up       bool
+	failWith error
+}
+
+func (f *fakeFirewall) Supported() bool { return true }
+func (f *fakeFirewall) Block(string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failWith != nil {
+		return f.failWith
+	}
+	f.up = true
+	return nil
+}
+func (f *fakeFirewall) Unblock() error { f.mu.Lock(); defer f.mu.Unlock(); f.up = false; return nil }
+func (f *fakeFirewall) isUp() bool     { f.mu.Lock(); defer f.mu.Unlock(); return f.up }
+
+func killSwitchHarness(t *testing.T) (*harness, *fakeFirewall, *pb.Subscription) {
+	t.Helper()
+	fw := &fakeFirewall{}
+	h := newHarness(t, func(c *Config) { c.Firewall = fw })
+	sub := h.add(t)
+	h.setSettings(t, func(s *pb.Settings) {
+		s.KillSwitch = true
+		s.TunnelMode = pb.TunnelMode_TUNNEL_MODE_TUN
+	})
+	return h, fw, sub
+}
+
+func (h *harness) setSettings(t *testing.T, change func(*pb.Settings)) {
+	t.Helper()
+	ctx := context.Background()
+	set, err := h.client.GetSettings(ctx, &pb.GetSettingsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	change(set)
+	if _, err := h.client.UpdateSettings(ctx, set); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (h *harness) status(t *testing.T) *pb.Status {
+	t.Helper()
+	st, err := h.client.GetStatus(context.Background(), &pb.GetStatusRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return st
+}
+
+func TestKillSwitchIsUpFromConnectUntilDisconnect(t *testing.T) {
+	h, fw, sub := killSwitchHarness(t)
+	ctx := context.Background()
+	if fw.isUp() {
+		t.Error("the setting alone should not block anything: nobody asked for a tunnel yet")
+	}
+	if _, err := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.GetId()}); err != nil {
+		t.Fatal(err)
+	}
+	if !fw.isUp() {
+		t.Error("no rules while connected")
+	}
+	if h.status(t).GetKillSwitchBlocking() {
+		t.Error("the tunnel is up, nothing is being cut off")
+	}
+	if _, err := h.client.Disconnect(ctx, &pb.DisconnectRequest{}); err != nil {
+		t.Fatal(err)
+	}
+	if fw.isUp() {
+		t.Error("rules left after Disconnect: the person expects a direct internet now")
+	}
+}
+
+func TestKillSwitchStaysUpWhenTheConnectionFails(t *testing.T) {
+	h, fw, sub := killSwitchHarness(t)
+	ctx := context.Background()
+	h.eng.mu.Lock()
+	h.eng.failWith = errors.New("engine: TUN did not start")
+	h.eng.mu.Unlock()
+	st, err := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.GetId()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.GetState() != pb.ConnectionState_CONNECTION_STATE_FAILED || !fw.isUp() || !st.GetKillSwitchBlocking() {
+		t.Errorf("state %v, rules %v, blocking %v", st.GetState(), fw.isUp(), st.GetKillSwitchBlocking())
+	}
+	// Disconnect is the way out, from a failed state too.
+	st, err = h.client.Disconnect(ctx, &pb.DisconnectRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fw.isUp() || st.GetKillSwitchBlocking() {
+		t.Error("still blocked after Disconnect")
+	}
+}
+
+func TestKillSwitchOffInTheSettingsLiftsTheRules(t *testing.T) {
+	h, fw, sub := killSwitchHarness(t)
+	if _, err := h.client.Connect(context.Background(), &pb.ConnectRequest{SubscriptionId: sub.GetId()}); err != nil {
+		t.Fatal(err)
+	}
+	h.setSettings(t, func(s *pb.Settings) { s.KillSwitch = false })
+	if fw.isUp() {
+		t.Error("rules left after turning the setting off")
+	}
+}
+
+func TestKillSwitchDoesNothingInProxyMode(t *testing.T) {
+	h, fw, sub := killSwitchHarness(t)
+	h.setSettings(t, func(s *pb.Settings) { s.TunnelMode = pb.TunnelMode_TUNNEL_MODE_SYSTEM_PROXY })
+	if _, err := h.client.Connect(context.Background(), &pb.ConnectRequest{SubscriptionId: sub.GetId()}); err != nil {
+		t.Fatal(err)
+	}
+	if fw.isUp() {
+		t.Error("programs ignoring the proxy go direct in this mode by design")
+	}
+}
+
+func TestNoTunnelWithoutTheRulesItWasAskedFor(t *testing.T) {
+	h, fw, sub := killSwitchHarness(t)
+	fw.mu.Lock()
+	fw.failWith = errors.New("nftables: no such thing")
+	fw.mu.Unlock()
+	before := h.eng.starts()
+	st, err := h.client.Connect(context.Background(), &pb.ConnectRequest{SubscriptionId: sub.GetId()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.GetState() != pb.ConnectionState_CONNECTION_STATE_FAILED || !strings.Contains(st.GetError(), "Kill Switch") {
+		t.Errorf("state %v, error %q", st.GetState(), st.GetError())
+	}
+	if h.eng.starts() != before {
+		t.Error("the tunnel started without its protection")
+	}
+}
+
+func TestAfterAReboot(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		disconnected bool
+		wantConnect  bool
+	}{
+		{"was connected: rules and the connection come back", false, true},
+		{"disconnected on purpose: nothing happens", true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, fw, sub := killSwitchHarness(t)
+			ctx := context.Background()
+			if _, err := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.GetId()}); err != nil {
+				t.Fatal(err)
+			}
+			if tc.disconnected {
+				if _, err := h.client.Disconnect(ctx, &pb.DisconnectRequest{}); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			// A reboot takes the rules away. connect_on_start is off here.
+			fw.Unblock()
+			eng := &fakeEngine{}
+			again, err := New(Config{StateDir: h.dir, Engine: eng, Firewall: fw, Check: quietCheck})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer again.Close()
+			if fw.isUp() != tc.wantConnect {
+				t.Errorf("rules up = %v right at start", fw.isUp())
+			}
+			runCtx, stop := context.WithCancel(ctx)
+			defer stop()
+			go again.Run(runCtx)
+			if tc.wantConnect {
+				waitFor(t, "the connection to come back", func() bool { return eng.starts() == 1 })
+			} else {
+				time.Sleep(50 * time.Millisecond)
+				if eng.starts() != 0 {
+					t.Error("connected without being asked")
+				}
+			}
+		})
+	}
+}
+
+func TestQuitLiftsTheRulesButRemembers(t *testing.T) {
+	fw := &fakeFirewall{}
+	var quit sync.Once
+	done := make(chan struct{})
+	h := newHarness(t, func(c *Config) {
+		c.Firewall = fw
+		c.Shutdown = func() { quit.Do(func() { close(done) }) }
+	})
+	sub := h.add(t)
+	h.setSettings(t, func(s *pb.Settings) {
+		s.KillSwitch = true
+		s.TunnelMode = pb.TunnelMode_TUNNEL_MODE_TUN
+	})
+	ctx := context.Background()
+	if _, err := h.client.Connect(ctx, &pb.ConnectRequest{SubscriptionId: sub.GetId()}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.client.Shutdown(ctx, &pb.ShutdownRequest{}); err != nil {
+		t.Fatal(err)
+	}
+	<-done
+	h.closeService()
+	if fw.isUp() {
+		t.Error("rules left after quitting: everything is closed, the internet should work")
+	}
+
+	// The next start goes on as if nothing happened.
+	again, err := New(Config{StateDir: h.dir, Engine: &fakeEngine{}, Firewall: fw, Check: quietCheck})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer again.Close()
+	if !fw.isUp() {
+		t.Error("the next start did not put the rules back")
+	}
+}
+
+func TestDyingLeavesTheRulesUp(t *testing.T) {
+	h, fw, sub := killSwitchHarness(t)
+	if _, err := h.client.Connect(context.Background(), &pb.ConnectRequest{SubscriptionId: sub.GetId()}); err != nil {
+		t.Fatal(err)
+	}
+	h.closeService()
+	if !fw.isUp() {
+		t.Error("a stopped service took the rules with it, and that is the very case they are for")
 	}
 }

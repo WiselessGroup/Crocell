@@ -90,6 +90,7 @@ func uninstall() error {
 	if os.Geteuid() != 0 {
 		return errors.New("uninstall needs root: sudo crocelld uninstall")
 	}
+	liftKillSwitch()
 	_ = launchctl("bootout", "system/"+label)
 	for _, p := range []string{plistPath, binaryPath} {
 		if err := os.Remove(p); err != nil && !errors.Is(err, os.ErrNotExist) {

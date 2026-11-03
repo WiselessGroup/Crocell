@@ -151,6 +151,13 @@ const Status$json = {
     },
     {'1': 'node_name', '3': 13, '4': 1, '5': 9, '10': 'nodeName'},
     {'1': 'quitting', '3': 14, '4': 1, '5': 8, '10': 'quitting'},
+    {
+      '1': 'kill_switch_blocking',
+      '3': 15,
+      '4': 1,
+      '5': 8,
+      '10': 'killSwitchBlocking'
+    },
   ],
 };
 
@@ -166,7 +173,8 @@ final $typed_data.Uint8List statusDescriptor = $convert.base64Decode(
     'JlUmVzdWx0UglsaXZlQ2hlY2sSGgoIY2hlY2tpbmcYCiABKAhSCGNoZWNraW5nEiEKDGNvcmVf'
     'dmVyc2lvbhgLIAEoCVILY29yZVZlcnNpb24SNgoJZmF2b3JpdGVzGAwgAygLMhguY3JvY2VsbC'
     '52MS5GYXZvcml0ZU5vZGVSCWZhdm9yaXRlcxIbCglub2RlX25hbWUYDSABKAlSCG5vZGVOYW1l'
-    'EhoKCHF1aXR0aW5nGA4gASgIUghxdWl0dGluZw==');
+    'EhoKCHF1aXR0aW5nGA4gASgIUghxdWl0dGluZxIwChRraWxsX3N3aXRjaF9ibG9ja2luZxgPIA'
+    'EoCFISa2lsbFN3aXRjaEJsb2NraW5n');
 
 @$core.Deprecated('Use favoriteNodeDescriptor instead')
 const FavoriteNode$json = {
@@ -624,6 +632,7 @@ const Settings$json = {
     {'1': 'allow_lan', '3': 10, '4': 1, '5': 8, '10': 'allowLan'},
     {'1': 'connect_on_start', '3': 11, '4': 1, '5': 8, '10': 'connectOnStart'},
     {'1': 'auto_node', '3': 12, '4': 1, '5': 8, '10': 'autoNode'},
+    {'1': 'kill_switch', '3': 13, '4': 1, '5': 8, '10': 'killSwitch'},
   ],
   '9': [
     {'1': 2, '2': 3},
@@ -640,7 +649,7 @@ final $typed_data.Uint8List settingsDescriptor = $convert.base64Decode(
     'oDZ2VvGAggASgLMhcuY3JvY2VsbC52MS5HZW9TZXR0aW5nc1IDZ2VvEiEKDGRpc2FibGVfaXB2'
     'NhgJIAEoCFILZGlzYWJsZUlwdjYSGwoJYWxsb3dfbGFuGAogASgIUghhbGxvd0xhbhIoChBjb2'
     '5uZWN0X29uX3N0YXJ0GAsgASgIUg5jb25uZWN0T25TdGFydBIbCglhdXRvX25vZGUYDCABKAhS'
-    'CGF1dG9Ob2RlSgQIAhAD');
+    'CGF1dG9Ob2RlEh8KC2tpbGxfc3dpdGNoGA0gASgIUgpraWxsU3dpdGNoSgQIAhAD');
 
 @$core.Deprecated('Use getSettingsRequestDescriptor instead')
 const GetSettingsRequest$json = {

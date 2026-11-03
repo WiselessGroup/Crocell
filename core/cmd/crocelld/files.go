@@ -2,9 +2,12 @@ package main
 
 import (
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"git.wiseless.net/fureunoir/crocell/core/killswitch"
 )
 
 func sudoUID() int {
@@ -35,4 +38,12 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	}
 	// rename over a running binary is fine on Linux, writing into it is not.
 	return os.Rename(tmp, dst)
+}
+
+// liftKillSwitch takes the firewall rules away with the service. Left behind
+// with no service to remove them, they would cut the person off for good.
+func liftKillSwitch() {
+	if err := killswitch.New().Unblock(); err != nil {
+		log.Printf("crocelld: Kill Switch: %v", err)
+	}
 }

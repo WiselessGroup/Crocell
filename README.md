@@ -83,6 +83,7 @@ On a desktop the connection is held by a small system service, so closing or upd
 - the subscription links you added;
 - Cloudflare's trace page, through the node, to see where that node exits. If you let it pick the node by itself, also every few minutes through each node of the subscription while the tunnel is in use;
 - the DNS servers from Settings, through the tunnel (1.1.1.1 and 8.8.8.8 unless you change them);
+- 77.88.8.8 and 1.1.1.1 directly, to find node addresses and, while Kill Switch has the internet blocked, those of your subscriptions;
 - GitHub, for the update check and the geosite/geoip databases.
 
 ## How it's built
