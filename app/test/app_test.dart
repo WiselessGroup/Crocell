@@ -331,6 +331,15 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('narrow window: the add button sits in the top bar next to update and settings', (tester) async {
+    await pumpApp(tester, FakeCore(), size: const Size(320, 640));
+    await tester.tap(find.byIcon(Icons.add_link_rounded).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
+
   testWidgets('add: a WireGuard config can be pasted as text', (tester) async {
     final core = await pumpApp(tester, FakeCore());
     await tester.tap(find.byType(ConnectButton));

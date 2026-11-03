@@ -38,7 +38,7 @@ class HomeScreen extends ConsumerWidget {
             appBar: AppBar(
               actions: [
                 const UpdateButton(),
-                if (wide && reachable == true)
+                if (reachable == true)
                   IconButton(
                     tooltip: tr('Добавить подписку', 'Add subscription'),
                     icon: const Icon(Icons.add_link_rounded),

@@ -94,6 +94,9 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // The text and a six-line field don't fit a small phone with the
+      // keyboard open.
+      scrollable: true,
       title: Text(tr('Добавить подписку', 'Add subscription')),
       content: SizedBox(
         width: 460,
