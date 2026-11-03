@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 import '../l10n.dart';
@@ -224,6 +225,23 @@ final _darwin = _Backend(
   ],
 );
 
+const _internetOptionSettingsChanged = 39;
+const _internetOptionRefresh = 37;
+
+/// Tells running browsers to read the settings again: without this they find
+/// out in their own time. Same calls as core/sysproxy for the CLI. The registry
+/// already has the new values, so failing here costs a delay and nothing more.
+void _announceWindowsProxyChange() {
+  if (!Platform.isWindows) return;
+  try {
+    final setOption = DynamicLibrary.open('wininet.dll').lookupFunction<
+        Int32 Function(Pointer<Void>, Uint32, Pointer<Void>, Uint32),
+        int Function(Pointer<Void>, int, Pointer<Void>, int)>('InternetSetOptionW');
+    setOption(nullptr, _internetOptionSettingsChanged, nullptr, 0);
+    setOption(nullptr, _internetOptionRefresh, nullptr, 0);
+  } catch (_) {}
+}
+
 const _winKey = r'HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings';
 const _winBypass =
     'localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;'
@@ -256,6 +274,7 @@ final _windows = _Backend(
         await run('reg', ['add', _winKey, '/v', name, '/t', 'REG_SZ', '/d', values[i], '/f']);
       }
     }
+    _announceWindowsProxyChange();
   },
   (run, host, port) async => ['0x1', '$host:$port', _winBypass],
 );
