@@ -2,6 +2,6 @@
   "uuid": "crocell@wiseless.net",
   "name": "Crocell",
   "description": "Crocell VPN from Quick Settings: on and off, favourite nodes, refresh, quit.",
-  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "shell-version": ["45", "46", "47", "48", "49", "50", "51"],
   "url": "https://github.com/WiselessGroup/Crocell"
 }
