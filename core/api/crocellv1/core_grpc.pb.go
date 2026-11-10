@@ -40,6 +40,7 @@ const (
 	Core_ProbeNodes_FullMethodName              = "/crocell.v1.Core/ProbeNodes"
 	Core_GetSettings_FullMethodName             = "/crocell.v1.Core/GetSettings"
 	Core_UpdateSettings_FullMethodName          = "/crocell.v1.Core/UpdateSettings"
+	Core_ReadRouting_FullMethodName             = "/crocell.v1.Core/ReadRouting"
 	Core_ListProcesses_FullMethodName           = "/crocell.v1.Core/ListProcesses"
 	Core_GetGeoInfo_FullMethodName              = "/crocell.v1.Core/GetGeoInfo"
 	Core_UpdateGeo_FullMethodName               = "/crocell.v1.Core/UpdateGeo"
@@ -70,6 +71,9 @@ type CoreClient interface {
 	// Settings
 	GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*Settings, error)
 	UpdateSettings(ctx context.Context, in *Settings, opts ...grpc.CallOption) (*Settings, error)
+	// Reads a routing link (happ://routing/onadd/..., as Happ and INCY take
+	// them) into a profile the client shows before anything is applied.
+	ReadRouting(ctx context.Context, in *ReadRoutingRequest, opts ...grpc.CallOption) (*RoutingProfile, error)
 	// Running programs, to pick one for a routing rule.
 	ListProcesses(ctx context.Context, in *ListProcessesRequest, opts ...grpc.CallOption) (*ListProcessesResponse, error)
 	// geoip.dat / geosite.dat: when they were fetched and what is inside.
@@ -240,6 +244,16 @@ func (c *coreClient) UpdateSettings(ctx context.Context, in *Settings, opts ...g
 	return out, nil
 }
 
+func (c *coreClient) ReadRouting(ctx context.Context, in *ReadRoutingRequest, opts ...grpc.CallOption) (*RoutingProfile, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RoutingProfile)
+	err := c.cc.Invoke(ctx, Core_ReadRouting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreClient) ListProcesses(ctx context.Context, in *ListProcessesRequest, opts ...grpc.CallOption) (*ListProcessesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListProcessesResponse)
@@ -313,6 +327,9 @@ type CoreServer interface {
 	// Settings
 	GetSettings(context.Context, *GetSettingsRequest) (*Settings, error)
 	UpdateSettings(context.Context, *Settings) (*Settings, error)
+	// Reads a routing link (happ://routing/onadd/..., as Happ and INCY take
+	// them) into a profile the client shows before anything is applied.
+	ReadRouting(context.Context, *ReadRoutingRequest) (*RoutingProfile, error)
 	// Running programs, to pick one for a routing rule.
 	ListProcesses(context.Context, *ListProcessesRequest) (*ListProcessesResponse, error)
 	// geoip.dat / geosite.dat: when they were fetched and what is inside.
@@ -373,6 +390,9 @@ func (UnimplementedCoreServer) GetSettings(context.Context, *GetSettingsRequest)
 }
 func (UnimplementedCoreServer) UpdateSettings(context.Context, *Settings) (*Settings, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSettings not implemented")
+}
+func (UnimplementedCoreServer) ReadRouting(context.Context, *ReadRoutingRequest) (*RoutingProfile, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReadRouting not implemented")
 }
 func (UnimplementedCoreServer) ListProcesses(context.Context, *ListProcessesRequest) (*ListProcessesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProcesses not implemented")
@@ -630,6 +650,24 @@ func _Core_UpdateSettings_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Core_ReadRouting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadRoutingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServer).ReadRouting(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Core_ReadRouting_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServer).ReadRouting(ctx, req.(*ReadRoutingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Core_ListProcesses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListProcessesRequest)
 	if err := dec(in); err != nil {
@@ -770,6 +808,10 @@ var Core_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateSettings",
 			Handler:    _Core_UpdateSettings_Handler,
+		},
+		{
+			MethodName: "ReadRouting",
+			Handler:    _Core_ReadRouting_Handler,
 		},
 		{
 			MethodName: "ListProcesses",

@@ -9,6 +9,7 @@ import '../theme.dart';
 import 'add_subscription.dart';
 import 'common.dart';
 import 'format.dart';
+import 'routing_import.dart';
 
 /// Subscriptions and their nodes. Picking a node switches to it right away
 /// when connected, or makes it the one the big button will use.
@@ -303,7 +304,11 @@ class _SubscriptionHeader extends ConsumerWidget {
           onSelected: (v) async {
             switch (v) {
               case 'refresh':
-                await run(() => notifier.refresh(sub.id));
+                await run(() async {
+                  final fresh = await notifier.refresh(sub.id);
+                  // A profile the person took, changed by the provider since.
+                  if (context.mounted) await offerSubscriptionRouting(context, ref, fresh, refreshed: true);
+                });
               case 'remove':
                 if (await _confirmRemove(context, sub)) await run(() => notifier.remove(sub.id));
             }

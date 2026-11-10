@@ -55,12 +55,13 @@ On a desktop the connection is held by a small system service, so closing or upd
 
 ## What it does
 
-- Takes subscriptions in any shape: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `tuic://` links, base64 of them, or Clash/mihomo YAML with `proxy-providers`. It figures out the format itself and reads the title, traffic and expiry the provider sends.
+- Takes subscriptions in any shape: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `tuic://` links, base64 of them, or Clash/mihomo YAML with `proxy-providers`. It figures out the format itself and reads the title, traffic and expiry the provider sends. Wrapped links work too: `sub://` from Shadowrocket and `incy://` from INCY.
 - Takes WireGuard and AmneziaWG too: paste a config, an `awg://` link or a `vpn://` key from AmneziaVPN.
 - Handles VLESS Reality and Vision, XHTTP, Hysteria2 with obfs, and the rest of what mihomo supports.
 - Shows each node as a flag and an exit city after a check, not as a latency number. If the name says Netherlands and the exit says Germany, you'll see that. Nodes that failed their check can be hidden with one switch.
 - Runs as a system proxy (no admin rights, for apps that respect it) or as a TUN tunnel for the whole system. On Android the same choice means the whole phone through the tunnel, or a local proxy for the apps you point at it.
 - Routes traffic through three lists: through the tunnel, direct, or blocked. A rule can be a site, a wildcard, a subnet, a [runetfreedom](https://github.com/runetfreedom/russia-v2ray-rules-dat) geosite/geoip set (or your own database), a program, or an Android app. Lists copied from v2ray configs paste as they are, `domain:` and `full:` included. A specific rule beats a general one.
+- Takes a provider's routing profile, the `happ://routing/…` link that Happ and INCY use, or the same profile sent with the subscription. Crocell shows what it would add and asks first. The rules go in as one group, and one button takes them all out again.
 - Checks the connection right after connecting and every couple of minutes, and sends a notification if traffic stops getting through.
 - Picks up new settings on its own: change a rule while connected and the tunnel quietly reconnects.
 - Turns on and off without opening the window: a Quick Settings tile on Android, and a toggle in GNOME's quick settings (Settings → "Add to GNOME quick settings" installs it).

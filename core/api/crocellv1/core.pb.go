@@ -791,8 +791,11 @@ type Subscription struct {
 	Announce            string                 `protobuf:"bytes,12,opt,name=announce,proto3" json:"announce,omitempty"`
 	FetchedAt           *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=fetched_at,json=fetchedAt,proto3" json:"fetched_at,omitempty"`
 	Nodes               []*Node                `protobuf:"bytes,14,rep,name=nodes,proto3" json:"nodes,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// The provider's routing profile, if it sends one. Only an offer: the
+	// client asks before adding it to Settings.rules.
+	Routing       *RoutingProfile `protobuf:"bytes,15,opt,name=routing,proto3" json:"routing,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Subscription) Reset() {
@@ -919,6 +922,13 @@ func (x *Subscription) GetFetchedAt() *timestamppb.Timestamp {
 func (x *Subscription) GetNodes() []*Node {
 	if x != nil {
 		return x.Nodes
+	}
+	return nil
+}
+
+func (x *Subscription) GetRouting() *RoutingProfile {
+	if x != nil {
+		return x.Routing
 	}
 	return nil
 }
@@ -1572,10 +1582,13 @@ func (x *ProbeResult) GetProbedAt() *timestamppb.Timestamp {
 }
 
 type RouteRule struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Kind          RuleKind               `protobuf:"varint,1,opt,name=kind,proto3,enum=crocell.v1.RuleKind" json:"kind,omitempty"`
-	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	Action        RouteAction            `protobuf:"varint,3,opt,name=action,proto3,enum=crocell.v1.RouteAction" json:"action,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Kind   RuleKind               `protobuf:"varint,1,opt,name=kind,proto3,enum=crocell.v1.RuleKind" json:"kind,omitempty"`
+	Value  string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Action RouteAction            `protobuf:"varint,3,opt,name=action,proto3,enum=crocell.v1.RouteAction" json:"action,omitempty"`
+	// The routing profile the rule came with, so the whole profile can be
+	// removed at once. Empty for rules added by hand.
+	Group         string `protobuf:"bytes,4,opt,name=group,proto3" json:"group,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1631,6 +1644,154 @@ func (x *RouteRule) GetAction() RouteAction {
 	return RouteAction_ROUTE_ACTION_UNSPECIFIED
 }
 
+func (x *RouteRule) GetGroup() string {
+	if x != nil {
+		return x.Group
+	}
+	return ""
+}
+
+// A routing profile from a link or a subscription, not applied yet.
+type RoutingProfile struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Name    string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Updated string                 `protobuf:"bytes,2,opt,name=updated,proto3" json:"updated,omitempty"` // as the profile says it, unix seconds
+	// group is set to name. PROCESS_NAME rules are Android packages.
+	Rules []*RouteRule `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`
+	// Everything else: PROXY, DIRECT, or UNSPECIFIED when the profile says
+	// nothing.
+	FinalAction RouteAction  `protobuf:"varint,4,opt,name=final_action,json=finalAction,proto3,enum=crocell.v1.RouteAction" json:"final_action,omitempty"`
+	Dns         *DnsSettings `protobuf:"bytes,5,opt,name=dns,proto3" json:"dns,omitempty"` // servers and direct_servers only; empty: not given
+	Geo         *GeoSettings `protobuf:"bytes,6,opt,name=geo,proto3" json:"geo,omitempty"` // sources only; empty: not given
+	// What it asks for that Crocell can't do, as written in the profile.
+	Unsupported   []string `protobuf:"bytes,7,rep,name=unsupported,proto3" json:"unsupported,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RoutingProfile) Reset() {
+	*x = RoutingProfile{}
+	mi := &file_crocell_v1_core_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RoutingProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RoutingProfile) ProtoMessage() {}
+
+func (x *RoutingProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_crocell_v1_core_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RoutingProfile.ProtoReflect.Descriptor instead.
+func (*RoutingProfile) Descriptor() ([]byte, []int) {
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *RoutingProfile) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RoutingProfile) GetUpdated() string {
+	if x != nil {
+		return x.Updated
+	}
+	return ""
+}
+
+func (x *RoutingProfile) GetRules() []*RouteRule {
+	if x != nil {
+		return x.Rules
+	}
+	return nil
+}
+
+func (x *RoutingProfile) GetFinalAction() RouteAction {
+	if x != nil {
+		return x.FinalAction
+	}
+	return RouteAction_ROUTE_ACTION_UNSPECIFIED
+}
+
+func (x *RoutingProfile) GetDns() *DnsSettings {
+	if x != nil {
+		return x.Dns
+	}
+	return nil
+}
+
+func (x *RoutingProfile) GetGeo() *GeoSettings {
+	if x != nil {
+		return x.Geo
+	}
+	return nil
+}
+
+func (x *RoutingProfile) GetUnsupported() []string {
+	if x != nil {
+		return x.Unsupported
+	}
+	return nil
+}
+
+type ReadRoutingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReadRoutingRequest) Reset() {
+	*x = ReadRoutingRequest{}
+	mi := &file_crocell_v1_core_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReadRoutingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadRoutingRequest) ProtoMessage() {}
+
+func (x *ReadRoutingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_crocell_v1_core_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadRoutingRequest.ProtoReflect.Descriptor instead.
+func (*ReadRoutingRequest) Descriptor() ([]byte, []int) {
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ReadRoutingRequest) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
 type DnsSettings struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Resolvers for everything, queried through the VPN. Empty: defaults
@@ -1646,7 +1807,7 @@ type DnsSettings struct {
 
 func (x *DnsSettings) Reset() {
 	*x = DnsSettings{}
-	mi := &file_crocell_v1_core_proto_msgTypes[22]
+	mi := &file_crocell_v1_core_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1658,7 +1819,7 @@ func (x *DnsSettings) String() string {
 func (*DnsSettings) ProtoMessage() {}
 
 func (x *DnsSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[22]
+	mi := &file_crocell_v1_core_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1671,7 +1832,7 @@ func (x *DnsSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DnsSettings.ProtoReflect.Descriptor instead.
 func (*DnsSettings) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{22}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *DnsSettings) GetServers() []string {
@@ -1707,7 +1868,7 @@ type GeoSettings struct {
 
 func (x *GeoSettings) Reset() {
 	*x = GeoSettings{}
-	mi := &file_crocell_v1_core_proto_msgTypes[23]
+	mi := &file_crocell_v1_core_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1719,7 +1880,7 @@ func (x *GeoSettings) String() string {
 func (*GeoSettings) ProtoMessage() {}
 
 func (x *GeoSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[23]
+	mi := &file_crocell_v1_core_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1732,7 +1893,7 @@ func (x *GeoSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeoSettings.ProtoReflect.Descriptor instead.
 func (*GeoSettings) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{23}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GeoSettings) GetGeoipSource() string {
@@ -1781,7 +1942,7 @@ type Settings struct {
 
 func (x *Settings) Reset() {
 	*x = Settings{}
-	mi := &file_crocell_v1_core_proto_msgTypes[24]
+	mi := &file_crocell_v1_core_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1793,7 +1954,7 @@ func (x *Settings) String() string {
 func (*Settings) ProtoMessage() {}
 
 func (x *Settings) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[24]
+	mi := &file_crocell_v1_core_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1806,7 +1967,7 @@ func (x *Settings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Settings.ProtoReflect.Descriptor instead.
 func (*Settings) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{24}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *Settings) GetTunnelMode() TunnelMode {
@@ -1901,7 +2062,7 @@ type GetSettingsRequest struct {
 
 func (x *GetSettingsRequest) Reset() {
 	*x = GetSettingsRequest{}
-	mi := &file_crocell_v1_core_proto_msgTypes[25]
+	mi := &file_crocell_v1_core_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1913,7 +2074,7 @@ func (x *GetSettingsRequest) String() string {
 func (*GetSettingsRequest) ProtoMessage() {}
 
 func (x *GetSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[25]
+	mi := &file_crocell_v1_core_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1926,7 +2087,7 @@ func (x *GetSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSettingsRequest.ProtoReflect.Descriptor instead.
 func (*GetSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{25}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{27}
 }
 
 type ListProcessesRequest struct {
@@ -1937,7 +2098,7 @@ type ListProcessesRequest struct {
 
 func (x *ListProcessesRequest) Reset() {
 	*x = ListProcessesRequest{}
-	mi := &file_crocell_v1_core_proto_msgTypes[26]
+	mi := &file_crocell_v1_core_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1949,7 +2110,7 @@ func (x *ListProcessesRequest) String() string {
 func (*ListProcessesRequest) ProtoMessage() {}
 
 func (x *ListProcessesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[26]
+	mi := &file_crocell_v1_core_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1962,7 +2123,7 @@ func (x *ListProcessesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProcessesRequest.ProtoReflect.Descriptor instead.
 func (*ListProcessesRequest) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{26}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{28}
 }
 
 type Process struct {
@@ -1976,7 +2137,7 @@ type Process struct {
 
 func (x *Process) Reset() {
 	*x = Process{}
-	mi := &file_crocell_v1_core_proto_msgTypes[27]
+	mi := &file_crocell_v1_core_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1988,7 +2149,7 @@ func (x *Process) String() string {
 func (*Process) ProtoMessage() {}
 
 func (x *Process) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[27]
+	mi := &file_crocell_v1_core_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2001,7 +2162,7 @@ func (x *Process) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Process.ProtoReflect.Descriptor instead.
 func (*Process) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{27}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *Process) GetName() string {
@@ -2034,7 +2195,7 @@ type ListProcessesResponse struct {
 
 func (x *ListProcessesResponse) Reset() {
 	*x = ListProcessesResponse{}
-	mi := &file_crocell_v1_core_proto_msgTypes[28]
+	mi := &file_crocell_v1_core_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2046,7 +2207,7 @@ func (x *ListProcessesResponse) String() string {
 func (*ListProcessesResponse) ProtoMessage() {}
 
 func (x *ListProcessesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[28]
+	mi := &file_crocell_v1_core_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2059,7 +2220,7 @@ func (x *ListProcessesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProcessesResponse.ProtoReflect.Descriptor instead.
 func (*ListProcessesResponse) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{28}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListProcessesResponse) GetProcesses() []*Process {
@@ -2077,7 +2238,7 @@ type GetLogsRequest struct {
 
 func (x *GetLogsRequest) Reset() {
 	*x = GetLogsRequest{}
-	mi := &file_crocell_v1_core_proto_msgTypes[29]
+	mi := &file_crocell_v1_core_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2089,7 +2250,7 @@ func (x *GetLogsRequest) String() string {
 func (*GetLogsRequest) ProtoMessage() {}
 
 func (x *GetLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[29]
+	mi := &file_crocell_v1_core_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2102,7 +2263,7 @@ func (x *GetLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLogsRequest.ProtoReflect.Descriptor instead.
 func (*GetLogsRequest) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{29}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{31}
 }
 
 type Logs struct {
@@ -2114,7 +2275,7 @@ type Logs struct {
 
 func (x *Logs) Reset() {
 	*x = Logs{}
-	mi := &file_crocell_v1_core_proto_msgTypes[30]
+	mi := &file_crocell_v1_core_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2126,7 +2287,7 @@ func (x *Logs) String() string {
 func (*Logs) ProtoMessage() {}
 
 func (x *Logs) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[30]
+	mi := &file_crocell_v1_core_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2139,7 +2300,7 @@ func (x *Logs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Logs.ProtoReflect.Descriptor instead.
 func (*Logs) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{30}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *Logs) GetText() string {
@@ -2157,7 +2318,7 @@ type ShutdownRequest struct {
 
 func (x *ShutdownRequest) Reset() {
 	*x = ShutdownRequest{}
-	mi := &file_crocell_v1_core_proto_msgTypes[31]
+	mi := &file_crocell_v1_core_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2169,7 +2330,7 @@ func (x *ShutdownRequest) String() string {
 func (*ShutdownRequest) ProtoMessage() {}
 
 func (x *ShutdownRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[31]
+	mi := &file_crocell_v1_core_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2182,7 +2343,7 @@ func (x *ShutdownRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShutdownRequest.ProtoReflect.Descriptor instead.
 func (*ShutdownRequest) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{31}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{33}
 }
 
 type ShutdownResponse struct {
@@ -2193,7 +2354,7 @@ type ShutdownResponse struct {
 
 func (x *ShutdownResponse) Reset() {
 	*x = ShutdownResponse{}
-	mi := &file_crocell_v1_core_proto_msgTypes[32]
+	mi := &file_crocell_v1_core_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2205,7 +2366,7 @@ func (x *ShutdownResponse) String() string {
 func (*ShutdownResponse) ProtoMessage() {}
 
 func (x *ShutdownResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[32]
+	mi := &file_crocell_v1_core_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2218,7 +2379,7 @@ func (x *ShutdownResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShutdownResponse.ProtoReflect.Descriptor instead.
 func (*ShutdownResponse) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{32}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{34}
 }
 
 type GetGeoInfoRequest struct {
@@ -2229,7 +2390,7 @@ type GetGeoInfoRequest struct {
 
 func (x *GetGeoInfoRequest) Reset() {
 	*x = GetGeoInfoRequest{}
-	mi := &file_crocell_v1_core_proto_msgTypes[33]
+	mi := &file_crocell_v1_core_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2241,7 +2402,7 @@ func (x *GetGeoInfoRequest) String() string {
 func (*GetGeoInfoRequest) ProtoMessage() {}
 
 func (x *GetGeoInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[33]
+	mi := &file_crocell_v1_core_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2254,7 +2415,7 @@ func (x *GetGeoInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGeoInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetGeoInfoRequest) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{33}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{35}
 }
 
 type UpdateGeoRequest struct {
@@ -2265,7 +2426,7 @@ type UpdateGeoRequest struct {
 
 func (x *UpdateGeoRequest) Reset() {
 	*x = UpdateGeoRequest{}
-	mi := &file_crocell_v1_core_proto_msgTypes[34]
+	mi := &file_crocell_v1_core_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2277,7 +2438,7 @@ func (x *UpdateGeoRequest) String() string {
 func (*UpdateGeoRequest) ProtoMessage() {}
 
 func (x *UpdateGeoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[34]
+	mi := &file_crocell_v1_core_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2290,7 +2451,7 @@ func (x *UpdateGeoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateGeoRequest.ProtoReflect.Descriptor instead.
 func (*UpdateGeoRequest) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{34}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{36}
 }
 
 type GeoInfo struct {
@@ -2307,7 +2468,7 @@ type GeoInfo struct {
 
 func (x *GeoInfo) Reset() {
 	*x = GeoInfo{}
-	mi := &file_crocell_v1_core_proto_msgTypes[35]
+	mi := &file_crocell_v1_core_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2319,7 +2480,7 @@ func (x *GeoInfo) String() string {
 func (*GeoInfo) ProtoMessage() {}
 
 func (x *GeoInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_crocell_v1_core_proto_msgTypes[35]
+	mi := &file_crocell_v1_core_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2332,7 +2493,7 @@ func (x *GeoInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeoInfo.ProtoReflect.Descriptor instead.
 func (*GeoInfo) Descriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{35}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *GeoInfo) GetGeoipUpdated() *timestamppb.Timestamp {
@@ -2421,7 +2582,7 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\x11DisconnectRequest\"U\n" +
 	"\x11SelectNodeRequest\x12'\n" +
 	"\x0fsubscription_id\x18\x01 \x01(\tR\x0esubscriptionId\x12\x17\n" +
-	"\anode_id\x18\x02 \x01(\tR\x06nodeId\"\xf2\x03\n" +
+	"\anode_id\x18\x02 \x01(\tR\x06nodeId\"\xa8\x04\n" +
 	"\fSubscription\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1d\n" +
@@ -2440,7 +2601,8 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\bannounce\x18\f \x01(\tR\bannounce\x129\n" +
 	"\n" +
 	"fetched_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tfetchedAt\x12&\n" +
-	"\x05nodes\x18\x0e \x03(\v2\x10.crocell.v1.NodeR\x05nodes\"\xbc\x01\n" +
+	"\x05nodes\x18\x0e \x03(\v2\x10.crocell.v1.NodeR\x05nodes\x124\n" +
+	"\arouting\x18\x0f \x01(\v2\x1a.crocell.v1.RoutingProfileR\arouting\"\xbc\x01\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -2481,11 +2643,22 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"latency_ms\x18\a \x01(\rR\tlatencyMs\x12\x14\n" +
 	"\x05error\x18\b \x01(\tR\x05error\x127\n" +
-	"\tprobed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\bprobedAt\"|\n" +
+	"\tprobed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\bprobedAt\"\x92\x01\n" +
 	"\tRouteRule\x12(\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x14.crocell.v1.RuleKindR\x04kind\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12/\n" +
-	"\x06action\x18\x03 \x01(\x0e2\x17.crocell.v1.RouteActionR\x06action\"g\n" +
+	"\x06action\x18\x03 \x01(\x0e2\x17.crocell.v1.RouteActionR\x06action\x12\x14\n" +
+	"\x05group\x18\x04 \x01(\tR\x05group\"\x9f\x02\n" +
+	"\x0eRoutingProfile\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\aupdated\x18\x02 \x01(\tR\aupdated\x12+\n" +
+	"\x05rules\x18\x03 \x03(\v2\x15.crocell.v1.RouteRuleR\x05rules\x12:\n" +
+	"\ffinal_action\x18\x04 \x01(\x0e2\x17.crocell.v1.RouteActionR\vfinalAction\x12)\n" +
+	"\x03dns\x18\x05 \x01(\v2\x17.crocell.v1.DnsSettingsR\x03dns\x12)\n" +
+	"\x03geo\x18\x06 \x01(\v2\x17.crocell.v1.GeoSettingsR\x03geo\x12 \n" +
+	"\vunsupported\x18\a \x03(\tR\vunsupported\"(\n" +
+	"\x12ReadRoutingRequest\x12\x12\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text\"g\n" +
 	"\vDnsSettings\x12\x18\n" +
 	"\aservers\x18\x01 \x03(\tR\aservers\x12%\n" +
 	"\x0edirect_servers\x18\x02 \x03(\tR\rdirectServers\x12\x17\n" +
@@ -2559,8 +2732,7 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\x17RULE_KIND_DOMAIN_SUFFIX\x10\x05\x12\x15\n" +
 	"\x11RULE_KIND_IP_CIDR\x10\x06\x12\x15\n" +
 	"\x11RULE_KIND_GEOSITE\x10\a\x12\x13\n" +
-	"\x0fRULE_KIND_GEOIP\x10\b2\xcf\n" +
-	"\n" +
+	"\x0fRULE_KIND_GEOIP\x10\b2\x9a\v\n" +
 	"\x04Core\x12=\n" +
 	"\tGetStatus\x12\x1c.crocell.v1.GetStatusRequest\x1a\x12.crocell.v1.Status\x12C\n" +
 	"\vWatchStatus\x12\x1e.crocell.v1.WatchStatusRequest\x1a\x12.crocell.v1.Status0\x01\x129\n" +
@@ -2577,7 +2749,8 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"ProbeNodes\x12\x1d.crocell.v1.ProbeNodesRequest\x1a\x17.crocell.v1.ProbeResult0\x01\x12C\n" +
 	"\vGetSettings\x12\x1e.crocell.v1.GetSettingsRequest\x1a\x14.crocell.v1.Settings\x12<\n" +
-	"\x0eUpdateSettings\x12\x14.crocell.v1.Settings\x1a\x14.crocell.v1.Settings\x12T\n" +
+	"\x0eUpdateSettings\x12\x14.crocell.v1.Settings\x1a\x14.crocell.v1.Settings\x12I\n" +
+	"\vReadRouting\x12\x1e.crocell.v1.ReadRoutingRequest\x1a\x1a.crocell.v1.RoutingProfile\x12T\n" +
 	"\rListProcesses\x12 .crocell.v1.ListProcessesRequest\x1a!.crocell.v1.ListProcessesResponse\x12@\n" +
 	"\n" +
 	"GetGeoInfo\x12\x1d.crocell.v1.GetGeoInfoRequest\x1a\x13.crocell.v1.GeoInfo\x12>\n" +
@@ -2598,7 +2771,7 @@ func file_crocell_v1_core_proto_rawDescGZIP() []byte {
 }
 
 var file_crocell_v1_core_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_crocell_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_crocell_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_crocell_v1_core_proto_goTypes = []any{
 	(ConnectionState)(0),                    // 0: crocell.v1.ConnectionState
 	(TunnelMode)(0),                         // 1: crocell.v1.TunnelMode
@@ -2626,87 +2799,96 @@ var file_crocell_v1_core_proto_goTypes = []any{
 	(*ProbeNodesRequest)(nil),               // 23: crocell.v1.ProbeNodesRequest
 	(*ProbeResult)(nil),                     // 24: crocell.v1.ProbeResult
 	(*RouteRule)(nil),                       // 25: crocell.v1.RouteRule
-	(*DnsSettings)(nil),                     // 26: crocell.v1.DnsSettings
-	(*GeoSettings)(nil),                     // 27: crocell.v1.GeoSettings
-	(*Settings)(nil),                        // 28: crocell.v1.Settings
-	(*GetSettingsRequest)(nil),              // 29: crocell.v1.GetSettingsRequest
-	(*ListProcessesRequest)(nil),            // 30: crocell.v1.ListProcessesRequest
-	(*Process)(nil),                         // 31: crocell.v1.Process
-	(*ListProcessesResponse)(nil),           // 32: crocell.v1.ListProcessesResponse
-	(*GetLogsRequest)(nil),                  // 33: crocell.v1.GetLogsRequest
-	(*Logs)(nil),                            // 34: crocell.v1.Logs
-	(*ShutdownRequest)(nil),                 // 35: crocell.v1.ShutdownRequest
-	(*ShutdownResponse)(nil),                // 36: crocell.v1.ShutdownResponse
-	(*GetGeoInfoRequest)(nil),               // 37: crocell.v1.GetGeoInfoRequest
-	(*UpdateGeoRequest)(nil),                // 38: crocell.v1.UpdateGeoRequest
-	(*GeoInfo)(nil),                         // 39: crocell.v1.GeoInfo
-	(*timestamppb.Timestamp)(nil),           // 40: google.protobuf.Timestamp
+	(*RoutingProfile)(nil),                  // 26: crocell.v1.RoutingProfile
+	(*ReadRoutingRequest)(nil),              // 27: crocell.v1.ReadRoutingRequest
+	(*DnsSettings)(nil),                     // 28: crocell.v1.DnsSettings
+	(*GeoSettings)(nil),                     // 29: crocell.v1.GeoSettings
+	(*Settings)(nil),                        // 30: crocell.v1.Settings
+	(*GetSettingsRequest)(nil),              // 31: crocell.v1.GetSettingsRequest
+	(*ListProcessesRequest)(nil),            // 32: crocell.v1.ListProcessesRequest
+	(*Process)(nil),                         // 33: crocell.v1.Process
+	(*ListProcessesResponse)(nil),           // 34: crocell.v1.ListProcessesResponse
+	(*GetLogsRequest)(nil),                  // 35: crocell.v1.GetLogsRequest
+	(*Logs)(nil),                            // 36: crocell.v1.Logs
+	(*ShutdownRequest)(nil),                 // 37: crocell.v1.ShutdownRequest
+	(*ShutdownResponse)(nil),                // 38: crocell.v1.ShutdownResponse
+	(*GetGeoInfoRequest)(nil),               // 39: crocell.v1.GetGeoInfoRequest
+	(*UpdateGeoRequest)(nil),                // 40: crocell.v1.UpdateGeoRequest
+	(*GeoInfo)(nil),                         // 41: crocell.v1.GeoInfo
+	(*timestamppb.Timestamp)(nil),           // 42: google.protobuf.Timestamp
 }
 var file_crocell_v1_core_proto_depIdxs = []int32{
 	0,  // 0: crocell.v1.Status.state:type_name -> crocell.v1.ConnectionState
-	40, // 1: crocell.v1.Status.connected_since:type_name -> google.protobuf.Timestamp
+	42, // 1: crocell.v1.Status.connected_since:type_name -> google.protobuf.Timestamp
 	6,  // 2: crocell.v1.Status.traffic:type_name -> crocell.v1.Traffic
 	1,  // 3: crocell.v1.Status.tunnel_mode:type_name -> crocell.v1.TunnelMode
 	24, // 4: crocell.v1.Status.live_check:type_name -> crocell.v1.ProbeResult
 	5,  // 5: crocell.v1.Status.favorites:type_name -> crocell.v1.FavoriteNode
-	40, // 6: crocell.v1.Subscription.expire:type_name -> google.protobuf.Timestamp
-	40, // 7: crocell.v1.Subscription.fetched_at:type_name -> google.protobuf.Timestamp
+	42, // 6: crocell.v1.Subscription.expire:type_name -> google.protobuf.Timestamp
+	42, // 7: crocell.v1.Subscription.fetched_at:type_name -> google.protobuf.Timestamp
 	13, // 8: crocell.v1.Subscription.nodes:type_name -> crocell.v1.Node
-	24, // 9: crocell.v1.Node.last_probe:type_name -> crocell.v1.ProbeResult
-	12, // 10: crocell.v1.ListSubscriptionsResponse.subscriptions:type_name -> crocell.v1.Subscription
-	22, // 11: crocell.v1.RefreshAllSubscriptionsResponse.failed:type_name -> crocell.v1.RefreshFailure
-	40, // 12: crocell.v1.ProbeResult.probed_at:type_name -> google.protobuf.Timestamp
-	3,  // 13: crocell.v1.RouteRule.kind:type_name -> crocell.v1.RuleKind
-	2,  // 14: crocell.v1.RouteRule.action:type_name -> crocell.v1.RouteAction
-	1,  // 15: crocell.v1.Settings.tunnel_mode:type_name -> crocell.v1.TunnelMode
-	25, // 16: crocell.v1.Settings.rules:type_name -> crocell.v1.RouteRule
-	2,  // 17: crocell.v1.Settings.final_action:type_name -> crocell.v1.RouteAction
-	26, // 18: crocell.v1.Settings.dns:type_name -> crocell.v1.DnsSettings
-	27, // 19: crocell.v1.Settings.geo:type_name -> crocell.v1.GeoSettings
-	31, // 20: crocell.v1.ListProcessesResponse.processes:type_name -> crocell.v1.Process
-	40, // 21: crocell.v1.GeoInfo.geoip_updated:type_name -> google.protobuf.Timestamp
-	40, // 22: crocell.v1.GeoInfo.geosite_updated:type_name -> google.protobuf.Timestamp
-	7,  // 23: crocell.v1.Core.GetStatus:input_type -> crocell.v1.GetStatusRequest
-	8,  // 24: crocell.v1.Core.WatchStatus:input_type -> crocell.v1.WatchStatusRequest
-	9,  // 25: crocell.v1.Core.Connect:input_type -> crocell.v1.ConnectRequest
-	10, // 26: crocell.v1.Core.Disconnect:input_type -> crocell.v1.DisconnectRequest
-	11, // 27: crocell.v1.Core.SelectNode:input_type -> crocell.v1.SelectNodeRequest
-	14, // 28: crocell.v1.Core.ListSubscriptions:input_type -> crocell.v1.ListSubscriptionsRequest
-	16, // 29: crocell.v1.Core.AddSubscription:input_type -> crocell.v1.AddSubscriptionRequest
-	17, // 30: crocell.v1.Core.RefreshSubscription:input_type -> crocell.v1.RefreshSubscriptionRequest
-	18, // 31: crocell.v1.Core.RemoveSubscription:input_type -> crocell.v1.RemoveSubscriptionRequest
-	20, // 32: crocell.v1.Core.RefreshAllSubscriptions:input_type -> crocell.v1.RefreshAllSubscriptionsRequest
-	23, // 33: crocell.v1.Core.ProbeNodes:input_type -> crocell.v1.ProbeNodesRequest
-	29, // 34: crocell.v1.Core.GetSettings:input_type -> crocell.v1.GetSettingsRequest
-	28, // 35: crocell.v1.Core.UpdateSettings:input_type -> crocell.v1.Settings
-	30, // 36: crocell.v1.Core.ListProcesses:input_type -> crocell.v1.ListProcessesRequest
-	37, // 37: crocell.v1.Core.GetGeoInfo:input_type -> crocell.v1.GetGeoInfoRequest
-	38, // 38: crocell.v1.Core.UpdateGeo:input_type -> crocell.v1.UpdateGeoRequest
-	33, // 39: crocell.v1.Core.GetLogs:input_type -> crocell.v1.GetLogsRequest
-	35, // 40: crocell.v1.Core.Shutdown:input_type -> crocell.v1.ShutdownRequest
-	4,  // 41: crocell.v1.Core.GetStatus:output_type -> crocell.v1.Status
-	4,  // 42: crocell.v1.Core.WatchStatus:output_type -> crocell.v1.Status
-	4,  // 43: crocell.v1.Core.Connect:output_type -> crocell.v1.Status
-	4,  // 44: crocell.v1.Core.Disconnect:output_type -> crocell.v1.Status
-	4,  // 45: crocell.v1.Core.SelectNode:output_type -> crocell.v1.Status
-	15, // 46: crocell.v1.Core.ListSubscriptions:output_type -> crocell.v1.ListSubscriptionsResponse
-	12, // 47: crocell.v1.Core.AddSubscription:output_type -> crocell.v1.Subscription
-	12, // 48: crocell.v1.Core.RefreshSubscription:output_type -> crocell.v1.Subscription
-	19, // 49: crocell.v1.Core.RemoveSubscription:output_type -> crocell.v1.RemoveSubscriptionResponse
-	21, // 50: crocell.v1.Core.RefreshAllSubscriptions:output_type -> crocell.v1.RefreshAllSubscriptionsResponse
-	24, // 51: crocell.v1.Core.ProbeNodes:output_type -> crocell.v1.ProbeResult
-	28, // 52: crocell.v1.Core.GetSettings:output_type -> crocell.v1.Settings
-	28, // 53: crocell.v1.Core.UpdateSettings:output_type -> crocell.v1.Settings
-	32, // 54: crocell.v1.Core.ListProcesses:output_type -> crocell.v1.ListProcessesResponse
-	39, // 55: crocell.v1.Core.GetGeoInfo:output_type -> crocell.v1.GeoInfo
-	39, // 56: crocell.v1.Core.UpdateGeo:output_type -> crocell.v1.GeoInfo
-	34, // 57: crocell.v1.Core.GetLogs:output_type -> crocell.v1.Logs
-	36, // 58: crocell.v1.Core.Shutdown:output_type -> crocell.v1.ShutdownResponse
-	41, // [41:59] is the sub-list for method output_type
-	23, // [23:41] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	26, // 9: crocell.v1.Subscription.routing:type_name -> crocell.v1.RoutingProfile
+	24, // 10: crocell.v1.Node.last_probe:type_name -> crocell.v1.ProbeResult
+	12, // 11: crocell.v1.ListSubscriptionsResponse.subscriptions:type_name -> crocell.v1.Subscription
+	22, // 12: crocell.v1.RefreshAllSubscriptionsResponse.failed:type_name -> crocell.v1.RefreshFailure
+	42, // 13: crocell.v1.ProbeResult.probed_at:type_name -> google.protobuf.Timestamp
+	3,  // 14: crocell.v1.RouteRule.kind:type_name -> crocell.v1.RuleKind
+	2,  // 15: crocell.v1.RouteRule.action:type_name -> crocell.v1.RouteAction
+	25, // 16: crocell.v1.RoutingProfile.rules:type_name -> crocell.v1.RouteRule
+	2,  // 17: crocell.v1.RoutingProfile.final_action:type_name -> crocell.v1.RouteAction
+	28, // 18: crocell.v1.RoutingProfile.dns:type_name -> crocell.v1.DnsSettings
+	29, // 19: crocell.v1.RoutingProfile.geo:type_name -> crocell.v1.GeoSettings
+	1,  // 20: crocell.v1.Settings.tunnel_mode:type_name -> crocell.v1.TunnelMode
+	25, // 21: crocell.v1.Settings.rules:type_name -> crocell.v1.RouteRule
+	2,  // 22: crocell.v1.Settings.final_action:type_name -> crocell.v1.RouteAction
+	28, // 23: crocell.v1.Settings.dns:type_name -> crocell.v1.DnsSettings
+	29, // 24: crocell.v1.Settings.geo:type_name -> crocell.v1.GeoSettings
+	33, // 25: crocell.v1.ListProcessesResponse.processes:type_name -> crocell.v1.Process
+	42, // 26: crocell.v1.GeoInfo.geoip_updated:type_name -> google.protobuf.Timestamp
+	42, // 27: crocell.v1.GeoInfo.geosite_updated:type_name -> google.protobuf.Timestamp
+	7,  // 28: crocell.v1.Core.GetStatus:input_type -> crocell.v1.GetStatusRequest
+	8,  // 29: crocell.v1.Core.WatchStatus:input_type -> crocell.v1.WatchStatusRequest
+	9,  // 30: crocell.v1.Core.Connect:input_type -> crocell.v1.ConnectRequest
+	10, // 31: crocell.v1.Core.Disconnect:input_type -> crocell.v1.DisconnectRequest
+	11, // 32: crocell.v1.Core.SelectNode:input_type -> crocell.v1.SelectNodeRequest
+	14, // 33: crocell.v1.Core.ListSubscriptions:input_type -> crocell.v1.ListSubscriptionsRequest
+	16, // 34: crocell.v1.Core.AddSubscription:input_type -> crocell.v1.AddSubscriptionRequest
+	17, // 35: crocell.v1.Core.RefreshSubscription:input_type -> crocell.v1.RefreshSubscriptionRequest
+	18, // 36: crocell.v1.Core.RemoveSubscription:input_type -> crocell.v1.RemoveSubscriptionRequest
+	20, // 37: crocell.v1.Core.RefreshAllSubscriptions:input_type -> crocell.v1.RefreshAllSubscriptionsRequest
+	23, // 38: crocell.v1.Core.ProbeNodes:input_type -> crocell.v1.ProbeNodesRequest
+	31, // 39: crocell.v1.Core.GetSettings:input_type -> crocell.v1.GetSettingsRequest
+	30, // 40: crocell.v1.Core.UpdateSettings:input_type -> crocell.v1.Settings
+	27, // 41: crocell.v1.Core.ReadRouting:input_type -> crocell.v1.ReadRoutingRequest
+	32, // 42: crocell.v1.Core.ListProcesses:input_type -> crocell.v1.ListProcessesRequest
+	39, // 43: crocell.v1.Core.GetGeoInfo:input_type -> crocell.v1.GetGeoInfoRequest
+	40, // 44: crocell.v1.Core.UpdateGeo:input_type -> crocell.v1.UpdateGeoRequest
+	35, // 45: crocell.v1.Core.GetLogs:input_type -> crocell.v1.GetLogsRequest
+	37, // 46: crocell.v1.Core.Shutdown:input_type -> crocell.v1.ShutdownRequest
+	4,  // 47: crocell.v1.Core.GetStatus:output_type -> crocell.v1.Status
+	4,  // 48: crocell.v1.Core.WatchStatus:output_type -> crocell.v1.Status
+	4,  // 49: crocell.v1.Core.Connect:output_type -> crocell.v1.Status
+	4,  // 50: crocell.v1.Core.Disconnect:output_type -> crocell.v1.Status
+	4,  // 51: crocell.v1.Core.SelectNode:output_type -> crocell.v1.Status
+	15, // 52: crocell.v1.Core.ListSubscriptions:output_type -> crocell.v1.ListSubscriptionsResponse
+	12, // 53: crocell.v1.Core.AddSubscription:output_type -> crocell.v1.Subscription
+	12, // 54: crocell.v1.Core.RefreshSubscription:output_type -> crocell.v1.Subscription
+	19, // 55: crocell.v1.Core.RemoveSubscription:output_type -> crocell.v1.RemoveSubscriptionResponse
+	21, // 56: crocell.v1.Core.RefreshAllSubscriptions:output_type -> crocell.v1.RefreshAllSubscriptionsResponse
+	24, // 57: crocell.v1.Core.ProbeNodes:output_type -> crocell.v1.ProbeResult
+	30, // 58: crocell.v1.Core.GetSettings:output_type -> crocell.v1.Settings
+	30, // 59: crocell.v1.Core.UpdateSettings:output_type -> crocell.v1.Settings
+	26, // 60: crocell.v1.Core.ReadRouting:output_type -> crocell.v1.RoutingProfile
+	34, // 61: crocell.v1.Core.ListProcesses:output_type -> crocell.v1.ListProcessesResponse
+	41, // 62: crocell.v1.Core.GetGeoInfo:output_type -> crocell.v1.GeoInfo
+	41, // 63: crocell.v1.Core.UpdateGeo:output_type -> crocell.v1.GeoInfo
+	36, // 64: crocell.v1.Core.GetLogs:output_type -> crocell.v1.Logs
+	38, // 65: crocell.v1.Core.Shutdown:output_type -> crocell.v1.ShutdownResponse
+	47, // [47:66] is the sub-list for method output_type
+	28, // [28:47] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_crocell_v1_core_proto_init() }
@@ -2720,7 +2902,7 @@ func file_crocell_v1_core_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_crocell_v1_core_proto_rawDesc), len(file_crocell_v1_core_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   36,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

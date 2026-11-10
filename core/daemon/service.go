@@ -1040,6 +1040,7 @@ func (s *Service) subToProtoLocked(sub *storedSub) *pb.Subscription {
 	if !sub.Info.Expire.IsZero() {
 		out.Expire = timestamppb.New(sub.Info.Expire)
 	}
+	out.Routing = routingToProto(sub.Info.Routing)
 	for _, n := range sub.Nodes {
 		typ, _ := n.Proxy["type"].(string)
 		if n.Proxy["amnezia-wg-option"] != nil {
@@ -1074,4 +1075,26 @@ func toProtoProbe(nodeID string, r probe.Result) *pb.ProbeResult {
 		out.Error = r.Err.Error()
 	}
 	return out
+}
+
+func (s *Service) ReadRouting(_ context.Context, req *pb.ReadRoutingRequest) (*pb.RoutingProfile, error) {
+	r, err := subscription.ParseRouting(req.GetText())
+	switch {
+	case errors.Is(err, subscription.ErrRoutingOff):
+		return nil, status.Error(codes.InvalidArgument, say(
+			"Эта ссылка выключает правила, а не добавляет их. Правила из профиля можно убрать в настройках.",
+			"This link turns routing off rather than adding rules. Rules from a profile can be removed in Settings."))
+	case errors.Is(err, subscription.ErrNotRouting), errors.Is(err, subscription.ErrRoutingUnknown):
+		return nil, status.Error(codes.InvalidArgument, say(
+			"Это не ссылка с правилами. Crocell понимает ссылки вида happ://routing/add/… и …/onadd/….",
+			"This is not a routing link. Crocell understands links like happ://routing/add/… and …/onadd/…."))
+	case err != nil:
+		return nil, status.Error(codes.InvalidArgument, say(
+			"Ссылка с правилами повреждена или обрезана. Скопируйте её целиком ещё раз.",
+			"The routing link is damaged or cut short. Copy all of it again."))
+	}
+	if r.Name == "" {
+		r.Name = say("Правила по ссылке", "Rules from a link")
+	}
+	return routingToProto(r), nil
 }

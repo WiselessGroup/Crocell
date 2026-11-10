@@ -70,8 +70,16 @@ func parseLinks(body []byte) (*parsed, error) {
 	var ours []map[string]any
 	var others [][]byte
 	var skipped error // a link we know but can't run; fatal only if alone
+	var routing *Routing
 	for _, line := range bytes.Split(decoded, []byte("\n")) {
 		line = bytes.TrimSpace(line)
+		if IsRoutingLink(string(line)) {
+			// Happ and INCY take a routing link among the nodes.
+			if r, err := ParseRouting(string(line)); err == nil {
+				routing = mergeRouting(routing, r)
+			}
+			continue
+		}
 		scheme, _, _ := strings.Cut(string(line), "://")
 		switch strings.ToLower(scheme) {
 		case "wireguard", "wg", "awg", "amneziawg":
@@ -112,9 +120,11 @@ func parseLinks(body []byte) (*parsed, error) {
 		}
 	}
 
+	info := infoFromComments(decoded)
+	info.Routing = mergeRouting(info.Routing, routing)
 	return &parsed{
 		format: FormatLinks,
-		info:   infoFromComments(decoded),
+		info:   info,
 		nodes:  uniqueNames(toNodes(append(proxies, ours...))),
 	}, nil
 }

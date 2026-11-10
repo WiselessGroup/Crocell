@@ -468,6 +468,126 @@ void main() {
     });
   }
 
+  RoutingProfile ruProfile({RouteAction finalAction = RouteAction.ROUTE_ACTION_PROXY}) => RoutingProfile(
+        name: 'Россия напрямую',
+        finalAction: finalAction,
+        rules: [
+          RouteRule(kind: RuleKind.RULE_KIND_GEOSITE, value: 'category-gov-ru', action: RouteAction.ROUTE_ACTION_DIRECT, group: 'Россия напрямую'),
+          RouteRule(kind: RuleKind.RULE_KIND_GEOSITE, value: 'category-bank-ru', action: RouteAction.ROUTE_ACTION_DIRECT, group: 'Россия напрямую'),
+          RouteRule(kind: RuleKind.RULE_KIND_PROCESS_NAME, value: 'ru.example.bank', action: RouteAction.ROUTE_ACTION_DIRECT, group: 'Россия напрямую'),
+        ],
+        unsupported: ['regexp:.*'],
+        dns: DnsSettings(),
+        geo: GeoSettings(),
+      );
+
+  testWidgets('routing: a link pasted into "add" shows what it adds, then adds it as a group', (tester) async {
+    final core = FakeCore()
+      ..routing = ruProfile()
+      ..geo = GeoInfo(); // not read yet: nothing held back
+    await pumpApp(tester, core, overrides: [hostProvider.overrideWithValue(const Host(HostKind.linux))]);
+    await tester.tap(find.byType(ConnectButton));
+    await tester.pumpAndSettle();
+    const link = 'happ://routing/onadd/eyJOYW1lIjoibiJ9';
+    await tester.enterText(find.byType(TextField), link);
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить'));
+    await tester.pumpAndSettle();
+
+    expect(core.calls, contains('routing $link'));
+    expect(core.calls.where((c) => c.startsWith('add ')), isEmpty, reason: 'not a subscription');
+    expect(find.text('Правила «Россия напрямую»'), findsOneWidget);
+    expect(find.textContaining('Приложения Android (1) пропущены'), findsOneWidget, reason: 'a computer here');
+    expect(find.textContaining('regexp:.*'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить 2'));
+    await tester.pumpAndSettle();
+
+    expect([for (final r in core.settings.rules) '${r.value}/${r.group}'],
+        ['category-gov-ru/Россия напрямую', 'category-bank-ru/Россия напрямую']);
+    await unmount(tester);
+  });
+
+  testWidgets('routing: a subscription offers its profile, and "no" applies nothing', (tester) async {
+    final core = FakeCore()
+      ..toAdd = (sampleSubscription()..routing = ruProfile(finalAction: RouteAction.ROUTE_ACTION_DIRECT))
+      ..geo = GeoInfo();
+    await pumpApp(tester, core, overrides: [hostProvider.overrideWithValue(const Host(HostKind.android))]);
+    await tester.tap(find.byType(ConnectButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'https://sub.example.net/s');
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Их предлагает подписка «WISELESS»'), findsOneWidget);
+    expect(find.text('Всё остальное мимо VPN'), findsOneWidget);
+    final box = tester.widget<CheckboxListTile>(find.widgetWithText(CheckboxListTile, 'Всё остальное мимо VPN'));
+    expect(box.value, isFalse, reason: 'past the VPN only when ticked');
+    await tester.tap(find.text('Не добавлять'));
+    await tester.pumpAndSettle();
+    expect(core.settings.rules, isEmpty);
+    await unmount(tester);
+  });
+
+  testWidgets('routing: ticking "everything else" and adding apps on Android', (tester) async {
+    final core = FakeCore()
+      ..toAdd = (sampleSubscription()..routing = ruProfile(finalAction: RouteAction.ROUTE_ACTION_DIRECT))
+      ..geo = GeoInfo();
+    await pumpApp(tester, core, overrides: [hostProvider.overrideWithValue(const Host(HostKind.android))]);
+    await tester.tap(find.byType(ConnectButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'https://sub.example.net/s');
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Всё остальное мимо VPN'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить 3'));
+    await tester.pumpAndSettle();
+    expect(core.settings.rules.length, 3);
+    expect(core.settings.finalAction, RouteAction.ROUTE_ACTION_DIRECT);
+    await unmount(tester);
+  });
+
+  testWidgets('routing: a set missing from the databases stays out unless they come along', (tester) async {
+    final core = FakeCore()
+      ..routing = (ruProfile()..geo = GeoSettings(geositeSource: 'https://geo.example.invalid/geosite.dat'))
+      ..geo = GeoInfo(geositeCategories: ['category-gov-ru'], geoipCategories: ['private']);
+    await pumpApp(tester, core, overrides: [hostProvider.overrideWithValue(const Host(HostKind.linux))]);
+    await tester.tap(find.byType(ConnectButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'happ://routing/onadd/eyJOYW1lIjoibiJ9');
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('нет в ваших базах geosite/geoip, пропустим: geosite:category-bank-ru'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Добавить 1'), findsOneWidget);
+    await tester.tap(find.text('Взять и DNS с базами geosite/geoip'));
+    await tester.pump();
+    expect(find.widgetWithText(FilledButton, 'Добавить 2'), findsOneWidget, reason: 'the profile brings its own databases');
+    await tester.tap(find.widgetWithText(FilledButton, 'Добавить 2'));
+    await tester.pumpAndSettle();
+    expect(core.settings.geo.geositeSource, 'https://geo.example.invalid/geosite.dat');
+    await unmount(tester);
+  });
+
+  testWidgets('routing: a profile is removed whole, hand rules stay', (tester) async {
+    final core = FakeCore(subs: [sampleSubscription()]);
+    core.settings.rules.addAll([
+      RouteRule(kind: RuleKind.RULE_KIND_GEOSITE, value: 'category-gov-ru', action: RouteAction.ROUTE_ACTION_DIRECT, group: 'Россия напрямую'),
+      RouteRule(kind: RuleKind.RULE_KIND_GEOIP, value: 'private', action: RouteAction.ROUTE_ACTION_DIRECT, group: 'Россия напрямую'),
+      RouteRule(kind: RuleKind.RULE_KIND_DOMAIN, value: 'mine.example', action: RouteAction.ROUTE_ACTION_DIRECT),
+    ]);
+    await pumpApp(tester, core, size: const Size(900, 3000));
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Из профиля «Россия напрямую»: 2'), findsOneWidget);
+    await tester.tap(find.text('Убрать все'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Убрать'));
+    await tester.pumpAndSettle();
+    expect([for (final r in core.settings.rules) r.value], ['mine.example']);
+    expect(find.textContaining('Из профиля'), findsNothing);
+    await unmount(tester);
+  });
+
   testWidgets('add: a WireGuard config can be pasted as text', (tester) async {
     final core = await pumpApp(tester, FakeCore());
     await tester.tap(find.byType(ConnectButton));

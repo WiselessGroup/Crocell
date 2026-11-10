@@ -9,6 +9,7 @@ import '../l10n.dart';
 import '../theme.dart';
 import 'add_rule.dart';
 import 'common.dart';
+import 'routing_import.dart';
 
 /// Getters, not consts, so the texts follow the app's language.
 List<({RouteAction action, String title, IconData icon})> get routeLists => [
@@ -141,6 +142,7 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
               ),
             ),
           ),
+          for (final g in _profiles()) _ProfileRow(name: g.name, count: g.count, onRemove: () => _removeProfile(g.name, g.count)),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 4, 4),
             // Wide: search or hint, then the buttons, on one line. Narrow:
@@ -176,14 +178,15 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
                   ),
                   PopupMenuButton<String>(
                     tooltip: tr('Ещё', 'More'),
-                    enabled: inList.isNotEmpty,
                     onSelected: (v) => switch (v) {
+                      'link' => showRoutingLinkInput(context, ref),
                       'copy' => _copy(inList),
                       _ => _clear(inList, title),
                     },
                     itemBuilder: (_) => [
-                      PopupMenuItem(value: 'copy', child: Text(tr('Скопировать списком', 'Copy as a list'))),
-                      PopupMenuItem(value: 'clear', child: Text(tr('Очистить список', 'Clear list'))),
+                      PopupMenuItem(value: 'link', child: Text(tr('Добавить правила из ссылки…', 'Add rules from a link…'))),
+                      PopupMenuItem(value: 'copy', enabled: inList.isNotEmpty, child: Text(tr('Скопировать списком', 'Copy as a list'))),
+                      PopupMenuItem(value: 'clear', enabled: inList.isNotEmpty, child: Text(tr('Очистить список', 'Clear list'))),
                     ],
                   ),
                 ];
@@ -272,6 +275,31 @@ class _RoutingPanelState extends ConsumerState<RoutingPanel> {
     );
   }
 
+  /// Routing profiles the rules came with, in the order they appear.
+  List<({String name, int count})> _profiles() {
+    final counts = <String, int>{};
+    for (final r in widget.rules) {
+      if (r.group.isNotEmpty) counts[r.group] = (counts[r.group] ?? 0) + 1;
+    }
+    return [for (final e in counts.entries) (name: e.key, count: e.value)];
+  }
+
+  Future<void> _removeProfile(String name, int count) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr('Убрать правила «$name»?', 'Remove the rules "$name"?')),
+        content: Text(tr('Уйдут все $count правил из этого профиля, во всех трёх списках. Правила, добавленные вами, останутся.',
+            'All $count rules from this profile go, in all three lists. Rules you added yourself stay.')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('Отмена', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('Убрать', 'Remove'))),
+        ],
+      ),
+    );
+    if (ok == true) await _guard(() => ref.read(settingsProvider.notifier).removeGroup(name));
+  }
+
   Future<void> _move(RouteRule r, RouteAction to) =>
       _guard(() => ref.read(settingsProvider.notifier).addRules([r.deepCopy()..action = to]));
 
@@ -355,5 +383,37 @@ class _RuleChip extends StatelessWidget {
     );
     if (picked == null) return;
     picked == remove ? onRemove() : onMove(routeLists[picked].action);
+  }
+}
+
+/// One routing profile's rules, spread over the three lists: a line that
+/// says so and takes them all away.
+class _ProfileRow extends StatelessWidget {
+  const _ProfileRow({required this.name, required this.count, required this.onRemove});
+
+  final String name;
+  final int count;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 0),
+      child: Row(
+        children: [
+          Icon(Icons.link_rounded, size: 18, color: t.muted),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              tr('Из профиля «$name»: $count', 'From the profile "$name": $count'),
+              style: Theme.of(context).textTheme.bodyMedium,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TextButton(onPressed: onRemove, child: Text(tr('Убрать все', 'Remove all'))),
+        ],
+      ),
+    );
   }
 }

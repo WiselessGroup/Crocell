@@ -32,6 +32,7 @@ func infoFromMap(m map[string]string) Info {
 	info.WebPage = m["profile-web-page-url"]
 	info.Support = m["support-url"]
 	info.Announce = decodeMaybeBase64(m["announce"])
+	info.Routing = routingFromMap(m)
 
 	// Hours, not minutes. Happ and Clash agree on this.
 	if hours, err := strconv.Atoi(m["profile-update-interval"]); err == nil && hours > 0 {
@@ -99,4 +100,25 @@ func mergeInfo(dst *Info, src Info) {
 	if src.Announce != "" {
 		dst.Announce = src.Announce
 	}
+	dst.Routing = mergeRouting(dst.Routing, src.Routing)
+}
+
+// mergeRouting lets a full profile replace another, while a nameless one,
+// only apps from Happ's per-app headers, adds to whichever profile there is.
+func mergeRouting(dst, src *Routing) *Routing {
+	switch {
+	case src == nil:
+		return dst
+	case dst == nil:
+		return src
+	case src.Name != "":
+		if dst.Name == "" {
+			src.Rules = append(src.Rules, dst.Rules...)
+			src.Unsupported = append(src.Unsupported, dst.Unsupported...)
+		}
+		return src
+	}
+	dst.Rules = append(dst.Rules, src.Rules...)
+	dst.Unsupported = append(dst.Unsupported, src.Unsupported...)
+	return dst
 }

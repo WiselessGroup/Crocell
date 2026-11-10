@@ -135,6 +135,15 @@ class CoreClient extends $grpc.Client {
     return $createUnaryCall(_$updateSettings, request, options: options);
   }
 
+  /// Reads a routing link (happ://routing/onadd/..., as Happ and INCY take
+  /// them) into a profile the client shows before anything is applied.
+  $grpc.ResponseFuture<$0.RoutingProfile> readRouting(
+    $0.ReadRoutingRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$readRouting, request, options: options);
+  }
+
   /// Running programs, to pick one for a routing rule.
   $grpc.ResponseFuture<$0.ListProcessesResponse> listProcesses(
     $0.ListProcessesRequest request, {
@@ -242,6 +251,11 @@ class CoreClient extends $grpc.Client {
       '/crocell.v1.Core/UpdateSettings',
       ($0.Settings value) => value.writeToBuffer(),
       $0.Settings.fromBuffer);
+  static final _$readRouting =
+      $grpc.ClientMethod<$0.ReadRoutingRequest, $0.RoutingProfile>(
+          '/crocell.v1.Core/ReadRouting',
+          ($0.ReadRoutingRequest value) => value.writeToBuffer(),
+          $0.RoutingProfile.fromBuffer);
   static final _$listProcesses =
       $grpc.ClientMethod<$0.ListProcessesRequest, $0.ListProcessesResponse>(
           '/crocell.v1.Core/ListProcesses',
@@ -375,6 +389,14 @@ abstract class CoreServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.Settings.fromBuffer(value),
         ($0.Settings value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ReadRoutingRequest, $0.RoutingProfile>(
+        'ReadRouting',
+        readRouting_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.ReadRoutingRequest.fromBuffer(value),
+        ($0.RoutingProfile value) => value.writeToBuffer()));
     $addMethod(
         $grpc.ServiceMethod<$0.ListProcessesRequest, $0.ListProcessesResponse>(
             'ListProcesses',
@@ -521,6 +543,14 @@ abstract class CoreServiceBase extends $grpc.Service {
 
   $async.Future<$0.Settings> updateSettings(
       $grpc.ServiceCall call, $0.Settings request);
+
+  $async.Future<$0.RoutingProfile> readRouting_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ReadRoutingRequest> $request) async {
+    return readRouting($call, await $request);
+  }
+
+  $async.Future<$0.RoutingProfile> readRouting(
+      $grpc.ServiceCall call, $0.ReadRoutingRequest request);
 
   $async.Future<$0.ListProcessesResponse> listProcesses_Pre(
       $grpc.ServiceCall $call,

@@ -69,9 +69,10 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     return sub;
   }
 
-  Future<void> refresh(String id) async {
+  Future<Subscription> refresh(String id) async {
     final sub = await _api.refreshSubscription(id);
     _replace(sub);
+    return sub;
   }
 
   /// Every subscription with a link. Says which ones did not make it.
@@ -169,6 +170,38 @@ class SettingsNotifier extends AsyncNotifier<Settings> {
       });
 
   Future<void> setFinal(RouteAction action) => _update((s) => s.finalAction = action);
+
+  /// Puts a routing profile's rules in as its group, replacing what the
+  /// group had. A rule the person added by hand stays as it is.
+  /// [finalAction], [dns] and [geo] change only when given.
+  Future<void> applyRouting(
+    String group,
+    List<RouteRule> rules, {
+    RouteAction? finalAction,
+    DnsSettings? dns,
+    GeoSettings? geo,
+  }) =>
+      _update((s) {
+        s.rules.removeWhere((x) => x.group == group);
+        for (final r in rules) {
+          if (s.rules.any((x) => x.group.isEmpty && x.kind == r.kind && x.value == r.value)) continue;
+          s.rules.removeWhere((x) => x.kind == r.kind && x.value == r.value);
+          s.rules.add(r.deepCopy()..group = group);
+        }
+        if (finalAction != null) s.finalAction = finalAction;
+        // ensure…: an unset message field reads as a shared default.
+        if (dns != null) {
+          if (dns.servers.isNotEmpty) s.ensureDns().servers..clear()..addAll(dns.servers);
+          if (dns.directServers.isNotEmpty) s.ensureDns().directServers..clear()..addAll(dns.directServers);
+        }
+        if (geo != null) {
+          if (geo.geoipSource.isNotEmpty) s.ensureGeo().geoipSource = geo.geoipSource;
+          if (geo.geositeSource.isNotEmpty) s.ensureGeo().geositeSource = geo.geositeSource;
+        }
+      });
+
+  /// Removes every rule a routing profile brought.
+  Future<void> removeGroup(String group) => _update((s) => s.rules.removeWhere((x) => x.group == group));
 
   /// Any other edit, for the advanced section.
   Future<void> edit(void Function(Settings s) change) => _update(change);

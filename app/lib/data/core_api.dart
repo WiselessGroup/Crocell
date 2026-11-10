@@ -28,6 +28,9 @@ abstract interface class CoreApi {
   Future<Settings> getSettings();
   Future<Settings> updateSettings(Settings settings);
 
+  /// Reads a routing link into a profile. Applies nothing.
+  Future<RoutingProfile> readRouting(String text);
+
   Future<List<Process>> listProcesses();
   Future<GeoInfo> getGeoInfo();
   Future<GeoInfo> updateGeo();
@@ -181,6 +184,9 @@ class GrpcCoreApi implements CoreApi {
 
   @override
   Future<Settings> updateSettings(Settings settings) => _call(() => _client.updateSettings(settings));
+
+  @override
+  Future<RoutingProfile> readRouting(String text) => _call(() => _client.readRouting(ReadRoutingRequest(text: text)));
 
   @override
   Future<List<Process>> listProcesses() async =>

@@ -16,6 +16,9 @@ class FakeCore implements CoreApi {
   Settings settings = Settings(tunnelMode: TunnelMode.TUNNEL_MODE_SYSTEM_PROXY, mixedPort: 7890);
   final calls = <String>[];
 
+  /// What addSubscription brings; the sample when null.
+  Subscription? toAdd;
+
   /// When set, updateSettings refuses with this message, as the service
   /// does for a bad geo link.
   String? refuseSettings;
@@ -65,7 +68,7 @@ class FakeCore implements CoreApi {
   @override
   Future<Subscription> addSubscription(String url) async {
     calls.add('add $url');
-    final sub = sampleSubscription();
+    final sub = toAdd ?? sampleSubscription();
     subs = [...subs, sub];
     return sub;
   }
@@ -133,6 +136,16 @@ class FakeCore implements CoreApi {
     if (refuseSettings != null) throw CoreError(refuseSettings!);
     settings = s;
     return s;
+  }
+
+  /// What readRouting answers; null makes it refuse, as for a broken link.
+  RoutingProfile? routing;
+
+  @override
+  Future<RoutingProfile> readRouting(String text) async {
+    calls.add('routing $text');
+    if (routing == null) throw const CoreError('Это не ссылка с правилами.');
+    return routing!;
   }
 }
 

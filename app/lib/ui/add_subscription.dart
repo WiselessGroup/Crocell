@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/state.dart';
 import '../l10n.dart';
+import 'routing_import.dart';
 
 /// Asks for a subscription link. Picks it up from the clipboard when one is
 /// there, since that is where people bring it from.
@@ -41,6 +42,7 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
   static bool looksReadable(String s) {
     final text = s.trim();
     if (text.toLowerCase().startsWith('[interface]')) return true;
+    if (looksLikeRoutingLink(text)) return true;
     final uri = Uri.tryParse(text.split('\n').first);
     if (uri == null || !uri.hasScheme) return false;
     if (uri.scheme == 'https' || uri.scheme == 'http') return uri.host.isNotEmpty;
@@ -71,6 +73,12 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
       ));
       return;
     }
+    // Routing links come from the same providers and get pasted here too.
+    if (looksLikeRoutingLink(url)) {
+      await importRoutingLink(context, ref, url);
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -83,6 +91,10 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
       if ((status == null || status.nodeId.isEmpty) && sub.nodes.isNotEmpty) {
         await ref.read(connectionProvider).select(sub.id, sub.nodes.first.id);
       }
+      // Over this dialog, while its ref is still alive; the spinner stops
+      // first, the subscription is in already.
+      if (mounted) setState(() => _busy = false);
+      if (mounted) await offerSubscriptionRouting(context, ref, sub, refreshed: false);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) setState(() => _error = '$e');

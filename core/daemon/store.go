@@ -76,7 +76,8 @@ type settings struct {
 type rule struct {
 	Kind   string `json:"kind"` // process_path, process_name, domain, domain_wildcard, domain_suffix, ip_cidr, geosite, geoip
 	Value  string `json:"value"`
-	Action string `json:"action"` // proxy, direct, block
+	Action string `json:"action"`          // proxy, direct, block
+	Group  string `json:"group,omitempty"` // the routing profile it came with
 }
 
 type dnsSettings struct {

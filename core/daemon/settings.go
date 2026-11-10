@@ -10,6 +10,7 @@ import (
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
 	"git.wiseless.net/fureunoir/crocell/core/engine"
 	"git.wiseless.net/fureunoir/crocell/core/geo"
+	"git.wiseless.net/fureunoir/crocell/core/subscription"
 )
 
 var kindNames = map[string]pb.RuleKind{
@@ -119,7 +120,7 @@ func settingsToProto(s settings) *pb.Settings {
 		out.FinalAction = pb.RouteAction_ROUTE_ACTION_DIRECT
 	}
 	for _, r := range s.Rules {
-		out.Rules = append(out.Rules, &pb.RouteRule{Kind: kindNames[r.Kind], Value: r.Value, Action: actionNames[r.Action]})
+		out.Rules = append(out.Rules, &pb.RouteRule{Kind: kindNames[r.Kind], Value: r.Value, Action: actionNames[r.Action], Group: r.Group})
 	}
 	return out
 }
@@ -190,7 +191,7 @@ func settingsFromProto(p *pb.Settings) (settings, error) {
 		if kind == "" || action == "" {
 			return settings{}, fmt.Errorf("rule %q: kind or action not set", r.GetValue())
 		}
-		s.Rules = append(s.Rules, rule{Kind: kind, Value: strings.TrimSpace(r.GetValue()), Action: action})
+		s.Rules = append(s.Rules, rule{Kind: kind, Value: strings.TrimSpace(r.GetValue()), Action: action, Group: strings.TrimSpace(r.GetGroup())})
 	}
 	rules, err := engineRules(s.Rules)
 	if err != nil {
@@ -208,6 +209,35 @@ func clean(list []string) []string {
 		if v = strings.TrimSpace(v); v != "" {
 			out = append(out, v)
 		}
+	}
+	return out
+}
+
+// routingToProto shows a provider's routing offer to the client. Rules
+// carry the profile's name as their group, ready to go into Settings.
+func routingToProto(r *subscription.Routing) *pb.RoutingProfile {
+	if r == nil {
+		return nil
+	}
+	out := &pb.RoutingProfile{
+		Name:        r.Name,
+		Updated:     r.Updated,
+		Dns:         &pb.DnsSettings{Servers: r.DNS, DirectServers: r.DirectDNS},
+		Geo:         &pb.GeoSettings{GeoipSource: r.GeoIP, GeositeSource: r.GeoSite},
+		Unsupported: r.Unsupported,
+	}
+	switch r.Final {
+	case "proxy":
+		out.FinalAction = pb.RouteAction_ROUTE_ACTION_PROXY
+	case "direct":
+		out.FinalAction = pb.RouteAction_ROUTE_ACTION_DIRECT
+	}
+	for _, x := range r.Rules {
+		kind, action := kindNames[x.Kind], actionNames[x.Action]
+		if kind == pb.RuleKind_RULE_KIND_UNSPECIFIED || action == pb.RouteAction_ROUTE_ACTION_UNSPECIFIED {
+			continue
+		}
+		out.Rules = append(out.Rules, &pb.RouteRule{Kind: kind, Value: x.Value, Action: action, Group: r.Name})
 	}
 	return out
 }

@@ -726,6 +726,7 @@ class Subscription extends $pb.GeneratedMessage {
     $core.String? announce,
     $1.Timestamp? fetchedAt,
     $core.Iterable<Node>? nodes,
+    RoutingProfile? routing,
   }) {
     final result = Subscription._();
     if (id != null) result.id = id;
@@ -743,6 +744,7 @@ class Subscription extends $pb.GeneratedMessage {
     if (announce != null) result.announce = announce;
     if (fetchedAt != null) result.fetchedAt = fetchedAt;
     if (nodes != null) result.nodes.addAll(nodes);
+    if (routing != null) result.routing = routing;
     return result;
   }
 
@@ -783,6 +785,8 @@ class Subscription extends $pb.GeneratedMessage {
         subBuilder: $1.Timestamp.$_createMessage)
     ..pPM<Node>(14, _omitFieldNames ? '' : 'nodes',
         subBuilder: Node.$_createMessage)
+    ..aOM<RoutingProfile>(15, _omitFieldNames ? '' : 'routing',
+        subBuilder: RoutingProfile.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -932,6 +936,19 @@ class Subscription extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(14)
   $pb.PbList<Node> get nodes => $_getList(13);
+
+  /// The provider's routing profile, if it sends one. Only an offer: the
+  /// client asks before adding it to Settings.rules.
+  @$pb.TagNumber(15)
+  RoutingProfile get routing => $_getN(14);
+  @$pb.TagNumber(15)
+  set routing(RoutingProfile value) => $_setField(15, value);
+  @$pb.TagNumber(15)
+  $core.bool hasRouting() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearRouting() => $_clearField(15);
+  @$pb.TagNumber(15)
+  RoutingProfile ensureRouting() => $_ensure(14);
 }
 
 class Node extends $pb.GeneratedMessage {
@@ -1809,11 +1826,13 @@ class RouteRule extends $pb.GeneratedMessage {
     RuleKind? kind,
     $core.String? value,
     RouteAction? action,
+    $core.String? group,
   }) {
     final result = RouteRule._();
     if (kind != null) result.kind = kind;
     if (value != null) result.value = value;
     if (action != null) result.action = action;
+    if (group != null) result.group = group;
     return result;
   }
 
@@ -1835,6 +1854,7 @@ class RouteRule extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'value')
     ..aE<RouteAction>(3, _omitFieldNames ? '' : 'action',
         enumValues: RouteAction.values)
+    ..aOS(4, _omitFieldNames ? '' : 'group')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1883,6 +1903,204 @@ class RouteRule extends $pb.GeneratedMessage {
   $core.bool hasAction() => $_has(2);
   @$pb.TagNumber(3)
   void clearAction() => $_clearField(3);
+
+  /// The routing profile the rule came with, so the whole profile can be
+  /// removed at once. Empty for rules added by hand.
+  @$pb.TagNumber(4)
+  $core.String get group => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set group($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasGroup() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearGroup() => $_clearField(4);
+}
+
+/// A routing profile from a link or a subscription, not applied yet.
+class RoutingProfile extends $pb.GeneratedMessage {
+  factory RoutingProfile({
+    $core.String? name,
+    $core.String? updated,
+    $core.Iterable<RouteRule>? rules,
+    RouteAction? finalAction,
+    DnsSettings? dns,
+    GeoSettings? geo,
+    $core.Iterable<$core.String>? unsupported,
+  }) {
+    final result = RoutingProfile._();
+    if (name != null) result.name = name;
+    if (updated != null) result.updated = updated;
+    if (rules != null) result.rules.addAll(rules);
+    if (finalAction != null) result.finalAction = finalAction;
+    if (dns != null) result.dns = dns;
+    if (geo != null) result.geo = geo;
+    if (unsupported != null) result.unsupported.addAll(unsupported);
+    return result;
+  }
+
+  RoutingProfile._();
+
+  factory RoutingProfile.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RoutingProfile()..mergeFromBuffer(data, registry);
+  factory RoutingProfile.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RoutingProfile()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RoutingProfile',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: RoutingProfile.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'updated')
+    ..pPM<RouteRule>(3, _omitFieldNames ? '' : 'rules',
+        subBuilder: RouteRule.$_createMessage)
+    ..aE<RouteAction>(4, _omitFieldNames ? '' : 'finalAction',
+        enumValues: RouteAction.values)
+    ..aOM<DnsSettings>(5, _omitFieldNames ? '' : 'dns',
+        subBuilder: DnsSettings.$_createMessage)
+    ..aOM<GeoSettings>(6, _omitFieldNames ? '' : 'geo',
+        subBuilder: GeoSettings.$_createMessage)
+    ..pPS(7, _omitFieldNames ? '' : 'unsupported')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RoutingProfile clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RoutingProfile copyWith(void Function(RoutingProfile) updates) =>
+      super.copyWith((message) => updates(message as RoutingProfile))
+          as RoutingProfile;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RoutingProfile() / RoutingProfile.new instead')
+  static RoutingProfile create() => RoutingProfile._();
+  static $pb.GeneratedMessage $_createMessage() => RoutingProfile._();
+  @$core.override
+  RoutingProfile createEmptyInstance() => RoutingProfile._();
+  @$core.pragma('dart2js:noInline')
+  static RoutingProfile getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RoutingProfile>(
+          RoutingProfile.$_createMessage);
+  static RoutingProfile? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get updated => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set updated($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasUpdated() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearUpdated() => $_clearField(2);
+
+  /// group is set to name. PROCESS_NAME rules are Android packages.
+  @$pb.TagNumber(3)
+  $pb.PbList<RouteRule> get rules => $_getList(2);
+
+  /// Everything else: PROXY, DIRECT, or UNSPECIFIED when the profile says
+  /// nothing.
+  @$pb.TagNumber(4)
+  RouteAction get finalAction => $_getN(3);
+  @$pb.TagNumber(4)
+  set finalAction(RouteAction value) => $_setField(4, value);
+  @$pb.TagNumber(4)
+  $core.bool hasFinalAction() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearFinalAction() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  DnsSettings get dns => $_getN(4);
+  @$pb.TagNumber(5)
+  set dns(DnsSettings value) => $_setField(5, value);
+  @$pb.TagNumber(5)
+  $core.bool hasDns() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearDns() => $_clearField(5);
+  @$pb.TagNumber(5)
+  DnsSettings ensureDns() => $_ensure(4);
+
+  @$pb.TagNumber(6)
+  GeoSettings get geo => $_getN(5);
+  @$pb.TagNumber(6)
+  set geo(GeoSettings value) => $_setField(6, value);
+  @$pb.TagNumber(6)
+  $core.bool hasGeo() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearGeo() => $_clearField(6);
+  @$pb.TagNumber(6)
+  GeoSettings ensureGeo() => $_ensure(5);
+
+  /// What it asks for that Crocell can't do, as written in the profile.
+  @$pb.TagNumber(7)
+  $pb.PbList<$core.String> get unsupported => $_getList(6);
+}
+
+class ReadRoutingRequest extends $pb.GeneratedMessage {
+  factory ReadRoutingRequest({
+    $core.String? text,
+  }) {
+    final result = ReadRoutingRequest._();
+    if (text != null) result.text = text;
+    return result;
+  }
+
+  ReadRoutingRequest._();
+
+  factory ReadRoutingRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReadRoutingRequest()..mergeFromBuffer(data, registry);
+  factory ReadRoutingRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReadRoutingRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReadRoutingRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: ReadRoutingRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'text')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReadRoutingRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReadRoutingRequest copyWith(void Function(ReadRoutingRequest) updates) =>
+      super.copyWith((message) => updates(message as ReadRoutingRequest))
+          as ReadRoutingRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ReadRoutingRequest() / ReadRoutingRequest.new instead')
+  static ReadRoutingRequest create() => ReadRoutingRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ReadRoutingRequest._();
+  @$core.override
+  ReadRoutingRequest createEmptyInstance() => ReadRoutingRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ReadRoutingRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReadRoutingRequest>(
+          ReadRoutingRequest.$_createMessage);
+  static ReadRoutingRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get text => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set text($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasText() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearText() => $_clearField(1);
 }
 
 class DnsSettings extends $pb.GeneratedMessage {

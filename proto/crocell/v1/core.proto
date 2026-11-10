@@ -37,6 +37,9 @@ service Core {
   // Settings
   rpc GetSettings(GetSettingsRequest) returns (Settings);
   rpc UpdateSettings(Settings) returns (Settings);
+  // Reads a routing link (happ://routing/onadd/..., as Happ and INCY take
+  // them) into a profile the client shows before anything is applied.
+  rpc ReadRouting(ReadRoutingRequest) returns (RoutingProfile);
 
   // Running programs, to pick one for a routing rule.
   rpc ListProcesses(ListProcessesRequest) returns (ListProcessesResponse);
@@ -149,6 +152,9 @@ message Subscription {
   string announce = 12;
   google.protobuf.Timestamp fetched_at = 13;
   repeated Node nodes = 14;
+  // The provider's routing profile, if it sends one. Only an offer: the
+  // client asks before adding it to Settings.rules.
+  RoutingProfile routing = 15;
 }
 
 message Node {
@@ -239,6 +245,28 @@ message RouteRule {
   RuleKind kind = 1;
   string value = 2;
   RouteAction action = 3;
+  // The routing profile the rule came with, so the whole profile can be
+  // removed at once. Empty for rules added by hand.
+  string group = 4;
+}
+
+// A routing profile from a link or a subscription, not applied yet.
+message RoutingProfile {
+  string name = 1;
+  string updated = 2; // as the profile says it, unix seconds
+  // group is set to name. PROCESS_NAME rules are Android packages.
+  repeated RouteRule rules = 3;
+  // Everything else: PROXY, DIRECT, or UNSPECIFIED when the profile says
+  // nothing.
+  RouteAction final_action = 4;
+  DnsSettings dns = 5;   // servers and direct_servers only; empty: not given
+  GeoSettings geo = 6;   // sources only; empty: not given
+  // What it asks for that Crocell can't do, as written in the profile.
+  repeated string unsupported = 7;
+}
+
+message ReadRoutingRequest {
+  string text = 1;
 }
 
 message DnsSettings {

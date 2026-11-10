@@ -308,6 +308,14 @@ const Subscription$json = {
       '6': '.crocell.v1.Node',
       '10': 'nodes'
     },
+    {
+      '1': 'routing',
+      '3': 15,
+      '4': 1,
+      '5': 11,
+      '6': '.crocell.v1.RoutingProfile',
+      '10': 'routing'
+    },
   ],
 };
 
@@ -321,7 +329,8 @@ final $typed_data.Uint8List subscriptionDescriptor = $convert.base64Decode(
     'ludGVydmFsX2hvdXJzGAkgASgNUhN1cGRhdGVJbnRlcnZhbEhvdXJzEhkKCHdlYl9wYWdlGAog'
     'ASgJUgd3ZWJQYWdlEhgKB3N1cHBvcnQYCyABKAlSB3N1cHBvcnQSGgoIYW5ub3VuY2UYDCABKA'
     'lSCGFubm91bmNlEjkKCmZldGNoZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0'
-    'YW1wUglmZXRjaGVkQXQSJgoFbm9kZXMYDiADKAsyEC5jcm9jZWxsLnYxLk5vZGVSBW5vZGVz');
+    'YW1wUglmZXRjaGVkQXQSJgoFbm9kZXMYDiADKAsyEC5jcm9jZWxsLnYxLk5vZGVSBW5vZGVzEj'
+    'QKB3JvdXRpbmcYDyABKAsyGi5jcm9jZWxsLnYxLlJvdXRpbmdQcm9maWxlUgdyb3V0aW5n');
 
 @$core.Deprecated('Use nodeDescriptor instead')
 const Node$json = {
@@ -542,6 +551,7 @@ const RouteRule$json = {
       '6': '.crocell.v1.RouteAction',
       '10': 'action'
     },
+    {'1': 'group', '3': 4, '4': 1, '5': 9, '10': 'group'},
   ],
 };
 
@@ -549,7 +559,70 @@ const RouteRule$json = {
 final $typed_data.Uint8List routeRuleDescriptor = $convert.base64Decode(
     'CglSb3V0ZVJ1bGUSKAoEa2luZBgBIAEoDjIULmNyb2NlbGwudjEuUnVsZUtpbmRSBGtpbmQSFA'
     'oFdmFsdWUYAiABKAlSBXZhbHVlEi8KBmFjdGlvbhgDIAEoDjIXLmNyb2NlbGwudjEuUm91dGVB'
-    'Y3Rpb25SBmFjdGlvbg==');
+    'Y3Rpb25SBmFjdGlvbhIUCgVncm91cBgEIAEoCVIFZ3JvdXA=');
+
+@$core.Deprecated('Use routingProfileDescriptor instead')
+const RoutingProfile$json = {
+  '1': 'RoutingProfile',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'updated', '3': 2, '4': 1, '5': 9, '10': 'updated'},
+    {
+      '1': 'rules',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.crocell.v1.RouteRule',
+      '10': 'rules'
+    },
+    {
+      '1': 'final_action',
+      '3': 4,
+      '4': 1,
+      '5': 14,
+      '6': '.crocell.v1.RouteAction',
+      '10': 'finalAction'
+    },
+    {
+      '1': 'dns',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.crocell.v1.DnsSettings',
+      '10': 'dns'
+    },
+    {
+      '1': 'geo',
+      '3': 6,
+      '4': 1,
+      '5': 11,
+      '6': '.crocell.v1.GeoSettings',
+      '10': 'geo'
+    },
+    {'1': 'unsupported', '3': 7, '4': 3, '5': 9, '10': 'unsupported'},
+  ],
+};
+
+/// Descriptor for `RoutingProfile`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List routingProfileDescriptor = $convert.base64Decode(
+    'Cg5Sb3V0aW5nUHJvZmlsZRISCgRuYW1lGAEgASgJUgRuYW1lEhgKB3VwZGF0ZWQYAiABKAlSB3'
+    'VwZGF0ZWQSKwoFcnVsZXMYAyADKAsyFS5jcm9jZWxsLnYxLlJvdXRlUnVsZVIFcnVsZXMSOgoM'
+    'ZmluYWxfYWN0aW9uGAQgASgOMhcuY3JvY2VsbC52MS5Sb3V0ZUFjdGlvblILZmluYWxBY3Rpb2'
+    '4SKQoDZG5zGAUgASgLMhcuY3JvY2VsbC52MS5EbnNTZXR0aW5nc1IDZG5zEikKA2dlbxgGIAEo'
+    'CzIXLmNyb2NlbGwudjEuR2VvU2V0dGluZ3NSA2dlbxIgCgt1bnN1cHBvcnRlZBgHIAMoCVILdW'
+    '5zdXBwb3J0ZWQ=');
+
+@$core.Deprecated('Use readRoutingRequestDescriptor instead')
+const ReadRoutingRequest$json = {
+  '1': 'ReadRoutingRequest',
+  '2': [
+    {'1': 'text', '3': 1, '4': 1, '5': 9, '10': 'text'},
+  ],
+};
+
+/// Descriptor for `ReadRoutingRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List readRoutingRequestDescriptor = $convert
+    .base64Decode('ChJSZWFkUm91dGluZ1JlcXVlc3QSEgoEdGV4dBgBIAEoCVIEdGV4dA==');
 
 @$core.Deprecated('Use dnsSettingsDescriptor instead')
 const DnsSettings$json = {

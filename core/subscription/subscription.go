@@ -49,6 +49,10 @@ type Info struct {
 	WebPage        string
 	Support        string
 	Announce       string
+	// Routing is the provider's routing profile, an offer for the person
+	// to accept or not: the "routing" header, a routing link in the body,
+	// Happ's per-app headers.
+	Routing *Routing `json:",omitempty"`
 }
 
 // Subscription is a fetched and parsed subscription.
@@ -154,6 +158,9 @@ func (f *Fetcher) Fetch(ctx context.Context, url string) (*Subscription, error) 
 	mergeInfo(&info, infoFromHeader(header))
 	if info.Title == "" {
 		info.Title = name
+	}
+	if info.Routing != nil && info.Routing.Name == "" {
+		info.Routing.Name = info.Title // only the per-app headers came
 	}
 
 	return &Subscription{
