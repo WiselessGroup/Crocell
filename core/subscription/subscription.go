@@ -97,14 +97,25 @@ func IsLink(input string) bool {
 	return strings.HasPrefix(input, "https://") || strings.HasPrefix(input, "http://")
 }
 
-// Unwrap turns the sub:// link Shadowrocket exports into the https link inside
-// it: "sub://" + base64 of the link, usually unpadded, then "#" and a label.
-// The label can be a piece of the link's key, so it is dropped, not kept as a
-// title. Anything else comes back as is. Errors never quote the input.
+// Unwrap turns a wrapped subscription link into the https link inside it:
+// incy:// from INCY (see incy.go), or the sub:// link Shadowrocket exports,
+// "sub://" + base64 of the link, usually unpadded, then "#" and a label. The
+// sub:// label can be a piece of the link's key, so it is dropped, not kept
+// as a title. Anything else comes back as is. Errors never quote the input.
 func Unwrap(input string) (string, error) {
+	link, _, err := UnwrapNamed(input)
+	return link, err
+}
+
+// UnwrapNamed is Unwrap that also returns the name an incy:// link carries,
+// for a title when the provider sends none. sub:// and plain links have none.
+func UnwrapNamed(input string) (link, name string, err error) {
 	input = strings.TrimSpace(input)
+	if isIncy(input) {
+		return unwrapIncy(input)
+	}
 	if !strings.HasPrefix(strings.ToLower(input), "sub://") {
-		return input, nil
+		return input, "", nil
 	}
 	payload, _, _ := strings.Cut(input[len("sub://"):], "#")
 	payload = strings.TrimRight(payload, "=")
@@ -112,17 +123,17 @@ func Unwrap(input string) (string, error) {
 	if err != nil {
 		decoded, err = base64.RawURLEncoding.DecodeString(payload)
 	}
-	link := strings.TrimSpace(string(decoded))
+	link = strings.TrimSpace(string(decoded))
 	if err != nil || !IsLink(link) {
-		return "", errors.New("subscription: this sub:// link has no subscription link inside")
+		return "", "", errors.New("subscription: this sub:// link has no subscription link inside")
 	}
-	return link, nil
+	return link, "", nil
 }
 
 // Fetch downloads a subscription and resolves it into nodes. Anything that is
 // not an http(s) link is taken as the subscription's body itself.
 func (f *Fetcher) Fetch(ctx context.Context, url string) (*Subscription, error) {
-	url, err := Unwrap(url)
+	url, name, err := UnwrapNamed(url)
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +152,9 @@ func (f *Fetcher) Fetch(ctx context.Context, url string) (*Subscription, error) 
 
 	info := parsed.info
 	mergeInfo(&info, infoFromHeader(header))
+	if info.Title == "" {
+		info.Title = name
+	}
 
 	return &Subscription{
 		URL:       url,

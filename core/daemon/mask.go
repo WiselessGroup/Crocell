@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"net/url"
+	"regexp"
 	"strings"
 
 	"git.wiseless.net/fureunoir/crocell/core/subscription"
@@ -35,3 +36,7 @@ func scrub(msg string, secrets ...string) string {
 	}
 	return msg
 }
+
+// wrappedLink finds incy:// and sub:// links, which unwrap into a
+// subscription link: a log keeps the scheme and loses the rest.
+var wrappedLink = regexp.MustCompile(`(?i)\b(incy|sub)://[^\s"'<>]+`)

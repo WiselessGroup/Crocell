@@ -42,6 +42,9 @@ func (s *Service) GetLogs(context.Context, *pb.GetLogsRequest) (*pb.Logs, error)
 		text = scrub(text, sub.URL)
 	}
 	s.mu.Unlock()
+	// The wrapped forms are never stored, but one pasted into a log line
+	// still leads to the subscription.
+	text = wrappedLink.ReplaceAllString(text, "$1://…")
 	return &pb.Logs{Text: text}, nil
 }
 

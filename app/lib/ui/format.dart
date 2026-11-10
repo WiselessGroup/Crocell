@@ -105,6 +105,8 @@ String nodeKind(Node n) {
     'tuic' => 'TUIC',
     'wireguard' => 'WireGuard',
     'amneziawg' => 'AmneziaWG',
+    // Run in a compatible mode for now, see the core's subscription/naive.go.
+    'naive' => 'NaiveProxy',
     _ => n.type,
   };
   final net = switch (n.network) {

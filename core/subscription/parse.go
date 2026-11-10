@@ -65,9 +65,11 @@ func parseLinks(body []byte) (*parsed, error) {
 		return &parsed{format: FormatConfig, nodes: toNodes([]map[string]any{p})}, nil
 	}
 
-	// WireGuard's kinds of links are ours; the converter takes the rest.
+	// WireGuard's and naive's kinds of links are ours; the converter takes
+	// the rest.
 	var ours []map[string]any
 	var others [][]byte
+	var skipped error // a link we know but can't run; fatal only if alone
 	for _, line := range bytes.Split(decoded, []byte("\n")) {
 		line = bytes.TrimSpace(line)
 		scheme, _, _ := strings.Cut(string(line), "://")
@@ -76,6 +78,13 @@ func parseLinks(body []byte) (*parsed, error) {
 			p, err := parseWgLink(string(line))
 			if err != nil {
 				return nil, fmt.Errorf("%w: %v", ErrUnsupported, err)
+			}
+			ours = append(ours, p)
+		case "naive+https", "naive+quic", "naive":
+			p, err := parseNaiveLink(string(line))
+			if err != nil {
+				skipped = err
+				continue
 			}
 			ours = append(ours, p)
 		case "vpn":
@@ -89,8 +98,13 @@ func parseLinks(body []byte) (*parsed, error) {
 		}
 	}
 
+	rest := bytes.TrimSpace(bytes.Join(others, []byte("\n")))
+	if skipped != nil && len(ours) == 0 && len(rest) == 0 {
+		return nil, fmt.Errorf("%w: %v", ErrUnsupported, skipped)
+	}
+
 	var proxies []map[string]any
-	if rest := bytes.TrimSpace(bytes.Join(others, []byte("\n"))); len(rest) > 0 || len(ours) == 0 {
+	if len(rest) > 0 || len(ours) == 0 {
 		var err error
 		proxies, err = convert.ConvertsV2Ray(rest)
 		if err != nil && len(ours) == 0 {

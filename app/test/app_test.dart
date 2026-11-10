@@ -452,6 +452,22 @@ void main() {
     await unmount(tester);
   });
 
+  for (final link in [
+    'incy://crypt1/AAECAwQFBgcICQoLNyIQL3rDwRZqnyoD8pGKSLXP6o8NdSXQVSSALNbbUyIr',
+    'naive+https://u0a1b2c3d:c2VjcmV0@naive.example.invalid:443#naive',
+  ]) {
+    testWidgets('add: ${link.split(':').first} goes to the core', (tester) async {
+      final core = await pumpApp(tester, FakeCore());
+      await tester.tap(find.byType(ConnectButton));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), link);
+      await tester.tap(find.widgetWithText(FilledButton, 'Добавить'));
+      await tester.pumpAndSettle();
+      expect(core.calls.first, 'add $link');
+      await unmount(tester);
+    });
+  }
+
   testWidgets('add: a WireGuard config can be pasted as text', (tester) async {
     final core = await pumpApp(tester, FakeCore());
     await tester.tap(find.byType(ConnectButton));

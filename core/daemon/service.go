@@ -788,7 +788,7 @@ func (s *Service) ListSubscriptions(context.Context, *pb.ListSubscriptionsReques
 func (s *Service) AddSubscription(ctx context.Context, req *pb.AddSubscriptionRequest) (*pb.Subscription, error) {
 	// Unwrapped first, so the link scrub looks for is the one errors quote,
 	// and the same subscription keeps one id however it was pasted.
-	url, err := subscription.Unwrap(req.GetUrl())
+	url, name, err := subscription.UnwrapNamed(req.GetUrl())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -796,11 +796,19 @@ func (s *Service) AddSubscription(ctx context.Context, req *pb.AddSubscriptionRe
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, scrub(err.Error(), url))
 	}
+	if fetched.Info.Title == "" {
+		fetched.Info.Title = name // what an incy:// link calls it
+	}
 	stored := toStored(url, fetched)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if i := slices.IndexFunc(s.st.Subscriptions, func(x *storedSub) bool { return x.ID == stored.ID }); i >= 0 {
+		// Only the https link is kept, so a refresh has no incy:// name to
+		// fall back on: keep the one it had.
+		if stored.Info.Title == "" {
+			stored.Info.Title = s.st.Subscriptions[i].Info.Title
+		}
 		s.st.Subscriptions[i] = stored // adding a link twice refreshes it
 	} else {
 		s.st.Subscriptions = append(s.st.Subscriptions, stored)
@@ -1036,6 +1044,9 @@ func (s *Service) subToProtoLocked(sub *storedSub) *pb.Subscription {
 		typ, _ := n.Proxy["type"].(string)
 		if n.Proxy["amnezia-wg-option"] != nil {
 			typ = "amneziawg" // what people call it; mihomo's type stays wireguard
+		}
+		if n.Proxy[subscription.NaiveKey] == true {
+			typ = "naive" // runs as trusttunnel, see subscription.parseNaiveLink
 		}
 		network, _ := n.Proxy["network"].(string)
 		server, _ := n.Proxy["server"].(string)

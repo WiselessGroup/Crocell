@@ -46,8 +46,8 @@ class _AddSubscriptionDialogState extends ConsumerState<_AddSubscriptionDialog> 
     if (uri.scheme == 'https' || uri.scheme == 'http') return uri.host.isNotEmpty;
     return const {
       'vless', 'vmess', 'trojan', 'ss', 'ssr', 'hysteria', 'hysteria2', 'hy2', 'tuic',
-      'wireguard', 'wg', 'awg', 'amneziawg', 'vpn', 'sub',
-    }.contains(uri.scheme);
+      'wireguard', 'wg', 'awg', 'amneziawg', 'vpn', 'sub', 'incy', 'naive', 'naive+https',
+    }.contains(uri.scheme.toLowerCase());
   }
 
   Future<void> _pasteIfLink({bool auto = false}) async {
