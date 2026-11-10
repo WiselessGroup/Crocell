@@ -1,10 +1,14 @@
 package engine
 
 import (
+	"fmt"
+	"io"
 	"net"
 	"net/netip"
 	"os"
+	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/metacubex/mihomo/component/process"
 	"golang.org/x/sys/unix"
@@ -106,4 +110,84 @@ func dialMapped(t *testing.T, port int) mappedConn {
 		t.Fatal(err)
 	}
 	return mappedConn{fd: fd, port: sa.(*unix.SockaddrInet6).Port}
+}
+
+// Processes come and go while the lookup walks /proc. One that exits in
+// between must not fail the search: upstream gave up on the first lstat
+// error, so a program rule missed whenever anything else had just quit.
+//
+// The walk goes up by pid and stops at the owner, so the processes that
+// exit have to come before it: sleepers first, then a child holding the
+// socket.
+func TestProgramLookupWhileProcessesExit(t *testing.T) {
+	if os.Getenv("CROCELL_HOLD_SOCKET") != "" {
+		return // the helper's own run, see holdSocket
+	}
+	var sleepers []*exec.Cmd
+	reaped := make(chan struct{}, 300)
+	for i := range 300 {
+		cmd := exec.Command("sleep", fmt.Sprintf("0.%03d", 100+i*4)) // exits 0.1s..1.3s in
+		if err := cmd.Start(); err != nil {
+			t.Skip("can't start sleep:", err)
+		}
+		sleepers = append(sleepers, cmd)
+		// Reaped at once: a zombie keeps its /proc entry.
+		go func() { _ = cmd.Wait(); reaped <- struct{}{} }()
+	}
+	defer func() {
+		for _, c := range sleepers {
+			_ = c.Process.Kill()
+		}
+		for range sleepers {
+			<-reaped
+		}
+	}()
+	port := holdSocket(t)
+	self, _ := os.Executable()
+
+	deadline := time.Now().Add(1500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		_, path, err := process.FindProcessName("tcp", netip.MustParseAddr("127.0.0.1"), port)
+		if err != nil || path != self {
+			t.Fatalf("found %q, %v; want the helper, this test binary", path, err)
+		}
+	}
+}
+
+// holdSocket runs this test binary again as a child that connects to us
+// and waits, and returns the child's source port.
+func holdSocket(t *testing.T) int {
+	t.Helper()
+	l, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { l.Close() })
+	self, _ := os.Executable()
+	cmd := exec.Command(self, "-test.run=^TestHoldSocketHelper$")
+	cmd.Env = append(os.Environ(), "CROCELL_HOLD_SOCKET="+l.Addr().String())
+	stdin, _ := cmd.StdinPipe()
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { stdin.Close(); _ = cmd.Wait() })
+	c, err := l.Accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { c.Close() })
+	return c.RemoteAddr().(*net.TCPAddr).Port
+}
+
+func TestHoldSocketHelper(t *testing.T) {
+	addr := os.Getenv("CROCELL_HOLD_SOCKET")
+	if addr == "" {
+		t.Skip("helper for TestProgramLookupWhileProcessesExit")
+	}
+	c, err := net.Dial("tcp4", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	_, _ = io.Copy(io.Discard, os.Stdin) // until the parent is done
 }

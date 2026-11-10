@@ -8,6 +8,7 @@ then every change here is listed in this table.
 | File | Change |
 |---|---|
 | `component/process/process_linux.go` | `resolveSocketByNetlink` no longer falls back to the last socket of the dump when nothing matches. Upstream pinned connections it could not place on a random process, so a rule for Chrome caught Firefox and Telegram traffic. It now also looks for IPv4 connections among AF_INET6 sockets (`::ffff:a.b.c.d`), which is how Firefox connects, and takes a UDP socket on `0.0.0.0` or `::` when no socket has the exact address, which is how games send. Guarded by `core/engine/process_lookup_linux_test.go`. |
+| `component/process/process_linux.go` | `resolveProcessNameByProcSearch` skips a `/proc/<pid>` that vanished between listing and reading it, instead of failing the whole search. Upstream gave up on the first `lstat` error, so a program rule missed whenever any process with a lower pid had just exited. Guarded by `TestProgramLookupWhileProcessesExit`. |
 | `listener/sing_tun/server_android.go` | `buildAndroidRules` returns early when TUN comes from a VpnService fd or no package/user lists are set. Upstream always started the package manager, which reads `/data/system/packages.xml`; an ordinary app (anything but CMFA's `cmfa` build) may not, so TUN failed on every connect. |
 
 ## Moving to a newer mihomo

@@ -205,9 +205,12 @@ func resolveProcessNameByProcSearch(inode, uid uint32) (string, error) {
 			continue
 		}
 
+		// Crocell patch (see CROCELL.md): a process may exit between
+		// ReadDir and here. Upstream returned that error and gave up the
+		// whole search.
 		info, err := f.Info()
 		if err != nil {
-			return "", err
+			continue
 		}
 		if info.Sys().(*syscall.Stat_t).Uid != uid {
 			continue
@@ -231,14 +234,16 @@ func resolveProcessNameByProcSearch(inode, uid uint32) (string, error) {
 				if bytes.Equal(buffer[:n], socket) {
 					cmdline, err := os.ReadFile(path.Join(processPath, "cmdline"))
 					if err != nil {
-						return "", err
+						continue // exited; a forked sibling may hold it too
 					}
 
 					return splitCmdline(cmdline), nil
 				}
 			} else {
 				if bytes.Equal(buffer[:n], socket) {
-					return os.Readlink(filepath.Join(processPath, "exe"))
+					if exe, err := os.Readlink(filepath.Join(processPath, "exe")); err == nil {
+						return exe, nil
+					}
 				}
 			}
 		}
