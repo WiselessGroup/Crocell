@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../brand/app_icon.dart';
 import '../brand/appearance.dart';
 import '../data/core_api.dart';
 import '../data/state.dart';
@@ -70,26 +69,18 @@ class SystemNotifications implements Notifications {
     } catch (_) {}
   }
 
-  /// The picture from "Customize": large beside the text, and its shape in the
-  /// status bar, where icons come in one colour. Who draws what is up to the
-  /// launcher. Android's own surfaces may still use the icon in the package.
+  /// The shape of the picture from "Customize" as the small icon, the only
+  /// one we set. No large icon: Samsung puts the package's own icon on the
+  /// left and nothing can change that at runtime, so a large one only adds
+  /// a second picture on the right. Stock Android draws the small one there.
   Future<AndroidNotificationDetails?> _androidDetails() async {
     if (!Platform.isAndroid) return null;
     final look = this.look?.call();
-    Uint8List? large;
-    if (look != null) {
-      try {
-        large = await renderAppIcon(look.art, look.background);
-      } catch (e) {
-        appLog('notification icon: $e');
-      }
-    }
     return AndroidNotificationDetails(
       'alerts',
       tr('Состояние VPN', 'VPN status'),
       channelDescription: tr('Сбои подключения и новые версии Crocell', 'Connection failures and new Crocell versions'),
       icon: look == null || look.art.isGlyph ? 'ic_notification' : 'ic_notification_crocell',
-      largeIcon: large == null ? null : ByteArrayAndroidBitmap(large),
     );
   }
 

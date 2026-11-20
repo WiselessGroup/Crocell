@@ -3,7 +3,6 @@ package net.wiseless.crocell
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.drawable.Icon
 
 /**
  * The launcher icon: one activity-alias per picture and background, declared
@@ -41,18 +40,12 @@ object AppIcons {
         }
     }
 
-    /** The status bar icon: the shape of the chosen picture, in one colour. */
+    /**
+     * The status bar icon: the shape of the chosen picture, in one colour.
+     * Notifications set only this one. Samsung draws the package's own icon
+     * beside the text whatever we pass, and that icon cannot change at
+     * runtime, so a large icon would just show a second picture.
+     */
     fun small(context: Context): Int =
         if (current(context)?.startsWith("Icon_crocell") == true) R.drawable.ic_notification_crocell else R.drawable.ic_notification
-
-    /**
-     * The chosen icon as a notification's large icon. Null while the default
-     * one is on: until the person chooses, the manifest has it enabled but
-     * reports DEFAULT, not ENABLED, and the system's own icon is the same one.
-     */
-    fun large(context: Context): Icon? {
-        val alias = current(context) ?: return null
-        val id = context.resources.getIdentifier(alias.lowercase(), "mipmap", context.packageName)
-        return if (id == 0) null else Icon.createWithResource(context, id)
-    }
 }
