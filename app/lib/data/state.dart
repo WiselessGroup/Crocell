@@ -75,6 +75,12 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     return sub;
   }
 
+  Future<Subscription> edit(String id, {required String title, String url = '', String userAgent = ''}) async {
+    final sub = await _api.updateSubscription(id, title: title, url: url.trim(), userAgent: userAgent);
+    _replace(sub);
+    return sub;
+  }
+
   /// Every subscription with a link. Says which ones did not make it.
   Future<RefreshAllSubscriptionsResponse> refreshAll() async {
     final result = await _api.refreshAllSubscriptions();

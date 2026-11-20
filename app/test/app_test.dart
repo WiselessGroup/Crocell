@@ -146,7 +146,7 @@ void main() {
 
     expect(find.text('nlWISELESS'), findsOneWidget, reason: 'list visible without navigation');
 
-    await tester.tap(find.text('Проверить'));
+    await tester.tap(find.byTooltip('Проверить ноды'));
     await tester.pumpAndSettle();
     expect(find.text('Выход: Германия, Франкфурт · 145 мс'), findsWidgets);
     expect(find.text('Не отвечает'), findsOneWidget);
@@ -154,6 +154,37 @@ void main() {
     await tester.tap(find.text('nlWISELESS'));
     await tester.pumpAndSettle();
     expect(core.calls.last, 'select n2');
+    await unmount(tester);
+  });
+
+  testWidgets('subscription edit: name, link and User-Agent go to the core', (tester) async {
+    final core = await pumpApp(tester, FakeCore(subs: [sampleSubscription()]), size: const Size(1200, 900));
+
+    await tester.tap(find.byTooltip('Изменить подписку'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Название'), 'Дом');
+    await tester.enterText(find.widgetWithText(TextField, 'Новая ссылка'), 'https://ftn.example.net/sub/new');
+    await tester.tap(find.text('Дополнительно'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'User-Agent'), 'INCY/1.0/android');
+    await tester.tap(find.widgetWithText(FilledButton, 'Сохранить'));
+    await tester.pumpAndSettle();
+
+    expect(core.calls.last, 'edit sub1 Дом|https://ftn.example.net/sub/new|INCY/1.0/android');
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Дом'), findsWidgets);
+    await unmount(tester);
+  });
+
+  testWidgets('subscription actions fit a phone next to a long name', (tester) async {
+    final sub = sampleSubscription()..title = 'Очень длинное название подписки от провайдера, которое не влезет';
+    await pumpApp(tester, FakeCore(subs: [sub], status: connectedTo('n1')), size: const Size(360, 1600));
+    await tester.tap(find.text('autoWISELESS-1'));
+    await tester.pumpAndSettle();
+    for (final tip in ['Проверить ноды', 'Обновить подписку', 'Изменить подписку', 'Удалить подписку']) {
+      expect(find.byTooltip(tip), findsOneWidget, reason: tip);
+    }
+    expect(tester.takeException(), isNull);
     await unmount(tester);
   });
 

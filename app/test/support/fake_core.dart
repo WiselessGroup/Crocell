@@ -77,6 +77,17 @@ class FakeCore implements CoreApi {
   Future<Subscription> refreshSubscription(String id) async => subs.firstWhere((s) => s.id == id);
 
   @override
+  Future<Subscription> updateSubscription(String id, {required String title, String url = '', String userAgent = ''}) async {
+    calls.add('edit $id $title|$url|$userAgent');
+    final i = subs.indexWhere((s) => s.id == id);
+    final sub = subs[i].deepCopy()
+      ..title = title.isEmpty ? subs[i].title : title
+      ..userAgent = userAgent;
+    subs = [...subs]..[i] = sub;
+    return sub;
+  }
+
+  @override
   Future<void> removeSubscription(String id) async {
     calls.add('remove $id');
     subs = subs.where((s) => s.id != id).toList();

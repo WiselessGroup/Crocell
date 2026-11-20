@@ -8,6 +8,7 @@ import '../l10n.dart';
 import '../theme.dart';
 import 'add_subscription.dart';
 import 'common.dart';
+import 'edit_subscription.dart';
 import 'format.dart';
 import 'routing_import.dart';
 
@@ -291,32 +292,39 @@ class _SubscriptionHeader extends ConsumerWidget {
             ],
           ),
         ),
-        TextButton.icon(
+        // Icons in a row rather than a menu: people did not find refresh
+        // and remove behind "More".
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          tooltip: probing ? tr('Проверяю ноды…', 'Checking nodes…') : tr('Проверить ноды', 'Check nodes'),
           onPressed: probing ? null : () => run(() => notifier.probe(sub.id)),
           icon: probing
-              ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Icon(Icons.travel_explore_rounded, size: 18),
-          label: Text(probing ? tr('Проверяю…', 'Checking…') : tr('Проверить', 'Check')),
+              ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.check_circle_outline_rounded),
         ),
-        PopupMenuButton<String>(
-          tooltip: tr('Ещё', 'More'),
-          icon: const Icon(Icons.more_horiz_rounded),
-          onSelected: (v) async {
-            switch (v) {
-              case 'refresh':
-                await run(() async {
-                  final fresh = await notifier.refresh(sub.id);
-                  // A profile the person took, changed by the provider since.
-                  if (context.mounted) await offerSubscriptionRouting(context, ref, fresh, refreshed: true);
-                });
-              case 'remove':
-                if (await _confirmRemove(context, sub)) await run(() => notifier.remove(sub.id));
-            }
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          tooltip: tr('Обновить подписку', 'Refresh subscription'),
+          icon: const Icon(Icons.refresh_rounded),
+          onPressed: () => run(() async {
+            final fresh = await notifier.refresh(sub.id);
+            // A profile the person took, changed by the provider since.
+            if (context.mounted) await offerSubscriptionRouting(context, ref, fresh, refreshed: true);
+          }),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          tooltip: tr('Изменить подписку', 'Edit subscription'),
+          icon: const Icon(Icons.edit_outlined),
+          onPressed: () => showDialog<void>(context: context, builder: (_) => EditSubscriptionDialog(sub: sub)),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          tooltip: tr('Удалить подписку', 'Remove subscription'),
+          icon: const Icon(Icons.delete_outline_rounded),
+          onPressed: () async {
+            if (await _confirmRemove(context, sub)) await run(() => notifier.remove(sub.id));
           },
-          itemBuilder: (_) => [
-            PopupMenuItem(value: 'refresh', child: Text(tr('Обновить подписку', 'Refresh subscription'))),
-            PopupMenuItem(value: 'remove', child: Text(tr('Удалить подписку…', 'Remove subscription…'))),
-          ],
         ),
       ],
     );

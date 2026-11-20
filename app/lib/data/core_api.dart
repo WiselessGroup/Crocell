@@ -20,6 +20,10 @@ abstract interface class CoreApi {
   Future<List<Subscription>> listSubscriptions();
   Future<Subscription> addSubscription(String url);
   Future<Subscription> refreshSubscription(String id);
+
+  /// "Edit": an empty [url] keeps the link, an empty [userAgent] means the
+  /// default one. A new link or User-Agent is fetched before anything changes.
+  Future<Subscription> updateSubscription(String id, {required String title, String url = '', String userAgent = ''});
   Future<void> removeSubscription(String id);
   Future<RefreshAllSubscriptionsResponse> refreshAllSubscriptions();
 
@@ -166,6 +170,11 @@ class GrpcCoreApi implements CoreApi {
   @override
   Future<Subscription> refreshSubscription(String id) =>
       _call(() => _client.refreshSubscription(RefreshSubscriptionRequest(id: id)));
+
+  @override
+  Future<Subscription> updateSubscription(String id, {required String title, String url = '', String userAgent = ''}) =>
+      _call(() => _client.updateSubscription(
+          UpdateSubscriptionRequest(id: id, title: title, url: url, userAgent: userAgent)));
 
   @override
   Future<void> removeSubscription(String id) =>
