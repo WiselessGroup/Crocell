@@ -19,6 +19,7 @@ import (
 	"github.com/metacubex/mihomo/hub/executor"
 	"github.com/metacubex/mihomo/listener"
 	"github.com/metacubex/mihomo/tunnel"
+	"github.com/metacubex/mihomo/tunnel/statistic"
 	"go.yaml.in/yaml/v3"
 
 	"git.wiseless.net/fureunoir/crocell/core/subscription"
@@ -170,10 +171,31 @@ func selectLocked(name string) error {
 	if !ok {
 		return errors.New("engine: selector has unexpected type")
 	}
+	if nowLocked() == name {
+		return nil
+	}
 	if err := sel.Set(name); err != nil {
 		return fmt.Errorf("engine: select %q: %w", name, err)
 	}
+	// Set only changes the name: open connections stay on the old node,
+	// and Telegram or a playing video keep going through it as if the
+	// switch did nothing. Closed, they reconnect through the new one.
+	closeThrough(statistic.DefaultManager, GroupName)
 	return nil
+}
+
+// closeThrough closes the connections that went through group. Direct ones
+// do not depend on the node and stay open.
+func closeThrough(m *statistic.Manager, group string) {
+	m.Range(func(c statistic.Tracker) bool {
+		for _, name := range c.Chains() {
+			if name == group {
+				_ = c.Close()
+				break
+			}
+		}
+		return true
+	})
 }
 
 // Selected returns the active node name.
