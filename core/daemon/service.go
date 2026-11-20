@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -18,12 +19,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/metacubex/mihomo/component/dialer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
+	"git.wiseless.net/fureunoir/crocell/core/diagnose"
 	"git.wiseless.net/fureunoir/crocell/core/engine"
 	"git.wiseless.net/fureunoir/crocell/core/geo"
 	"git.wiseless.net/fureunoir/crocell/core/internal/version"
@@ -62,6 +65,9 @@ type Config struct {
 	// connection; it runs once per connection. Default: probe.System /
 	// probe.ViaProxy.
 	Check func(ctx context.Context, mode pb.TunnelMode, port int, full bool) probe.Result
+	// Diagnose looks past the tunnel once the live check failed twice in a
+	// row. Default: diagnose.Run through mihomo's dialer, which keeps off TUN.
+	Diagnose func(ctx context.Context, node, nodeType string) diagnose.Report
 	// GeoClient fetches geoip.dat / geosite.dat. Default: plain HTTP.
 	GeoClient *http.Client
 	// CheckInterval is how often a live connection is re-checked. One small
@@ -98,6 +104,25 @@ const (
 	DefaultReconnectDelay = 1500 * time.Millisecond
 )
 
+func realDiagnose(ctx context.Context, node, nodeType string) diagnose.Report {
+	return diagnose.Run(ctx, diagnose.Env{
+		Dial: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dialer.DialContext(ctx, network, addr)
+		},
+		Node:    node,
+		NodeUDP: udpNode(nodeType),
+	})
+}
+
+// udpNode: QUIC and WireGuard, where a TCP connect to the port means nothing.
+func udpNode(t string) bool {
+	switch t {
+	case "hysteria", "hysteria2", "tuic", "wireguard", "amneziawg":
+		return true
+	}
+	return false
+}
+
 func realCheck(ctx context.Context, mode pb.TunnelMode, port int, full bool) probe.Result {
 	if mode == pb.TunnelMode_TUNNEL_MODE_TUN {
 		return probe.System(ctx, full)
@@ -108,20 +133,21 @@ func realCheck(ctx context.Context, mode pb.TunnelMode, port int, full bool) pro
 type Service struct {
 	pb.UnimplementedCoreServer
 
-	store    store
-	homeDir  string
-	eng      Engine
-	fetcher  *subscription.Fetcher
-	probe    func(context.Context, map[string]any) probe.Result
-	check    func(context.Context, pb.TunnelMode, int, bool) probe.Result
-	every    time.Duration // live check interval
-	settle   time.Duration // see Config.ReconnectDelay
-	tun      TunProvider   // Android only
-	programs func() ([]procs.Process, error)
-	pkg      string
-	shutdown func()
-	now      func() time.Time
-	fw       killswitch.Firewall
+	store     store
+	homeDir   string
+	eng       Engine
+	fetcher   *subscription.Fetcher
+	probe     func(context.Context, map[string]any) probe.Result
+	check     func(context.Context, pb.TunnelMode, int, bool) probe.Result
+	every     time.Duration // live check interval
+	settle    time.Duration // see Config.ReconnectDelay
+	tun       TunProvider   // Android only
+	programs  func() ([]procs.Process, error)
+	diagnoser func(ctx context.Context, node, nodeType string) diagnose.Report
+	pkg       string
+	shutdown  func()
+	now       func() time.Time
+	fw        killswitch.Firewall
 
 	// op serialises connect/disconnect/reconfigure, which can take seconds
 	// (TUN setup). mu guards the fields below and is never held across them.
@@ -167,20 +193,21 @@ func New(cfg Config) (*Service, error) {
 		return nil, errors.New("daemon: no state dir")
 	}
 	s := &Service{
-		store:    store{dir: cfg.StateDir},
-		homeDir:  filepath.Join(cfg.StateDir, "engine"),
-		eng:      cfg.Engine,
-		fetcher:  cfg.Fetcher,
-		probe:    cfg.Probe,
-		probes:   map[string]*pb.ProbeResult{},
-		changed:  make(chan struct{}),
-		conn:     connection{state: pb.ConnectionState_CONNECTION_STATE_DISCONNECTED},
-		tun:      cfg.Tun,
-		programs: cfg.Programs,
-		pkg:      cfg.Package,
-		shutdown: cfg.Shutdown,
-		now:      cfg.Now,
-		fw:       cfg.Firewall,
+		store:     store{dir: cfg.StateDir},
+		homeDir:   filepath.Join(cfg.StateDir, "engine"),
+		eng:       cfg.Engine,
+		fetcher:   cfg.Fetcher,
+		probe:     cfg.Probe,
+		probes:    map[string]*pb.ProbeResult{},
+		changed:   make(chan struct{}),
+		conn:      connection{state: pb.ConnectionState_CONNECTION_STATE_DISCONNECTED},
+		tun:       cfg.Tun,
+		programs:  cfg.Programs,
+		diagnoser: cfg.Diagnose,
+		pkg:       cfg.Package,
+		shutdown:  cfg.Shutdown,
+		now:       cfg.Now,
+		fw:        cfg.Firewall,
 	}
 	if s.now == nil {
 		s.now = time.Now
@@ -203,6 +230,9 @@ func New(cfg Config) (*Service, error) {
 	s.check = cfg.Check
 	if s.check == nil {
 		s.check = realCheck
+	}
+	if s.diagnoser == nil {
+		s.diagnoser = realDiagnose
 	}
 	s.every = cfg.CheckInterval
 	if s.every <= 0 {
@@ -314,6 +344,7 @@ func (s *Service) startChecksLocked() {
 		// the node stays cut, to see it come back, and then at the normal
 		// pace rather than the quick one for a node that is down.
 		full := true
+		var diag *pb.ProbeResult // what diagnose found, kept until it works again
 		for {
 			s.mu.Lock()
 			if ctx.Err() != nil {
@@ -328,6 +359,19 @@ func (s *Service) startChecksLocked() {
 			res := s.check(ctx, mode, port, full)
 			full = res.Cut || (full && res.Err != nil) // a failed trace never got to the bulk part
 			r := toProtoProbe(nodeID, res)
+			switch {
+			case r.GetError() == "":
+				diag = nil
+			case r.GetCut():
+				// The check itself found out why.
+			case failed == 1 && diag == nil:
+				// The second failure in a row is the one people hear about:
+				// look past the tunnel once, so they hear why.
+				diag = s.diagnose(ctx)
+			}
+			if diag != nil && !r.GetCut() {
+				r.Verdict, r.OtherTools = diag.GetVerdict(), diag.GetOtherTools()
+			}
 			if r.GetError() != "" {
 				log.Printf("crocelld: live check: %s", r.GetError())
 			}
@@ -375,6 +419,54 @@ const (
 	recheckDelay      = 3 * time.Second
 	downCheckInterval = 20 * time.Second
 )
+
+// diagnose looks past the tunnel at why the live connection does not work.
+func (s *Service) diagnose(ctx context.Context) *pb.ProbeResult {
+	s.mu.Lock()
+	var node, typ string
+	if sub := s.findSubLocked(s.conn.subID); sub != nil {
+		if n, ok := sub.node(s.conn.nodeID); ok {
+			server, _ := n.Proxy["server"].(string)
+			typ, _ = n.Proxy["type"].(string)
+			if port, ok := n.Proxy["port"]; ok && server != "" {
+				node = net.JoinHostPort(server, fmt.Sprint(port))
+			}
+		}
+	}
+	// Android shows no other app's processes, and runs one VPN at a time.
+	desktop := s.tun == nil
+	s.mu.Unlock()
+
+	rep := s.diagnoser(ctx, node, typ)
+	out := &pb.ProbeResult{Verdict: verdictToProto(rep.Verdict)}
+	if desktop {
+		if list, err := s.programs(); err == nil {
+			names := make([]string, len(list))
+			for i, p := range list {
+				names[i] = p.Name
+			}
+			out.OtherTools = diagnose.OtherTools(names)
+		}
+	}
+	log.Printf("crocelld: diagnosis: %s (%s); alongside: %v", rep.Verdict, rep.Detail, out.OtherTools)
+	return out
+}
+
+func verdictToProto(v diagnose.Verdict) pb.Verdict {
+	switch v {
+	case diagnose.NoInternet:
+		return pb.Verdict_VERDICT_NO_INTERNET
+	case diagnose.Whitelist:
+		return pb.Verdict_VERDICT_WHITELIST
+	case diagnose.NodeBlocked:
+		return pb.Verdict_VERDICT_NODE_BLOCKED
+	case diagnose.NodeDown:
+		return pb.Verdict_VERDICT_NODE_DOWN
+	case diagnose.Intercepted:
+		return pb.Verdict_VERDICT_INTERCEPTED
+	}
+	return pb.Verdict_VERDICT_UNSPECIFIED
+}
 
 // sleep waits d, or reports false when ctx ends first.
 func sleep(ctx context.Context, d time.Duration) bool {
@@ -1173,6 +1265,9 @@ func toProtoProbe(nodeID string, r probe.Result) *pb.ProbeResult {
 		LatencyMs:   uint32(r.Latency / time.Millisecond),
 		Cut:         r.Cut,
 		ProbedAt:    timestamppb.Now(),
+	}
+	if r.Cut {
+		out.Verdict = pb.Verdict_VERDICT_CUT
 	}
 	if r.Err != nil {
 		out.Error = r.Err.Error()

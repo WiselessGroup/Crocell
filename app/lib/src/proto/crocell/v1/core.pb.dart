@@ -1796,6 +1796,8 @@ class ProbeResult extends $pb.GeneratedMessage {
     $core.String? error,
     $1.Timestamp? probedAt,
     $core.bool? cut,
+    Verdict? verdict,
+    $core.Iterable<$core.String>? otherTools,
   }) {
     final result = ProbeResult._();
     if (nodeId != null) result.nodeId = nodeId;
@@ -1808,6 +1810,8 @@ class ProbeResult extends $pb.GeneratedMessage {
     if (error != null) result.error = error;
     if (probedAt != null) result.probedAt = probedAt;
     if (cut != null) result.cut = cut;
+    if (verdict != null) result.verdict = verdict;
+    if (otherTools != null) result.otherTools.addAll(otherTools);
     return result;
   }
 
@@ -1835,6 +1839,9 @@ class ProbeResult extends $pb.GeneratedMessage {
     ..aOM<$1.Timestamp>(9, _omitFieldNames ? '' : 'probedAt',
         subBuilder: $1.Timestamp.$_createMessage)
     ..aOB(10, _omitFieldNames ? '' : 'cut')
+    ..aE<Verdict>(11, _omitFieldNames ? '' : 'verdict',
+        enumValues: Verdict.values)
+    ..pPS(12, _omitFieldNames ? '' : 'otherTools')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1946,6 +1953,22 @@ class ProbeResult extends $pb.GeneratedMessage {
   $core.bool hasCut() => $_has(9);
   @$pb.TagNumber(10)
   void clearCut() => $_clearField(10);
+
+  /// Why, in one word, for the live check. Set after it failed twice in a
+  /// row, when the core looked past the tunnel. The client only translates it.
+  @$pb.TagNumber(11)
+  Verdict get verdict => $_getN(10);
+  @$pb.TagNumber(11)
+  set verdict(Verdict value) => $_setField(11, value);
+  @$pb.TagNumber(11)
+  $core.bool hasVerdict() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearVerdict() => $_clearField(11);
+
+  /// VPNs and DPI bypassers running alongside, by process name. Only after a
+  /// failure, only on desktop.
+  @$pb.TagNumber(12)
+  $pb.PbList<$core.String> get otherTools => $_getList(11);
 }
 
 class RouteRule extends $pb.GeneratedMessage {

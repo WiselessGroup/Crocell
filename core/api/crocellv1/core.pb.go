@@ -88,6 +88,67 @@ func (ConnectionState) EnumDescriptor() ([]byte, []int) {
 	return file_crocell_v1_core_proto_rawDescGZIP(), []int{0}
 }
 
+type Verdict int32
+
+const (
+	Verdict_VERDICT_UNSPECIFIED  Verdict = 0
+	Verdict_VERDICT_NO_INTERNET  Verdict = 1 // nothing opens, the tunnel aside
+	Verdict_VERDICT_WHITELIST    Verdict = 2 // Russian sites open, foreign ones do not
+	Verdict_VERDICT_CUT          Verdict = 3 // the node answers, bigger replies break off
+	Verdict_VERDICT_NODE_BLOCKED Verdict = 4 // the network works, the node's server is out of reach
+	Verdict_VERDICT_NODE_DOWN    Verdict = 5 // the node is reachable and stays silent
+	Verdict_VERDICT_INTERCEPTED  Verdict = 6 // foreign sites come with a substituted certificate
+)
+
+// Enum value maps for Verdict.
+var (
+	Verdict_name = map[int32]string{
+		0: "VERDICT_UNSPECIFIED",
+		1: "VERDICT_NO_INTERNET",
+		2: "VERDICT_WHITELIST",
+		3: "VERDICT_CUT",
+		4: "VERDICT_NODE_BLOCKED",
+		5: "VERDICT_NODE_DOWN",
+		6: "VERDICT_INTERCEPTED",
+	}
+	Verdict_value = map[string]int32{
+		"VERDICT_UNSPECIFIED":  0,
+		"VERDICT_NO_INTERNET":  1,
+		"VERDICT_WHITELIST":    2,
+		"VERDICT_CUT":          3,
+		"VERDICT_NODE_BLOCKED": 4,
+		"VERDICT_NODE_DOWN":    5,
+		"VERDICT_INTERCEPTED":  6,
+	}
+)
+
+func (x Verdict) Enum() *Verdict {
+	p := new(Verdict)
+	*p = x
+	return p
+}
+
+func (x Verdict) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Verdict) Descriptor() protoreflect.EnumDescriptor {
+	return file_crocell_v1_core_proto_enumTypes[1].Descriptor()
+}
+
+func (Verdict) Type() protoreflect.EnumType {
+	return &file_crocell_v1_core_proto_enumTypes[1]
+}
+
+func (x Verdict) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Verdict.Descriptor instead.
+func (Verdict) EnumDescriptor() ([]byte, []int) {
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{1}
+}
+
 type TunnelMode int32
 
 const (
@@ -121,11 +182,11 @@ func (x TunnelMode) String() string {
 }
 
 func (TunnelMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_crocell_v1_core_proto_enumTypes[1].Descriptor()
+	return file_crocell_v1_core_proto_enumTypes[2].Descriptor()
 }
 
 func (TunnelMode) Type() protoreflect.EnumType {
-	return &file_crocell_v1_core_proto_enumTypes[1]
+	return &file_crocell_v1_core_proto_enumTypes[2]
 }
 
 func (x TunnelMode) Number() protoreflect.EnumNumber {
@@ -134,7 +195,7 @@ func (x TunnelMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use TunnelMode.Descriptor instead.
 func (TunnelMode) EnumDescriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{1}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{2}
 }
 
 // Where matching traffic goes.
@@ -174,11 +235,11 @@ func (x RouteAction) String() string {
 }
 
 func (RouteAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_crocell_v1_core_proto_enumTypes[2].Descriptor()
+	return file_crocell_v1_core_proto_enumTypes[3].Descriptor()
 }
 
 func (RouteAction) Type() protoreflect.EnumType {
-	return &file_crocell_v1_core_proto_enumTypes[2]
+	return &file_crocell_v1_core_proto_enumTypes[3]
 }
 
 func (x RouteAction) Number() protoreflect.EnumNumber {
@@ -187,7 +248,7 @@ func (x RouteAction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RouteAction.Descriptor instead.
 func (RouteAction) EnumDescriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{2}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{3}
 }
 
 // What a rule matches. Specific beats general: rules apply in this order,
@@ -243,11 +304,11 @@ func (x RuleKind) String() string {
 }
 
 func (RuleKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_crocell_v1_core_proto_enumTypes[3].Descriptor()
+	return file_crocell_v1_core_proto_enumTypes[4].Descriptor()
 }
 
 func (RuleKind) Type() protoreflect.EnumType {
-	return &file_crocell_v1_core_proto_enumTypes[3]
+	return &file_crocell_v1_core_proto_enumTypes[4]
 }
 
 func (x RuleKind) Number() protoreflect.EnumNumber {
@@ -256,7 +317,7 @@ func (x RuleKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RuleKind.Descriptor instead.
 func (RuleKind) EnumDescriptor() ([]byte, []int) {
-	return file_crocell_v1_core_proto_rawDescGZIP(), []int{3}
+	return file_crocell_v1_core_proto_rawDescGZIP(), []int{4}
 }
 
 type Status struct {
@@ -1566,7 +1627,13 @@ type ProbeResult struct {
 	ProbedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=probed_at,json=probedAt,proto3" json:"probed_at,omitempty"`
 	// With error set: the node answers, but the provider breaks off anything
 	// bigger than a few kilobytes on the way to it.
-	Cut           bool `protobuf:"varint,10,opt,name=cut,proto3" json:"cut,omitempty"`
+	Cut bool `protobuf:"varint,10,opt,name=cut,proto3" json:"cut,omitempty"`
+	// Why, in one word, for the live check. Set after it failed twice in a
+	// row, when the core looked past the tunnel. The client only translates it.
+	Verdict Verdict `protobuf:"varint,11,opt,name=verdict,proto3,enum=crocell.v1.Verdict" json:"verdict,omitempty"`
+	// VPNs and DPI bypassers running alongside, by process name. Only after a
+	// failure, only on desktop.
+	OtherTools    []string `protobuf:"bytes,12,rep,name=other_tools,json=otherTools,proto3" json:"other_tools,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1669,6 +1736,20 @@ func (x *ProbeResult) GetCut() bool {
 		return x.Cut
 	}
 	return false
+}
+
+func (x *ProbeResult) GetVerdict() Verdict {
+	if x != nil {
+		return x.Verdict
+	}
+	return Verdict_VERDICT_UNSPECIFIED
+}
+
+func (x *ProbeResult) GetOtherTools() []string {
+	if x != nil {
+		return x.OtherTools
+	}
+	return nil
 }
 
 type RouteRule struct {
@@ -2730,7 +2811,7 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\x05error\x18\x03 \x01(\tR\x05error\"W\n" +
 	"\x11ProbeNodesRequest\x12'\n" +
 	"\x0fsubscription_id\x18\x01 \x01(\tR\x0esubscriptionId\x12\x19\n" +
-	"\bnode_ids\x18\x02 \x03(\tR\anodeIds\"\xc1\x02\n" +
+	"\bnode_ids\x18\x02 \x03(\tR\anodeIds\"\x91\x03\n" +
 	"\vProbeResult\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1b\n" +
 	"\tentry_ips\x18\x02 \x03(\tR\bentryIps\x12#\n" +
@@ -2743,7 +2824,10 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\x05error\x18\b \x01(\tR\x05error\x127\n" +
 	"\tprobed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\bprobedAt\x12\x10\n" +
 	"\x03cut\x18\n" +
-	" \x01(\bR\x03cut\"\x92\x01\n" +
+	" \x01(\bR\x03cut\x12-\n" +
+	"\averdict\x18\v \x01(\x0e2\x13.crocell.v1.VerdictR\averdict\x12\x1f\n" +
+	"\vother_tools\x18\f \x03(\tR\n" +
+	"otherTools\"\x92\x01\n" +
 	"\tRouteRule\x12(\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x14.crocell.v1.RuleKindR\x04kind\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12/\n" +
@@ -2812,7 +2896,15 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\x1bCONNECTION_STATE_CONNECTING\x10\x02\x12\x1e\n" +
 	"\x1aCONNECTION_STATE_CONNECTED\x10\x03\x12\"\n" +
 	"\x1eCONNECTION_STATE_DISCONNECTING\x10\x04\x12\x1b\n" +
-	"\x17CONNECTION_STATE_FAILED\x10\x05*\\\n" +
+	"\x17CONNECTION_STATE_FAILED\x10\x05*\xad\x01\n" +
+	"\aVerdict\x12\x17\n" +
+	"\x13VERDICT_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13VERDICT_NO_INTERNET\x10\x01\x12\x15\n" +
+	"\x11VERDICT_WHITELIST\x10\x02\x12\x0f\n" +
+	"\vVERDICT_CUT\x10\x03\x12\x18\n" +
+	"\x14VERDICT_NODE_BLOCKED\x10\x04\x12\x15\n" +
+	"\x11VERDICT_NODE_DOWN\x10\x05\x12\x17\n" +
+	"\x13VERDICT_INTERCEPTED\x10\x06*\\\n" +
 	"\n" +
 	"TunnelMode\x12\x1b\n" +
 	"\x17TUNNEL_MODE_UNSPECIFIED\x10\x00\x12\x1c\n" +
@@ -2871,128 +2963,130 @@ func file_crocell_v1_core_proto_rawDescGZIP() []byte {
 	return file_crocell_v1_core_proto_rawDescData
 }
 
-var file_crocell_v1_core_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_crocell_v1_core_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
 var file_crocell_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
 var file_crocell_v1_core_proto_goTypes = []any{
 	(ConnectionState)(0),                    // 0: crocell.v1.ConnectionState
-	(TunnelMode)(0),                         // 1: crocell.v1.TunnelMode
-	(RouteAction)(0),                        // 2: crocell.v1.RouteAction
-	(RuleKind)(0),                           // 3: crocell.v1.RuleKind
-	(*Status)(nil),                          // 4: crocell.v1.Status
-	(*FavoriteNode)(nil),                    // 5: crocell.v1.FavoriteNode
-	(*Traffic)(nil),                         // 6: crocell.v1.Traffic
-	(*GetStatusRequest)(nil),                // 7: crocell.v1.GetStatusRequest
-	(*WatchStatusRequest)(nil),              // 8: crocell.v1.WatchStatusRequest
-	(*ConnectRequest)(nil),                  // 9: crocell.v1.ConnectRequest
-	(*DisconnectRequest)(nil),               // 10: crocell.v1.DisconnectRequest
-	(*SelectNodeRequest)(nil),               // 11: crocell.v1.SelectNodeRequest
-	(*Subscription)(nil),                    // 12: crocell.v1.Subscription
-	(*Node)(nil),                            // 13: crocell.v1.Node
-	(*ListSubscriptionsRequest)(nil),        // 14: crocell.v1.ListSubscriptionsRequest
-	(*ListSubscriptionsResponse)(nil),       // 15: crocell.v1.ListSubscriptionsResponse
-	(*AddSubscriptionRequest)(nil),          // 16: crocell.v1.AddSubscriptionRequest
-	(*RefreshSubscriptionRequest)(nil),      // 17: crocell.v1.RefreshSubscriptionRequest
-	(*UpdateSubscriptionRequest)(nil),       // 18: crocell.v1.UpdateSubscriptionRequest
-	(*RemoveSubscriptionRequest)(nil),       // 19: crocell.v1.RemoveSubscriptionRequest
-	(*RemoveSubscriptionResponse)(nil),      // 20: crocell.v1.RemoveSubscriptionResponse
-	(*RefreshAllSubscriptionsRequest)(nil),  // 21: crocell.v1.RefreshAllSubscriptionsRequest
-	(*RefreshAllSubscriptionsResponse)(nil), // 22: crocell.v1.RefreshAllSubscriptionsResponse
-	(*RefreshFailure)(nil),                  // 23: crocell.v1.RefreshFailure
-	(*ProbeNodesRequest)(nil),               // 24: crocell.v1.ProbeNodesRequest
-	(*ProbeResult)(nil),                     // 25: crocell.v1.ProbeResult
-	(*RouteRule)(nil),                       // 26: crocell.v1.RouteRule
-	(*RoutingProfile)(nil),                  // 27: crocell.v1.RoutingProfile
-	(*ReadRoutingRequest)(nil),              // 28: crocell.v1.ReadRoutingRequest
-	(*DnsSettings)(nil),                     // 29: crocell.v1.DnsSettings
-	(*GeoSettings)(nil),                     // 30: crocell.v1.GeoSettings
-	(*Settings)(nil),                        // 31: crocell.v1.Settings
-	(*GetSettingsRequest)(nil),              // 32: crocell.v1.GetSettingsRequest
-	(*ListProcessesRequest)(nil),            // 33: crocell.v1.ListProcessesRequest
-	(*Process)(nil),                         // 34: crocell.v1.Process
-	(*ListProcessesResponse)(nil),           // 35: crocell.v1.ListProcessesResponse
-	(*GetLogsRequest)(nil),                  // 36: crocell.v1.GetLogsRequest
-	(*Logs)(nil),                            // 37: crocell.v1.Logs
-	(*ShutdownRequest)(nil),                 // 38: crocell.v1.ShutdownRequest
-	(*ShutdownResponse)(nil),                // 39: crocell.v1.ShutdownResponse
-	(*GetGeoInfoRequest)(nil),               // 40: crocell.v1.GetGeoInfoRequest
-	(*UpdateGeoRequest)(nil),                // 41: crocell.v1.UpdateGeoRequest
-	(*GeoInfo)(nil),                         // 42: crocell.v1.GeoInfo
-	(*timestamppb.Timestamp)(nil),           // 43: google.protobuf.Timestamp
+	(Verdict)(0),                            // 1: crocell.v1.Verdict
+	(TunnelMode)(0),                         // 2: crocell.v1.TunnelMode
+	(RouteAction)(0),                        // 3: crocell.v1.RouteAction
+	(RuleKind)(0),                           // 4: crocell.v1.RuleKind
+	(*Status)(nil),                          // 5: crocell.v1.Status
+	(*FavoriteNode)(nil),                    // 6: crocell.v1.FavoriteNode
+	(*Traffic)(nil),                         // 7: crocell.v1.Traffic
+	(*GetStatusRequest)(nil),                // 8: crocell.v1.GetStatusRequest
+	(*WatchStatusRequest)(nil),              // 9: crocell.v1.WatchStatusRequest
+	(*ConnectRequest)(nil),                  // 10: crocell.v1.ConnectRequest
+	(*DisconnectRequest)(nil),               // 11: crocell.v1.DisconnectRequest
+	(*SelectNodeRequest)(nil),               // 12: crocell.v1.SelectNodeRequest
+	(*Subscription)(nil),                    // 13: crocell.v1.Subscription
+	(*Node)(nil),                            // 14: crocell.v1.Node
+	(*ListSubscriptionsRequest)(nil),        // 15: crocell.v1.ListSubscriptionsRequest
+	(*ListSubscriptionsResponse)(nil),       // 16: crocell.v1.ListSubscriptionsResponse
+	(*AddSubscriptionRequest)(nil),          // 17: crocell.v1.AddSubscriptionRequest
+	(*RefreshSubscriptionRequest)(nil),      // 18: crocell.v1.RefreshSubscriptionRequest
+	(*UpdateSubscriptionRequest)(nil),       // 19: crocell.v1.UpdateSubscriptionRequest
+	(*RemoveSubscriptionRequest)(nil),       // 20: crocell.v1.RemoveSubscriptionRequest
+	(*RemoveSubscriptionResponse)(nil),      // 21: crocell.v1.RemoveSubscriptionResponse
+	(*RefreshAllSubscriptionsRequest)(nil),  // 22: crocell.v1.RefreshAllSubscriptionsRequest
+	(*RefreshAllSubscriptionsResponse)(nil), // 23: crocell.v1.RefreshAllSubscriptionsResponse
+	(*RefreshFailure)(nil),                  // 24: crocell.v1.RefreshFailure
+	(*ProbeNodesRequest)(nil),               // 25: crocell.v1.ProbeNodesRequest
+	(*ProbeResult)(nil),                     // 26: crocell.v1.ProbeResult
+	(*RouteRule)(nil),                       // 27: crocell.v1.RouteRule
+	(*RoutingProfile)(nil),                  // 28: crocell.v1.RoutingProfile
+	(*ReadRoutingRequest)(nil),              // 29: crocell.v1.ReadRoutingRequest
+	(*DnsSettings)(nil),                     // 30: crocell.v1.DnsSettings
+	(*GeoSettings)(nil),                     // 31: crocell.v1.GeoSettings
+	(*Settings)(nil),                        // 32: crocell.v1.Settings
+	(*GetSettingsRequest)(nil),              // 33: crocell.v1.GetSettingsRequest
+	(*ListProcessesRequest)(nil),            // 34: crocell.v1.ListProcessesRequest
+	(*Process)(nil),                         // 35: crocell.v1.Process
+	(*ListProcessesResponse)(nil),           // 36: crocell.v1.ListProcessesResponse
+	(*GetLogsRequest)(nil),                  // 37: crocell.v1.GetLogsRequest
+	(*Logs)(nil),                            // 38: crocell.v1.Logs
+	(*ShutdownRequest)(nil),                 // 39: crocell.v1.ShutdownRequest
+	(*ShutdownResponse)(nil),                // 40: crocell.v1.ShutdownResponse
+	(*GetGeoInfoRequest)(nil),               // 41: crocell.v1.GetGeoInfoRequest
+	(*UpdateGeoRequest)(nil),                // 42: crocell.v1.UpdateGeoRequest
+	(*GeoInfo)(nil),                         // 43: crocell.v1.GeoInfo
+	(*timestamppb.Timestamp)(nil),           // 44: google.protobuf.Timestamp
 }
 var file_crocell_v1_core_proto_depIdxs = []int32{
 	0,  // 0: crocell.v1.Status.state:type_name -> crocell.v1.ConnectionState
-	43, // 1: crocell.v1.Status.connected_since:type_name -> google.protobuf.Timestamp
-	6,  // 2: crocell.v1.Status.traffic:type_name -> crocell.v1.Traffic
-	1,  // 3: crocell.v1.Status.tunnel_mode:type_name -> crocell.v1.TunnelMode
-	25, // 4: crocell.v1.Status.live_check:type_name -> crocell.v1.ProbeResult
-	5,  // 5: crocell.v1.Status.favorites:type_name -> crocell.v1.FavoriteNode
-	43, // 6: crocell.v1.Subscription.expire:type_name -> google.protobuf.Timestamp
-	43, // 7: crocell.v1.Subscription.fetched_at:type_name -> google.protobuf.Timestamp
-	13, // 8: crocell.v1.Subscription.nodes:type_name -> crocell.v1.Node
-	27, // 9: crocell.v1.Subscription.routing:type_name -> crocell.v1.RoutingProfile
-	25, // 10: crocell.v1.Node.last_probe:type_name -> crocell.v1.ProbeResult
-	12, // 11: crocell.v1.ListSubscriptionsResponse.subscriptions:type_name -> crocell.v1.Subscription
-	23, // 12: crocell.v1.RefreshAllSubscriptionsResponse.failed:type_name -> crocell.v1.RefreshFailure
-	43, // 13: crocell.v1.ProbeResult.probed_at:type_name -> google.protobuf.Timestamp
-	3,  // 14: crocell.v1.RouteRule.kind:type_name -> crocell.v1.RuleKind
-	2,  // 15: crocell.v1.RouteRule.action:type_name -> crocell.v1.RouteAction
-	26, // 16: crocell.v1.RoutingProfile.rules:type_name -> crocell.v1.RouteRule
-	2,  // 17: crocell.v1.RoutingProfile.final_action:type_name -> crocell.v1.RouteAction
-	29, // 18: crocell.v1.RoutingProfile.dns:type_name -> crocell.v1.DnsSettings
-	30, // 19: crocell.v1.RoutingProfile.geo:type_name -> crocell.v1.GeoSettings
-	1,  // 20: crocell.v1.Settings.tunnel_mode:type_name -> crocell.v1.TunnelMode
-	26, // 21: crocell.v1.Settings.rules:type_name -> crocell.v1.RouteRule
-	2,  // 22: crocell.v1.Settings.final_action:type_name -> crocell.v1.RouteAction
-	29, // 23: crocell.v1.Settings.dns:type_name -> crocell.v1.DnsSettings
-	30, // 24: crocell.v1.Settings.geo:type_name -> crocell.v1.GeoSettings
-	34, // 25: crocell.v1.ListProcessesResponse.processes:type_name -> crocell.v1.Process
-	43, // 26: crocell.v1.GeoInfo.geoip_updated:type_name -> google.protobuf.Timestamp
-	43, // 27: crocell.v1.GeoInfo.geosite_updated:type_name -> google.protobuf.Timestamp
-	7,  // 28: crocell.v1.Core.GetStatus:input_type -> crocell.v1.GetStatusRequest
-	8,  // 29: crocell.v1.Core.WatchStatus:input_type -> crocell.v1.WatchStatusRequest
-	9,  // 30: crocell.v1.Core.Connect:input_type -> crocell.v1.ConnectRequest
-	10, // 31: crocell.v1.Core.Disconnect:input_type -> crocell.v1.DisconnectRequest
-	11, // 32: crocell.v1.Core.SelectNode:input_type -> crocell.v1.SelectNodeRequest
-	14, // 33: crocell.v1.Core.ListSubscriptions:input_type -> crocell.v1.ListSubscriptionsRequest
-	16, // 34: crocell.v1.Core.AddSubscription:input_type -> crocell.v1.AddSubscriptionRequest
-	17, // 35: crocell.v1.Core.RefreshSubscription:input_type -> crocell.v1.RefreshSubscriptionRequest
-	18, // 36: crocell.v1.Core.UpdateSubscription:input_type -> crocell.v1.UpdateSubscriptionRequest
-	19, // 37: crocell.v1.Core.RemoveSubscription:input_type -> crocell.v1.RemoveSubscriptionRequest
-	21, // 38: crocell.v1.Core.RefreshAllSubscriptions:input_type -> crocell.v1.RefreshAllSubscriptionsRequest
-	24, // 39: crocell.v1.Core.ProbeNodes:input_type -> crocell.v1.ProbeNodesRequest
-	32, // 40: crocell.v1.Core.GetSettings:input_type -> crocell.v1.GetSettingsRequest
-	31, // 41: crocell.v1.Core.UpdateSettings:input_type -> crocell.v1.Settings
-	28, // 42: crocell.v1.Core.ReadRouting:input_type -> crocell.v1.ReadRoutingRequest
-	33, // 43: crocell.v1.Core.ListProcesses:input_type -> crocell.v1.ListProcessesRequest
-	40, // 44: crocell.v1.Core.GetGeoInfo:input_type -> crocell.v1.GetGeoInfoRequest
-	41, // 45: crocell.v1.Core.UpdateGeo:input_type -> crocell.v1.UpdateGeoRequest
-	36, // 46: crocell.v1.Core.GetLogs:input_type -> crocell.v1.GetLogsRequest
-	38, // 47: crocell.v1.Core.Shutdown:input_type -> crocell.v1.ShutdownRequest
-	4,  // 48: crocell.v1.Core.GetStatus:output_type -> crocell.v1.Status
-	4,  // 49: crocell.v1.Core.WatchStatus:output_type -> crocell.v1.Status
-	4,  // 50: crocell.v1.Core.Connect:output_type -> crocell.v1.Status
-	4,  // 51: crocell.v1.Core.Disconnect:output_type -> crocell.v1.Status
-	4,  // 52: crocell.v1.Core.SelectNode:output_type -> crocell.v1.Status
-	15, // 53: crocell.v1.Core.ListSubscriptions:output_type -> crocell.v1.ListSubscriptionsResponse
-	12, // 54: crocell.v1.Core.AddSubscription:output_type -> crocell.v1.Subscription
-	12, // 55: crocell.v1.Core.RefreshSubscription:output_type -> crocell.v1.Subscription
-	12, // 56: crocell.v1.Core.UpdateSubscription:output_type -> crocell.v1.Subscription
-	20, // 57: crocell.v1.Core.RemoveSubscription:output_type -> crocell.v1.RemoveSubscriptionResponse
-	22, // 58: crocell.v1.Core.RefreshAllSubscriptions:output_type -> crocell.v1.RefreshAllSubscriptionsResponse
-	25, // 59: crocell.v1.Core.ProbeNodes:output_type -> crocell.v1.ProbeResult
-	31, // 60: crocell.v1.Core.GetSettings:output_type -> crocell.v1.Settings
-	31, // 61: crocell.v1.Core.UpdateSettings:output_type -> crocell.v1.Settings
-	27, // 62: crocell.v1.Core.ReadRouting:output_type -> crocell.v1.RoutingProfile
-	35, // 63: crocell.v1.Core.ListProcesses:output_type -> crocell.v1.ListProcessesResponse
-	42, // 64: crocell.v1.Core.GetGeoInfo:output_type -> crocell.v1.GeoInfo
-	42, // 65: crocell.v1.Core.UpdateGeo:output_type -> crocell.v1.GeoInfo
-	37, // 66: crocell.v1.Core.GetLogs:output_type -> crocell.v1.Logs
-	39, // 67: crocell.v1.Core.Shutdown:output_type -> crocell.v1.ShutdownResponse
-	48, // [48:68] is the sub-list for method output_type
-	28, // [28:48] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	44, // 1: crocell.v1.Status.connected_since:type_name -> google.protobuf.Timestamp
+	7,  // 2: crocell.v1.Status.traffic:type_name -> crocell.v1.Traffic
+	2,  // 3: crocell.v1.Status.tunnel_mode:type_name -> crocell.v1.TunnelMode
+	26, // 4: crocell.v1.Status.live_check:type_name -> crocell.v1.ProbeResult
+	6,  // 5: crocell.v1.Status.favorites:type_name -> crocell.v1.FavoriteNode
+	44, // 6: crocell.v1.Subscription.expire:type_name -> google.protobuf.Timestamp
+	44, // 7: crocell.v1.Subscription.fetched_at:type_name -> google.protobuf.Timestamp
+	14, // 8: crocell.v1.Subscription.nodes:type_name -> crocell.v1.Node
+	28, // 9: crocell.v1.Subscription.routing:type_name -> crocell.v1.RoutingProfile
+	26, // 10: crocell.v1.Node.last_probe:type_name -> crocell.v1.ProbeResult
+	13, // 11: crocell.v1.ListSubscriptionsResponse.subscriptions:type_name -> crocell.v1.Subscription
+	24, // 12: crocell.v1.RefreshAllSubscriptionsResponse.failed:type_name -> crocell.v1.RefreshFailure
+	44, // 13: crocell.v1.ProbeResult.probed_at:type_name -> google.protobuf.Timestamp
+	1,  // 14: crocell.v1.ProbeResult.verdict:type_name -> crocell.v1.Verdict
+	4,  // 15: crocell.v1.RouteRule.kind:type_name -> crocell.v1.RuleKind
+	3,  // 16: crocell.v1.RouteRule.action:type_name -> crocell.v1.RouteAction
+	27, // 17: crocell.v1.RoutingProfile.rules:type_name -> crocell.v1.RouteRule
+	3,  // 18: crocell.v1.RoutingProfile.final_action:type_name -> crocell.v1.RouteAction
+	30, // 19: crocell.v1.RoutingProfile.dns:type_name -> crocell.v1.DnsSettings
+	31, // 20: crocell.v1.RoutingProfile.geo:type_name -> crocell.v1.GeoSettings
+	2,  // 21: crocell.v1.Settings.tunnel_mode:type_name -> crocell.v1.TunnelMode
+	27, // 22: crocell.v1.Settings.rules:type_name -> crocell.v1.RouteRule
+	3,  // 23: crocell.v1.Settings.final_action:type_name -> crocell.v1.RouteAction
+	30, // 24: crocell.v1.Settings.dns:type_name -> crocell.v1.DnsSettings
+	31, // 25: crocell.v1.Settings.geo:type_name -> crocell.v1.GeoSettings
+	35, // 26: crocell.v1.ListProcessesResponse.processes:type_name -> crocell.v1.Process
+	44, // 27: crocell.v1.GeoInfo.geoip_updated:type_name -> google.protobuf.Timestamp
+	44, // 28: crocell.v1.GeoInfo.geosite_updated:type_name -> google.protobuf.Timestamp
+	8,  // 29: crocell.v1.Core.GetStatus:input_type -> crocell.v1.GetStatusRequest
+	9,  // 30: crocell.v1.Core.WatchStatus:input_type -> crocell.v1.WatchStatusRequest
+	10, // 31: crocell.v1.Core.Connect:input_type -> crocell.v1.ConnectRequest
+	11, // 32: crocell.v1.Core.Disconnect:input_type -> crocell.v1.DisconnectRequest
+	12, // 33: crocell.v1.Core.SelectNode:input_type -> crocell.v1.SelectNodeRequest
+	15, // 34: crocell.v1.Core.ListSubscriptions:input_type -> crocell.v1.ListSubscriptionsRequest
+	17, // 35: crocell.v1.Core.AddSubscription:input_type -> crocell.v1.AddSubscriptionRequest
+	18, // 36: crocell.v1.Core.RefreshSubscription:input_type -> crocell.v1.RefreshSubscriptionRequest
+	19, // 37: crocell.v1.Core.UpdateSubscription:input_type -> crocell.v1.UpdateSubscriptionRequest
+	20, // 38: crocell.v1.Core.RemoveSubscription:input_type -> crocell.v1.RemoveSubscriptionRequest
+	22, // 39: crocell.v1.Core.RefreshAllSubscriptions:input_type -> crocell.v1.RefreshAllSubscriptionsRequest
+	25, // 40: crocell.v1.Core.ProbeNodes:input_type -> crocell.v1.ProbeNodesRequest
+	33, // 41: crocell.v1.Core.GetSettings:input_type -> crocell.v1.GetSettingsRequest
+	32, // 42: crocell.v1.Core.UpdateSettings:input_type -> crocell.v1.Settings
+	29, // 43: crocell.v1.Core.ReadRouting:input_type -> crocell.v1.ReadRoutingRequest
+	34, // 44: crocell.v1.Core.ListProcesses:input_type -> crocell.v1.ListProcessesRequest
+	41, // 45: crocell.v1.Core.GetGeoInfo:input_type -> crocell.v1.GetGeoInfoRequest
+	42, // 46: crocell.v1.Core.UpdateGeo:input_type -> crocell.v1.UpdateGeoRequest
+	37, // 47: crocell.v1.Core.GetLogs:input_type -> crocell.v1.GetLogsRequest
+	39, // 48: crocell.v1.Core.Shutdown:input_type -> crocell.v1.ShutdownRequest
+	5,  // 49: crocell.v1.Core.GetStatus:output_type -> crocell.v1.Status
+	5,  // 50: crocell.v1.Core.WatchStatus:output_type -> crocell.v1.Status
+	5,  // 51: crocell.v1.Core.Connect:output_type -> crocell.v1.Status
+	5,  // 52: crocell.v1.Core.Disconnect:output_type -> crocell.v1.Status
+	5,  // 53: crocell.v1.Core.SelectNode:output_type -> crocell.v1.Status
+	16, // 54: crocell.v1.Core.ListSubscriptions:output_type -> crocell.v1.ListSubscriptionsResponse
+	13, // 55: crocell.v1.Core.AddSubscription:output_type -> crocell.v1.Subscription
+	13, // 56: crocell.v1.Core.RefreshSubscription:output_type -> crocell.v1.Subscription
+	13, // 57: crocell.v1.Core.UpdateSubscription:output_type -> crocell.v1.Subscription
+	21, // 58: crocell.v1.Core.RemoveSubscription:output_type -> crocell.v1.RemoveSubscriptionResponse
+	23, // 59: crocell.v1.Core.RefreshAllSubscriptions:output_type -> crocell.v1.RefreshAllSubscriptionsResponse
+	26, // 60: crocell.v1.Core.ProbeNodes:output_type -> crocell.v1.ProbeResult
+	32, // 61: crocell.v1.Core.GetSettings:output_type -> crocell.v1.Settings
+	32, // 62: crocell.v1.Core.UpdateSettings:output_type -> crocell.v1.Settings
+	28, // 63: crocell.v1.Core.ReadRouting:output_type -> crocell.v1.RoutingProfile
+	36, // 64: crocell.v1.Core.ListProcesses:output_type -> crocell.v1.ListProcessesResponse
+	43, // 65: crocell.v1.Core.GetGeoInfo:output_type -> crocell.v1.GeoInfo
+	43, // 66: crocell.v1.Core.UpdateGeo:output_type -> crocell.v1.GeoInfo
+	38, // 67: crocell.v1.Core.GetLogs:output_type -> crocell.v1.Logs
+	40, // 68: crocell.v1.Core.Shutdown:output_type -> crocell.v1.ShutdownResponse
+	49, // [49:69] is the sub-list for method output_type
+	29, // [29:49] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_crocell_v1_core_proto_init() }
@@ -3005,7 +3099,7 @@ func file_crocell_v1_core_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_crocell_v1_core_proto_rawDesc), len(file_crocell_v1_core_proto_rawDesc)),
-			NumEnums:      4,
+			NumEnums:      5,
 			NumMessages:   39,
 			NumExtensions: 0,
 			NumServices:   1,

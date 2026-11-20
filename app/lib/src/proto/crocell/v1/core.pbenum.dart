@@ -47,6 +47,40 @@ class ConnectionState extends $pb.ProtobufEnum {
   const ConnectionState._(super.value, super.name);
 }
 
+class Verdict extends $pb.ProtobufEnum {
+  static const Verdict VERDICT_UNSPECIFIED =
+      Verdict._(0, _omitEnumNames ? '' : 'VERDICT_UNSPECIFIED');
+  static const Verdict VERDICT_NO_INTERNET =
+      Verdict._(1, _omitEnumNames ? '' : 'VERDICT_NO_INTERNET');
+  static const Verdict VERDICT_WHITELIST =
+      Verdict._(2, _omitEnumNames ? '' : 'VERDICT_WHITELIST');
+  static const Verdict VERDICT_CUT =
+      Verdict._(3, _omitEnumNames ? '' : 'VERDICT_CUT');
+  static const Verdict VERDICT_NODE_BLOCKED =
+      Verdict._(4, _omitEnumNames ? '' : 'VERDICT_NODE_BLOCKED');
+  static const Verdict VERDICT_NODE_DOWN =
+      Verdict._(5, _omitEnumNames ? '' : 'VERDICT_NODE_DOWN');
+  static const Verdict VERDICT_INTERCEPTED =
+      Verdict._(6, _omitEnumNames ? '' : 'VERDICT_INTERCEPTED');
+
+  static const $core.List<Verdict> values = <Verdict>[
+    VERDICT_UNSPECIFIED,
+    VERDICT_NO_INTERNET,
+    VERDICT_WHITELIST,
+    VERDICT_CUT,
+    VERDICT_NODE_BLOCKED,
+    VERDICT_NODE_DOWN,
+    VERDICT_INTERCEPTED,
+  ];
+
+  static final $core.List<Verdict?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 6);
+  static Verdict? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const Verdict._(super.value, super.name);
+}
+
 class TunnelMode extends $pb.ProtobufEnum {
   static const TunnelMode TUNNEL_MODE_UNSPECIFIED =
       TunnelMode._(0, _omitEnumNames ? '' : 'TUNNEL_MODE_UNSPECIFIED');

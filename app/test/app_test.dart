@@ -188,6 +188,29 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('phone: a broken connection says why, once, with one way out', (tester) async {
+    final status = connectedTo('n1')
+      ..liveCheck = ProbeResult(error: 'probe: timeout', verdict: Verdict.VERDICT_NODE_BLOCKED, otherTools: ['zapret']);
+    await pumpApp(tester, FakeCore(subs: [sampleSubscription()], status: status), size: const Size(360, 1200));
+
+    expect(find.text('Подключено, но не работает'), findsOneWidget);
+    expect(find.text('Провайдер не пускает к этой ноде. Попробуйте другую.'), findsOneWidget);
+    expect(find.textContaining('Ещё работает zapret'), findsOneWidget);
+
+    await tester.tap(find.text('Выбрать другую ноду'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Изменить подписку'), findsOneWidget, reason: 'the node list opened');
+    await unmount(tester);
+  });
+
+  testWidgets('no internet at all: no point in another node', (tester) async {
+    final status = connectedTo('n1')..liveCheck = ProbeResult(error: 'probe: timeout', verdict: Verdict.VERDICT_NO_INTERNET);
+    await pumpApp(tester, FakeCore(subs: [sampleSubscription()], status: status), size: const Size(360, 1200));
+    expect(find.textContaining('Нет интернета'), findsOneWidget);
+    expect(find.text('Выбрать другую ноду'), findsNothing);
+    await unmount(tester);
+  });
+
   testWidgets('mode picker switches to the whole system', (tester) async {
     final core = await pumpApp(tester, FakeCore(subs: [sampleSubscription()], status: connectedTo('n1')));
     await tester.tap(find.text('Туннель'));

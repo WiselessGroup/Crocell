@@ -22,8 +22,10 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	pb "git.wiseless.net/fureunoir/crocell/core/api/crocellv1"
+	"git.wiseless.net/fureunoir/crocell/core/diagnose"
 	"git.wiseless.net/fureunoir/crocell/core/engine"
 	"git.wiseless.net/fureunoir/crocell/core/probe"
+	"git.wiseless.net/fureunoir/crocell/core/procs"
 )
 
 // fakeEngine records what the service asked for instead of running mihomo.
@@ -88,6 +90,9 @@ type harness struct {
 	checkMu  sync.Mutex
 	checkErr error // what the live check reports next
 
+	diagMu    sync.Mutex
+	diagNodes []string // what each diagnosis was asked to reach
+
 	webMu  sync.Mutex
 	onlyUA string // the provider serves only this User-Agent when set
 
@@ -139,6 +144,16 @@ func newHarness(t *testing.T, opts ...func(*Config)) *harness {
 				return probe.Result{Err: h.checkErr}
 			}
 			return probe.Result{ExitIP: "203.0.113.8", ExitCountry: "DE", ExitColo: "FRA", Latency: 90 * time.Millisecond}
+		},
+		// Never the real one either: it goes straight to the network.
+		Diagnose: func(_ context.Context, node, _ string) diagnose.Report {
+			h.diagMu.Lock()
+			defer h.diagMu.Unlock()
+			h.diagNodes = append(h.diagNodes, node)
+			return diagnose.Report{Verdict: diagnose.NodeBlocked}
+		},
+		Programs: func() ([]procs.Process, error) {
+			return []procs.Process{{Name: "bash"}, {Name: "sing-box"}}, nil
 		},
 		ReconnectDelay: 20 * time.Millisecond,
 	}
@@ -485,6 +500,16 @@ func TestBrokenConnectionIsReported(t *testing.T) {
 	st := waitStatus(t, h, func(s *pb.Status) bool { return s.LiveCheck != nil && !s.Checking })
 	if st.State != pb.ConnectionState_CONNECTION_STATE_CONNECTED || st.LiveCheck.Error == "" {
 		t.Errorf("want connected with a failed check, got %v / %v", st.State, st.LiveCheck)
+	}
+	// Reported along with why, from one look past the tunnel at the node.
+	if st.LiveCheck.Verdict != pb.Verdict_VERDICT_NODE_BLOCKED || len(st.LiveCheck.OtherTools) != 1 || st.LiveCheck.OtherTools[0] != "sing-box" {
+		t.Errorf("verdict %v, alongside %v", st.LiveCheck.Verdict, st.LiveCheck.OtherTools)
+	}
+	h.diagMu.Lock()
+	nodes := h.diagNodes
+	h.diagMu.Unlock()
+	if len(nodes) != 1 || !strings.Contains(nodes[0], ":") {
+		t.Errorf("diagnosed %v, want the node's host:port once", nodes)
 	}
 
 	// Disconnecting forgets the check.

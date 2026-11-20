@@ -91,6 +91,40 @@ Quality quality(ProbeResult? r) {
   return r.latencyMs <= 600 ? Quality.good : Quality.slow;
 }
 
+/// Why the live check failed, in one phrase that ends with what to do.
+/// Null while it works. The core works out the reason; this only words it.
+String? whyBroken(ProbeResult r) {
+  if (r.error.isEmpty && !r.cut) return null;
+  if (r.cut) return _cutText;
+  return switch (r.verdict) {
+    Verdict.VERDICT_NO_INTERNET => tr('Нет интернета. Проверьте Wi-Fi или мобильную сеть.', 'No internet. Check Wi-Fi or mobile data.'),
+    Verdict.VERDICT_WHITELIST => tr(
+        'Мобильный интернет в режиме белого списка: открываются только разрешённые сайты. Помогут ноды с пометкой БС.',
+        'Mobile internet is in whitelist mode: only allowed sites open. Nodes marked БС or WL can help.'),
+    Verdict.VERDICT_CUT => _cutText,
+    Verdict.VERDICT_NODE_BLOCKED =>
+      tr('Провайдер не пускает к этой ноде. Попробуйте другую.', "Your provider doesn't let you reach this node. Try another one."),
+    Verdict.VERDICT_NODE_DOWN =>
+      tr('Сеть в порядке, но нода не отвечает. Попробуйте другую.', 'The network is fine, but the node is not responding. Try another one.'),
+    Verdict.VERDICT_INTERCEPTED => tr('Провайдер подменяет защищённые соединения. Попробуйте другую ноду или другую сеть.',
+        'Your provider tampers with secure connections. Try another node or another network.'),
+    _ => tr('Интернет через VPN не идёт. Попробуйте другую ноду.', "The internet isn't getting through the VPN. Try another node."),
+  };
+}
+
+String get _cutText =>
+    tr('Провайдер обрывает соединения с этой нодой. Попробуйте другую.', 'Your provider cuts connections to this node. Try another one.');
+
+/// Whether another node is the way out. Not when the whole network is down.
+bool anotherNodeHelps(ProbeResult r) => whyBroken(r) != null && r.verdict != Verdict.VERDICT_NO_INTERNET;
+
+/// Another VPN or DPI bypasser running alongside, said once, after a failure.
+String? alongside(ProbeResult r) {
+  if (r.otherTools.isEmpty) return null;
+  final names = r.otherTools.join(', ');
+  return tr('Ещё работает $names. Два VPN сразу часто мешают друг другу.', "$names is running too. Two VPNs at once often get in each other's way.");
+}
+
 String qualityLabel(Quality q) => switch (q) {
       Quality.good => tr('работает', 'working'),
       Quality.slow => tr('медленно', 'slow'),

@@ -86,7 +86,7 @@ class ConnectPanel extends ConsumerWidget {
                     label: subs.isEmpty ? tr('Добавить подписку', 'Add subscription') : null,
                   ),
                   const SizedBox(height: 20),
-                  _StatusText(status: status, hasNodes: subs.isNotEmpty),
+                  _StatusText(status: status, hasNodes: subs.isNotEmpty, onOpenNodes: onOpenNodes),
                   // The figure is the signature, but a figure alone does not
                   // say "press me". A plain button next to the state does.
                   if (subs.isNotEmpty && status != null) ...[
@@ -117,10 +117,11 @@ class ConnectPanel extends ConsumerWidget {
 }
 
 class _StatusText extends StatelessWidget {
-  const _StatusText({required this.status, required this.hasNodes});
+  const _StatusText({required this.status, required this.hasNodes, this.onOpenNodes});
 
   final Status? status;
   final bool hasNodes;
+  final VoidCallback? onOpenNodes;
 
   @override
   Widget build(BuildContext context) {
@@ -175,12 +176,12 @@ class _StatusText extends StatelessWidget {
       final checkLine = switch (check) {
         _ when check == null && s.checking => tr('Проверяю, работает ли интернет…', 'Checking if the internet works…'),
         null => null,
-        _ when check.cut => tr('Провайдер обрывает соединения с этой нодой. Попробуйте другую.', 'Your provider cuts connections to this node. Try another one.'),
-        _ when check.error.isNotEmpty => tr('Интернет через VPN не идёт. Попробуйте другую ноду.', "The internet isn't getting through the VPN. Try another node."),
+        _ when whyBroken(check) != null => whyBroken(check),
         _ => tr('Выход: ${exitPlace(check)}', 'Exit: ${exitPlace(check)}'),
       };
       if (checkLine != null) {
-        final broken = check != null && check.error.isNotEmpty;
+        final broken = check != null && whyBroken(check) != null;
+        final others = check == null ? null : alongside(check);
         detail = Column(children: [
           detail,
           const SizedBox(height: 4),
@@ -189,6 +190,14 @@ class _StatusText extends StatelessWidget {
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(color: broken ? theme.colorScheme.error : t.muted),
           ),
+          if (broken && others != null) ...[
+            const SizedBox(height: 4),
+            Text(others, textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
+          ],
+          // One action, on the phone where the list is a screen away. The
+          // wide layout has the list right beside.
+          if (broken && onOpenNodes != null && anotherNodeHelps(check))
+            TextButton(onPressed: onOpenNodes, child: Text(tr('Выбрать другую ноду', 'Pick another node'))),
         ]);
       }
     } else if (s != null && s.isFailed && s.error.isNotEmpty) {

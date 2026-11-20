@@ -225,6 +225,22 @@ message ProbeResult {
   // With error set: the node answers, but the provider breaks off anything
   // bigger than a few kilobytes on the way to it.
   bool cut = 10;
+  // Why, in one word, for the live check. Set after it failed twice in a
+  // row, when the core looked past the tunnel. The client only translates it.
+  Verdict verdict = 11;
+  // VPNs and DPI bypassers running alongside, by process name. Only after a
+  // failure, only on desktop.
+  repeated string other_tools = 12;
+}
+
+enum Verdict {
+  VERDICT_UNSPECIFIED = 0;
+  VERDICT_NO_INTERNET = 1;  // nothing opens, the tunnel aside
+  VERDICT_WHITELIST = 2;    // Russian sites open, foreign ones do not
+  VERDICT_CUT = 3;          // the node answers, bigger replies break off
+  VERDICT_NODE_BLOCKED = 4; // the network works, the node's server is out of reach
+  VERDICT_NODE_DOWN = 5;    // the node is reachable and stays silent
+  VERDICT_INTERCEPTED = 6;  // foreign sites come with a substituted certificate
 }
 
 // ---------- Settings ----------

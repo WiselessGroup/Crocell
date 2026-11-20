@@ -157,12 +157,9 @@ final notificationsProvider = Provider<Notifications>((ref) {
   if (isBroken && !wasBroken) {
     return (
       title: tr('VPN подключён, но интернет не идёт', "VPN is connected, but there's no internet"),
-      body: next.liveCheck.cut
-          ? (nodeName.isEmpty
-              ? tr('Провайдер обрывает соединения с этой нодой. Выберите другую в списке.',
-                  'Your provider cuts connections to this node. Pick another one from the list.')
-              : tr('Провайдер обрывает соединения с нодой «$nodeName». Выберите другую в списке.',
-                  'Your provider cuts connections to node "$nodeName". Pick another one from the list.'))
+      // The core's reason when it found one; otherwise name the node.
+      body: next.liveCheck.cut || next.liveCheck.verdict != Verdict.VERDICT_UNSPECIFIED
+          ? [whyBroken(next.liveCheck)!, ?alongside(next.liveCheck)].join(' ')
           : tr('$node не отвечает. Выберите другую в списке.', '$node is not responding. Pick another one from the list.'),
     );
   }

@@ -35,6 +35,27 @@ final $typed_data.Uint8List connectionStateDescriptor = $convert.base64Decode(
     'RUNUSU5HEAISHgoaQ09OTkVDVElPTl9TVEFURV9DT05ORUNURUQQAxIiCh5DT05ORUNUSU9OX1'
     'NUQVRFX0RJU0NPTk5FQ1RJTkcQBBIbChdDT05ORUNUSU9OX1NUQVRFX0ZBSUxFRBAF');
 
+@$core.Deprecated('Use verdictDescriptor instead')
+const Verdict$json = {
+  '1': 'Verdict',
+  '2': [
+    {'1': 'VERDICT_UNSPECIFIED', '2': 0},
+    {'1': 'VERDICT_NO_INTERNET', '2': 1},
+    {'1': 'VERDICT_WHITELIST', '2': 2},
+    {'1': 'VERDICT_CUT', '2': 3},
+    {'1': 'VERDICT_NODE_BLOCKED', '2': 4},
+    {'1': 'VERDICT_NODE_DOWN', '2': 5},
+    {'1': 'VERDICT_INTERCEPTED', '2': 6},
+  ],
+};
+
+/// Descriptor for `Verdict`. Decode as a `google.protobuf.EnumDescriptorProto`.
+final $typed_data.Uint8List verdictDescriptor = $convert.base64Decode(
+    'CgdWZXJkaWN0EhcKE1ZFUkRJQ1RfVU5TUEVDSUZJRUQQABIXChNWRVJESUNUX05PX0lOVEVSTk'
+    'VUEAESFQoRVkVSRElDVF9XSElURUxJU1QQAhIPCgtWRVJESUNUX0NVVBADEhgKFFZFUkRJQ1Rf'
+    'Tk9ERV9CTE9DS0VEEAQSFQoRVkVSRElDVF9OT0RFX0RPV04QBRIXChNWRVJESUNUX0lOVEVSQ0'
+    'VQVEVEEAY=');
+
 @$core.Deprecated('Use tunnelModeDescriptor instead')
 const TunnelMode$json = {
   '1': 'TunnelMode',
@@ -538,6 +559,15 @@ const ProbeResult$json = {
       '10': 'probedAt'
     },
     {'1': 'cut', '3': 10, '4': 1, '5': 8, '10': 'cut'},
+    {
+      '1': 'verdict',
+      '3': 11,
+      '4': 1,
+      '5': 14,
+      '6': '.crocell.v1.Verdict',
+      '10': 'verdict'
+    },
+    {'1': 'other_tools', '3': 12, '4': 3, '5': 9, '10': 'otherTools'},
   ],
 };
 
@@ -548,7 +578,9 @@ final $typed_data.Uint8List probeResultDescriptor = $convert.base64Decode(
     'dF9pcBgEIAEoCVIGZXhpdElwEiEKDGV4aXRfY291bnRyeRgFIAEoCVILZXhpdENvdW50cnkSGw'
     'oJZXhpdF9jb2xvGAYgASgJUghleGl0Q29sbxIdCgpsYXRlbmN5X21zGAcgASgNUglsYXRlbmN5'
     'TXMSFAoFZXJyb3IYCCABKAlSBWVycm9yEjcKCXByb2JlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm'
-    '90b2J1Zi5UaW1lc3RhbXBSCHByb2JlZEF0EhAKA2N1dBgKIAEoCFIDY3V0');
+    '90b2J1Zi5UaW1lc3RhbXBSCHByb2JlZEF0EhAKA2N1dBgKIAEoCFIDY3V0Ei0KB3ZlcmRpY3QY'
+    'CyABKA4yEy5jcm9jZWxsLnYxLlZlcmRpY3RSB3ZlcmRpY3QSHwoLb3RoZXJfdG9vbHMYDCADKA'
+    'lSCm90aGVyVG9vbHM=');
 
 @$core.Deprecated('Use routeRuleDescriptor instead')
 const RouteRule$json = {
