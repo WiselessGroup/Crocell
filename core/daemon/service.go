@@ -1235,6 +1235,7 @@ func (s *Service) subToProtoLocked(sub *storedSub) *pb.Subscription {
 		out.Expire = timestamppb.New(sub.Info.Expire)
 	}
 	out.Routing = routingToProto(sub.Info.Routing)
+	ru := ruMatcher(s.geo.Prefixes("ru"))
 	for _, n := range sub.Nodes {
 		typ, _ := n.Proxy["type"].(string)
 		if n.Proxy["amnezia-wg-option"] != nil {
@@ -1250,6 +1251,7 @@ func (s *Service) subToProtoLocked(sub *storedSub) *pb.Subscription {
 		out.Nodes = append(out.Nodes, &pb.Node{
 			Id: n.ID, Name: n.Name, Type: typ, Network: network, Server: server, Port: port,
 			LastProbe: s.probes[n.ID],
+			Whitelist: whitelistHint(n.Name, n.Proxy, s.probes[n.ID].GetEntryIps(), ru),
 		})
 	}
 	return out

@@ -35,6 +35,23 @@ final $typed_data.Uint8List connectionStateDescriptor = $convert.base64Decode(
     'RUNUSU5HEAISHgoaQ09OTkVDVElPTl9TVEFURV9DT05ORUNURUQQAxIiCh5DT05ORUNUSU9OX1'
     'NUQVRFX0RJU0NPTk5FQ1RJTkcQBBIbChdDT05ORUNUSU9OX1NUQVRFX0ZBSUxFRBAF');
 
+@$core.Deprecated('Use whitelistHintDescriptor instead')
+const WhitelistHint$json = {
+  '1': 'WhitelistHint',
+  '2': [
+    {'1': 'WHITELIST_HINT_UNSPECIFIED', '2': 0},
+    {'1': 'WHITELIST_HINT_WEAK', '2': 1},
+    {'1': 'WHITELIST_HINT_LIKELY', '2': 2},
+    {'1': 'WHITELIST_HINT_MARKED', '2': 3},
+  ],
+};
+
+/// Descriptor for `WhitelistHint`. Decode as a `google.protobuf.EnumDescriptorProto`.
+final $typed_data.Uint8List whitelistHintDescriptor = $convert.base64Decode(
+    'Cg1XaGl0ZWxpc3RIaW50Eh4KGldISVRFTElTVF9ISU5UX1VOU1BFQ0lGSUVEEAASFwoTV0hJVE'
+    'VMSVNUX0hJTlRfV0VBSxABEhkKFVdISVRFTElTVF9ISU5UX0xJS0VMWRACEhkKFVdISVRFTElT'
+    'VF9ISU5UX01BUktFRBAD');
+
 @$core.Deprecated('Use verdictDescriptor instead')
 const Verdict$json = {
   '1': 'Verdict',
@@ -373,6 +390,14 @@ const Node$json = {
       '6': '.crocell.v1.ProbeResult',
       '10': 'lastProbe'
     },
+    {
+      '1': 'whitelist',
+      '3': 8,
+      '4': 1,
+      '5': 14,
+      '6': '.crocell.v1.WhitelistHint',
+      '10': 'whitelist'
+    },
   ],
 };
 
@@ -381,7 +406,8 @@ final $typed_data.Uint8List nodeDescriptor = $convert.base64Decode(
     'CgROb2RlEg4KAmlkGAEgASgJUgJpZBISCgRuYW1lGAIgASgJUgRuYW1lEhIKBHR5cGUYAyABKA'
     'lSBHR5cGUSGAoHbmV0d29yaxgEIAEoCVIHbmV0d29yaxIWCgZzZXJ2ZXIYBSABKAlSBnNlcnZl'
     'chISCgRwb3J0GAYgASgNUgRwb3J0EjYKCmxhc3RfcHJvYmUYByABKAsyFy5jcm9jZWxsLnYxLl'
-    'Byb2JlUmVzdWx0UglsYXN0UHJvYmU=');
+    'Byb2JlUmVzdWx0UglsYXN0UHJvYmUSNwoJd2hpdGVsaXN0GAggASgOMhkuY3JvY2VsbC52MS5X'
+    'aGl0ZWxpc3RIaW50Ugl3aGl0ZWxpc3Q=');
 
 @$core.Deprecated('Use listSubscriptionsRequestDescriptor instead')
 const ListSubscriptionsRequest$json = {

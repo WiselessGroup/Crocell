@@ -169,6 +169,16 @@ message Node {
   string server = 5;
   uint32 port = 6;
   ProbeResult last_probe = 7;
+  // How likely the node works on a mobile network in whitelist mode. The
+  // client puts the likeliest first once the live check finds such a network.
+  WhitelistHint whitelist = 8;
+}
+
+enum WhitelistHint {
+  WHITELIST_HINT_UNSPECIFIED = 0; // no sign either way
+  WHITELIST_HINT_WEAK = 1;   // an allowed SNI or an entry in Russia, one of them
+  WHITELIST_HINT_LIKELY = 2; // both
+  WHITELIST_HINT_MARKED = 3; // the provider says so in the name: БС, WL, whitelist
 }
 
 message ListSubscriptionsRequest {}

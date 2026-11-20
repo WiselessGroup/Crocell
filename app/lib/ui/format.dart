@@ -125,6 +125,38 @@ String? alongside(ProbeResult r) {
   return tr('Ещё работает $names. Два VPN сразу часто мешают друг другу.', "$names is running too. Two VPNs at once often get in each other's way.");
 }
 
+/// The live check found a mobile network in whitelist mode.
+bool onWhitelistNetwork(Status? s) =>
+    s != null &&
+    s.state == ConnectionState.CONNECTION_STATE_CONNECTED &&
+    s.hasLiveCheck() &&
+    s.liveCheck.verdict == Verdict.VERDICT_WHITELIST;
+
+/// Nodes likeliest to get through a whitelist first, the rest in the
+/// provider's order.
+List<Node> whitelistFirst(List<Node> nodes) {
+  final indexed = [for (var i = 0; i < nodes.length; i++) (i, nodes[i])];
+  indexed.sort((a, b) {
+    final byHint = b.$2.whitelist.value.compareTo(a.$2.whitelist.value);
+    return byHint != 0 ? byHint : a.$1.compareTo(b.$1);
+  });
+  return [for (final (_, n) in indexed) n];
+}
+
+/// The node to try on a whitelist network: marked by the provider, or at
+/// least likely, other than the one in use. The current subscription first.
+({Subscription sub, Node node})? bestWhitelistNode(List<Subscription> subs, Status s) {
+  ({Subscription sub, Node node})? best;
+  for (final sub in [...subs.where((x) => x.id == s.subscriptionId), ...subs.where((x) => x.id != s.subscriptionId)]) {
+    for (final n in sub.nodes) {
+      if (n.id == s.nodeId && sub.id == s.subscriptionId) continue;
+      if (n.whitelist.value < WhitelistHint.WHITELIST_HINT_LIKELY.value) continue;
+      if (best == null || n.whitelist.value > best.node.whitelist.value) best = (sub: sub, node: n);
+    }
+  }
+  return best;
+}
+
 String qualityLabel(Quality q) => switch (q) {
       Quality.good => tr('работает', 'working'),
       Quality.slow => tr('медленно', 'slow'),

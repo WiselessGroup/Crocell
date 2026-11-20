@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"slices"
@@ -45,8 +46,9 @@ type Manager struct {
 	Dir    string
 	Client *http.Client
 
-	mu    sync.Mutex
-	cache map[string][]string // file path -> categories, keyed with mtime
+	mu       sync.Mutex
+	cache    map[string][]string       // file path -> categories, keyed with mtime
+	prefixes map[string][]netip.Prefix // file version and country -> networks
 }
 
 func (m *Manager) client() *http.Client {

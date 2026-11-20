@@ -88,13 +88,16 @@ class _NodesViewState extends ConsumerState<NodesView> {
           ),
         ];
 
+        // On a whitelist network the nodes that may get through come first.
+        final whitelist = onWhitelistNetwork(status);
         for (final sub in value) {
-          final nodes = [
+          var nodes = [
             for (final n in sub.nodes)
               // The node in use stays, working or not: hiding it would lose
               // what the button connects to.
               if (nodeMatches(n, query) && !(hideDown && nodeUnavailable(n) && !isSelected(sub, n))) n,
           ];
+          if (whitelist) nodes = whitelistFirst(nodes);
           if ((query.isNotEmpty || hideDown) && nodes.isEmpty) continue;
           anyMatch = true;
           // Searching unfolds everything: hidden matches help nobody.
@@ -405,6 +408,18 @@ class _NodeRow extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 12),
+              // A marked node says so in its name; a likely one gets a hint.
+              if (node.whitelist == WhitelistHint.WHITELIST_HINT_LIKELY)
+                Tooltip(
+                  message: tr(
+                    'Похоже, работает при белых списках: адрес для маскировки из разрешённых и вход в России',
+                    'Likely works on whitelist networks: an allowed cover name and an entry in Russia',
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(tr('БС?', 'WL?'), style: theme.textTheme.labelSmall?.copyWith(color: t.brandText)),
+                  ),
+                ),
               Text(nodeKind(node), style: theme.textTheme.labelSmall?.copyWith(color: t.muted)),
               SizedBox(
                 width: 36,

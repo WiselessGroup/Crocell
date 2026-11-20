@@ -203,6 +203,23 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('whitelist network: whitelist nodes go first, one tap tries the best', (tester) async {
+    final sub = sampleSubscription();
+    sub.nodes[2].whitelist = WhitelistHint.WHITELIST_HINT_LIKELY;
+    final status = connectedTo('n1')..liveCheck = ProbeResult(error: 'probe: timeout', verdict: Verdict.VERDICT_WHITELIST);
+    final core = await pumpApp(tester, FakeCore(subs: [sub], status: status), size: const Size(1200, 900));
+
+    final hy = tester.getTopLeft(find.text('autoWISELESS-2 (HYSTERIA)')).dy;
+    final nl = tester.getTopLeft(find.text('nlWISELESS')).dy;
+    expect(hy, lessThan(nl), reason: 'the likely node moved up');
+    expect(find.text('БС?'), findsOneWidget);
+
+    await tester.tap(find.textContaining('Попробовать ноду для белых списков'));
+    await tester.pumpAndSettle();
+    expect(core.calls.last, 'select n3');
+    await unmount(tester);
+  });
+
   testWidgets('no internet at all: no point in another node', (tester) async {
     final status = connectedTo('n1')..liveCheck = ProbeResult(error: 'probe: timeout', verdict: Verdict.VERDICT_NO_INTERNET);
     await pumpApp(tester, FakeCore(subs: [sampleSubscription()], status: status), size: const Size(360, 1200));

@@ -47,6 +47,31 @@ class ConnectionState extends $pb.ProtobufEnum {
   const ConnectionState._(super.value, super.name);
 }
 
+class WhitelistHint extends $pb.ProtobufEnum {
+  static const WhitelistHint WHITELIST_HINT_UNSPECIFIED =
+      WhitelistHint._(0, _omitEnumNames ? '' : 'WHITELIST_HINT_UNSPECIFIED');
+  static const WhitelistHint WHITELIST_HINT_WEAK =
+      WhitelistHint._(1, _omitEnumNames ? '' : 'WHITELIST_HINT_WEAK');
+  static const WhitelistHint WHITELIST_HINT_LIKELY =
+      WhitelistHint._(2, _omitEnumNames ? '' : 'WHITELIST_HINT_LIKELY');
+  static const WhitelistHint WHITELIST_HINT_MARKED =
+      WhitelistHint._(3, _omitEnumNames ? '' : 'WHITELIST_HINT_MARKED');
+
+  static const $core.List<WhitelistHint> values = <WhitelistHint>[
+    WHITELIST_HINT_UNSPECIFIED,
+    WHITELIST_HINT_WEAK,
+    WHITELIST_HINT_LIKELY,
+    WHITELIST_HINT_MARKED,
+  ];
+
+  static final $core.List<WhitelistHint?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 3);
+  static WhitelistHint? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const WhitelistHint._(super.value, super.name);
+}
+
 class Verdict extends $pb.ProtobufEnum {
   static const Verdict VERDICT_UNSPECIFIED =
       Verdict._(0, _omitEnumNames ? '' : 'VERDICT_UNSPECIFIED');

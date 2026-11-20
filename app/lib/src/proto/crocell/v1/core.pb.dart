@@ -973,6 +973,7 @@ class Node extends $pb.GeneratedMessage {
     $core.String? server,
     $core.int? port,
     ProbeResult? lastProbe,
+    WhitelistHint? whitelist,
   }) {
     final result = Node._();
     if (id != null) result.id = id;
@@ -982,6 +983,7 @@ class Node extends $pb.GeneratedMessage {
     if (server != null) result.server = server;
     if (port != null) result.port = port;
     if (lastProbe != null) result.lastProbe = lastProbe;
+    if (whitelist != null) result.whitelist = whitelist;
     return result;
   }
 
@@ -1006,6 +1008,8 @@ class Node extends $pb.GeneratedMessage {
     ..aI(6, _omitFieldNames ? '' : 'port', fieldType: $pb.PbFieldType.OU3)
     ..aOM<ProbeResult>(7, _omitFieldNames ? '' : 'lastProbe',
         subBuilder: ProbeResult.$_createMessage)
+    ..aE<WhitelistHint>(8, _omitFieldNames ? '' : 'whitelist',
+        enumValues: WhitelistHint.values)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1092,6 +1096,17 @@ class Node extends $pb.GeneratedMessage {
   void clearLastProbe() => $_clearField(7);
   @$pb.TagNumber(7)
   ProbeResult ensureLastProbe() => $_ensure(6);
+
+  /// How likely the node works on a mobile network in whitelist mode. The
+  /// client puts the likeliest first once the live check finds such a network.
+  @$pb.TagNumber(8)
+  WhitelistHint get whitelist => $_getN(7);
+  @$pb.TagNumber(8)
+  set whitelist(WhitelistHint value) => $_setField(8, value);
+  @$pb.TagNumber(8)
+  $core.bool hasWhitelist() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearWhitelist() => $_clearField(8);
 }
 
 class ListSubscriptionsRequest extends $pb.GeneratedMessage {

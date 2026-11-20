@@ -86,7 +86,7 @@ class ConnectPanel extends ConsumerWidget {
                     label: subs.isEmpty ? tr('Добавить подписку', 'Add subscription') : null,
                   ),
                   const SizedBox(height: 20),
-                  _StatusText(status: status, hasNodes: subs.isNotEmpty, onOpenNodes: onOpenNodes),
+                  _StatusText(status: status, subs: subs, onOpenNodes: onOpenNodes),
                   // The figure is the signature, but a figure alone does not
                   // say "press me". A plain button next to the state does.
                   if (subs.isNotEmpty && status != null) ...[
@@ -117,11 +117,13 @@ class ConnectPanel extends ConsumerWidget {
 }
 
 class _StatusText extends StatelessWidget {
-  const _StatusText({required this.status, required this.hasNodes, this.onOpenNodes});
+  const _StatusText({required this.status, required this.subs, this.onOpenNodes});
 
   final Status? status;
-  final bool hasNodes;
+  final List<Subscription> subs;
   final VoidCallback? onOpenNodes;
+
+  bool get hasNodes => subs.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -182,6 +184,7 @@ class _StatusText extends StatelessWidget {
       if (checkLine != null) {
         final broken = check != null && whyBroken(check) != null;
         final others = check == null ? null : alongside(check);
+        final candidate = onWhitelistNetwork(s) ? bestWhitelistNode(subs, s) : null;
         detail = Column(children: [
           detail,
           const SizedBox(height: 4),
@@ -194,9 +197,12 @@ class _StatusText extends StatelessWidget {
             const SizedBox(height: 4),
             Text(others, textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: t.muted)),
           ],
-          // One action, on the phone where the list is a screen away. The
-          // wide layout has the list right beside.
-          if (broken && onOpenNodes != null && anotherNodeHelps(check))
+          // One action. On a whitelist network it tries the node likeliest
+          // to get through; otherwise it opens the list on the phone, where
+          // it is a screen away. The wide layout has the list right beside.
+          if (broken && candidate != null)
+            _TryNodeButton(sub: candidate.sub, node: candidate.node)
+          else if (broken && onOpenNodes != null && anotherNodeHelps(check))
             TextButton(onPressed: onOpenNodes, child: Text(tr('Выбрать другую ноду', 'Pick another node'))),
         ]);
       }
@@ -214,6 +220,28 @@ class _StatusText extends StatelessWidget {
           if (detail != null) ...[const SizedBox(height: 6), detail],
         ],
       ),
+    );
+  }
+}
+
+class _TryNodeButton extends ConsumerWidget {
+  const _TryNodeButton({required this.sub, required this.node});
+
+  final Subscription sub;
+  final Node node;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = displayName(node.name);
+    return TextButton(
+      onPressed: () async {
+        try {
+          await ref.read(connectionProvider).select(sub.id, node.id);
+        } catch (e) {
+          if (context.mounted) showError(context, e);
+        }
+      },
+      child: Text(tr('Попробовать ноду для белых списков: $name', 'Try a whitelist node: $name'), textAlign: TextAlign.center),
     );
   }
 }
