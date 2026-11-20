@@ -121,7 +121,7 @@ func newHarness(t *testing.T, opts ...func(*Config)) *harness {
 		},
 		// Never the real check here: it would dial 127.0.0.1:7890, where
 		// the developer's own VPN client may well be listening.
-		Check: func(ctx context.Context, mode pb.TunnelMode, port int) probe.Result {
+		Check: func(ctx context.Context, mode pb.TunnelMode, port int, _ bool) probe.Result {
 			h.checkMu.Lock()
 			defer h.checkMu.Unlock()
 			if h.checkErr != nil {
@@ -357,7 +357,7 @@ func TestStatePersists(t *testing.T) {
 	h := newHarness(t)
 	sub := h.add(t)
 
-	svc, err := New(Config{StateDir: h.dir, Engine: &fakeEngine{}, Check: func(context.Context, pb.TunnelMode, int) probe.Result {
+	svc, err := New(Config{StateDir: h.dir, Engine: &fakeEngine{}, Check: func(context.Context, pb.TunnelMode, int, bool) probe.Result {
 		return probe.Result{}
 	}})
 	if err != nil {
@@ -507,7 +507,7 @@ func TestOneFailedCheckIsLookedAtAgain(t *testing.T) {
 	calls := 0
 	h := newHarness(t, func(c *Config) {
 		c.CheckInterval = time.Hour // only the quick second look can run
-		c.Check = func(ctx context.Context, mode pb.TunnelMode, port int) probe.Result {
+		c.Check = func(ctx context.Context, mode pb.TunnelMode, port int, _ bool) probe.Result {
 			mu.Lock()
 			defer mu.Unlock()
 			calls++

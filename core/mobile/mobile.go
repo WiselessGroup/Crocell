@@ -77,7 +77,9 @@ func Start(dataDir, socket, pkg string, key []byte, p Platform) error {
 		Programs: func() ([]procs.Process, error) { return apps(p) },
 		// The app is outside its own tunnel, so a plain request from here
 		// would not go through the VPN. The mixed port does.
-		Check: func(ctx context.Context, _ pb.TunnelMode, port int) probe.Result { return probe.ViaProxy(ctx, port) },
+		Check: func(ctx context.Context, _ pb.TunnelMode, port int, full bool) probe.Result {
+			return probe.ViaProxy(ctx, port, full)
+		},
 	})
 	if err != nil {
 		return err

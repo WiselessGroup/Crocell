@@ -518,6 +518,7 @@ const ProbeResult$json = {
       '6': '.google.protobuf.Timestamp',
       '10': 'probedAt'
     },
+    {'1': 'cut', '3': 10, '4': 1, '5': 8, '10': 'cut'},
   ],
 };
 
@@ -528,7 +529,7 @@ final $typed_data.Uint8List probeResultDescriptor = $convert.base64Decode(
     'dF9pcBgEIAEoCVIGZXhpdElwEiEKDGV4aXRfY291bnRyeRgFIAEoCVILZXhpdENvdW50cnkSGw'
     'oJZXhpdF9jb2xvGAYgASgJUghleGl0Q29sbxIdCgpsYXRlbmN5X21zGAcgASgNUglsYXRlbmN5'
     'TXMSFAoFZXJyb3IYCCABKAlSBWVycm9yEjcKCXByb2JlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm'
-    '90b2J1Zi5UaW1lc3RhbXBSCHByb2JlZEF0');
+    '90b2J1Zi5UaW1lc3RhbXBSCHByb2JlZEF0EhAKA2N1dBgKIAEoCFIDY3V0');
 
 @$core.Deprecated('Use routeRuleDescriptor instead')
 const RouteRule$json = {

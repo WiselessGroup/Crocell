@@ -34,7 +34,27 @@ var traceURLs = []string{
 }
 
 // Timeout caps one node's probe, entry lookup and both attempts together.
+// The bulk download after it has its own BulkTimeout.
 const Timeout = 10 * time.Second
+
+// bulkURL serves exactly the asked number of bytes from Cloudflare.
+//
+// Russian providers let the handshake with foreign hosting through and then
+// cut the connection somewhere around 16-20 KB. The trace answer is under
+// 1 KB, so a node cut like that passes it and still fails on the first
+// picture. 64 KB is well past the cut and still cheap on mobile data.
+// The idea and the threshold come from dpi-detector (its TCP 16-20 test).
+var bulkURL = "https://speed.cloudflare.com/__down?bytes=65536"
+
+const bulkSize = 65536
+
+// BulkTimeout caps the bulk download. A cut connection usually hangs
+// rather than resets, so this is mostly how long a cut takes to show.
+var BulkTimeout = 6 * time.Second
+
+// ErrCut means small requests through the node work and a bigger answer
+// breaks off: the provider is cutting connections to this node.
+var ErrCut = errors.New("the connection breaks off after the first kilobytes, the provider is likely cutting it")
 
 // attemptTimeout caps one trace URL. An exit that silently drops 1.1.1.1
 // would otherwise spend the whole budget on it, and a node that works
@@ -49,6 +69,10 @@ type Result struct {
 	ExitCountry string // ISO 3166-1 alpha-2, as Cloudflare sees it
 	ExitColo    string // nearest Cloudflare PoP to the exit, e.g. FRA
 	Latency     time.Duration
+
+	// Cut is set with Err = ErrCut: the node answers, but anything bigger
+	// than a few kilobytes does not get through.
+	Cut bool
 
 	Err error
 }
@@ -65,10 +89,10 @@ func Node(ctx context.Context, proxy map[string]any) Result {
 
 // Proxy probes an already parsed adapter. server is the node's address, used
 // only for the entry side.
-func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
+func Proxy(parent context.Context, p C.ProxyAdapter, server string) Result {
 	// One budget for the whole probe, both trace URLs included: a dead node
 	// must not hold a subscription of 150 nodes hostage for minutes.
-	ctx, cancel := context.WithTimeout(ctx, Timeout)
+	ctx, cancel := context.WithTimeout(parent, Timeout)
 	defer cancel()
 
 	// The entry lookup goes alongside the trace, not before it: a slow DNS
@@ -92,27 +116,66 @@ func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
 	}
 	trace(ctx, client, &res)
 	res.EntryIPs = <-entry
+	if res.Err == nil {
+		bulk(parent, client, &res)
+	}
 	return res
 }
 
 // System checks the path the whole machine uses: with TUN up, a plain
 // request from this process goes through the tunnel like anyone else's.
-func System(ctx context.Context) Result {
-	ctx, cancel := context.WithTimeout(ctx, Timeout)
-	defer cancel()
-	var res Result
-	trace(ctx, &http.Client{Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}}, &res)
-	return res
+// full adds the bulk download.
+func System(ctx context.Context, full bool) Result {
+	return live(ctx, &http.Client{Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}}, full)
 }
 
 // ViaProxy checks the path proxy-mode apps use: the local mixed port.
-func ViaProxy(ctx context.Context, port int) Result {
-	ctx, cancel := context.WithTimeout(ctx, Timeout)
+func ViaProxy(ctx context.Context, port int, full bool) Result {
+	proxy := &url.URL{Scheme: "http", Host: net.JoinHostPort("127.0.0.1", strconv.Itoa(port))}
+	return live(ctx, &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy), DisableKeepAlives: true}}, full)
+}
+
+func live(parent context.Context, client *http.Client, full bool) Result {
+	ctx, cancel := context.WithTimeout(parent, Timeout)
 	defer cancel()
 	var res Result
-	proxy := &url.URL{Scheme: "http", Host: net.JoinHostPort("127.0.0.1", strconv.Itoa(port))}
-	trace(ctx, &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy), DisableKeepAlives: true}}, &res)
+	trace(ctx, client, &res)
+	if full && res.Err == nil {
+		bulk(parent, client, &res)
+	}
 	return res
+}
+
+// bulk downloads bulkSize bytes and marks res as cut when they do not all
+// arrive. Called only after a trace went through, so the node itself works.
+func bulk(parent context.Context, client *http.Client, res *Result) {
+	if parent.Err() != nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(parent, BulkTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, bulkURL, nil)
+	if err != nil {
+		return
+	}
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			// Cloudflare limiting us is not the provider cutting the node.
+			return
+		}
+		var n int64
+		n, err = io.Copy(io.Discard, io.LimitReader(resp.Body, bulkSize+1))
+		if err == nil && n >= bulkSize {
+			return
+		}
+	}
+	if parent.Err() != nil {
+		return // the caller gave up, the node did nothing wrong
+	}
+	res.Cut = true
+	res.Err = fmt.Errorf("probe: %w", ErrCut)
 }
 
 // trace asks Cloudflare who we are, IPv4 first, and fills res. Each URL

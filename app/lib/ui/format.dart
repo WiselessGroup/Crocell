@@ -79,11 +79,14 @@ String exitPlace(ProbeResult r) {
   return city == null || city == country ? country : '$country, $city';
 }
 
-enum Quality { good, slow, down, unknown }
+/// cut: the node answers, but the provider breaks off anything bigger than
+/// a few kilobytes on the way to it. As useless as down, with another cause.
+enum Quality { good, slow, cut, down, unknown }
 
 /// What a probe means for a person, not a number to decode.
 Quality quality(ProbeResult? r) {
   if (r == null || (!r.hasProbedAt() && r.error.isEmpty && r.exitIp.isEmpty)) return Quality.unknown;
+  if (r.cut) return Quality.cut;
   if (r.error.isNotEmpty) return Quality.down;
   return r.latencyMs <= 600 ? Quality.good : Quality.slow;
 }
@@ -91,6 +94,7 @@ Quality quality(ProbeResult? r) {
 String qualityLabel(Quality q) => switch (q) {
       Quality.good => tr('работает', 'working'),
       Quality.slow => tr('медленно', 'slow'),
+      Quality.cut => tr('обрывает провайдер', 'cut off by the provider'),
       Quality.down => tr('не отвечает', 'not responding'),
       Quality.unknown => tr('не проверено', 'not checked'),
     };

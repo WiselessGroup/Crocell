@@ -209,6 +209,9 @@ message ProbeResult {
   uint32 latency_ms = 7;    // a real HTTPS request through the node
   string error = 8;
   google.protobuf.Timestamp probed_at = 9;
+  // With error set: the node answers, but the provider breaks off anything
+  // bigger than a few kilobytes on the way to it.
+  bool cut = 10;
 }
 
 // ---------- Settings ----------

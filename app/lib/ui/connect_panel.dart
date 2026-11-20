@@ -175,6 +175,7 @@ class _StatusText extends StatelessWidget {
       final checkLine = switch (check) {
         _ when check == null && s.checking => tr('Проверяю, работает ли интернет…', 'Checking if the internet works…'),
         null => null,
+        _ when check.cut => tr('Провайдер обрывает соединения с этой нодой. Попробуйте другую.', 'Your provider cuts connections to this node. Try another one.'),
         _ when check.error.isNotEmpty => tr('Интернет через VPN не идёт. Попробуйте другую ноду.', "The internet isn't getting through the VPN. Try another node."),
         _ => tr('Выход: ${exitPlace(check)}', 'Exit: ${exitPlace(check)}'),
       };

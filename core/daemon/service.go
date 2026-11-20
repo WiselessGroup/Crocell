@@ -57,8 +57,10 @@ type Config struct {
 	Fetcher  *subscription.Fetcher                                        // default: plain HTTP
 	Probe    func(ctx context.Context, proxy map[string]any) probe.Result // default: probe.Node
 	// Check tests the live path while connected: through TUN or the mixed
-	// port. Default: probe.System / probe.ViaProxy.
-	Check func(ctx context.Context, mode pb.TunnelMode, port int) probe.Result
+	// port. full adds the bulk download that shows a provider cutting the
+	// connection; it runs once per connection. Default: probe.System /
+	// probe.ViaProxy.
+	Check func(ctx context.Context, mode pb.TunnelMode, port int, full bool) probe.Result
 	// GeoClient fetches geoip.dat / geosite.dat. Default: plain HTTP.
 	GeoClient *http.Client
 	// CheckInterval is how often a live connection is re-checked. One small
@@ -95,11 +97,11 @@ const (
 	DefaultReconnectDelay = 1500 * time.Millisecond
 )
 
-func realCheck(ctx context.Context, mode pb.TunnelMode, port int) probe.Result {
+func realCheck(ctx context.Context, mode pb.TunnelMode, port int, full bool) probe.Result {
 	if mode == pb.TunnelMode_TUNNEL_MODE_TUN {
-		return probe.System(ctx)
+		return probe.System(ctx, full)
 	}
-	return probe.ViaProxy(ctx, port)
+	return probe.ViaProxy(ctx, port, full)
 }
 
 type Service struct {
@@ -110,7 +112,7 @@ type Service struct {
 	eng      Engine
 	fetcher  *subscription.Fetcher
 	probe    func(context.Context, map[string]any) probe.Result
-	check    func(context.Context, pb.TunnelMode, int) probe.Result
+	check    func(context.Context, pb.TunnelMode, int, bool) probe.Result
 	every    time.Duration // live check interval
 	settle   time.Duration // see Config.ReconnectDelay
 	tun      TunProvider   // Android only
@@ -305,6 +307,12 @@ func (s *Service) startChecksLocked() {
 
 	go func() {
 		failed := 0
+		// 64 KB every two minutes would be about 2 MB an hour of mobile
+		// data, so the bulk download runs once per connection, when the
+		// provider cuts it right after connecting. It repeats only while
+		// the node stays cut, to see it come back, and then at the normal
+		// pace rather than the quick one for a node that is down.
+		full := true
 		for {
 			s.mu.Lock()
 			if ctx.Err() != nil {
@@ -316,7 +324,9 @@ func (s *Service) startChecksLocked() {
 			s.notifyLocked()
 			s.mu.Unlock()
 
-			r := toProtoProbe(nodeID, s.check(ctx, mode, port))
+			res := s.check(ctx, mode, port, full)
+			full = res.Cut || (full && res.Err != nil) // a failed trace never got to the bulk part
+			r := toProtoProbe(nodeID, res)
 			if r.GetError() != "" {
 				log.Printf("crocelld: live check: %s", r.GetError())
 			}
@@ -340,6 +350,8 @@ func (s *Service) startChecksLocked() {
 					return
 				}
 				continue
+			case r.GetCut():
+				failed++
 			default:
 				// Down: keep looking often, so recovery shows up soon too.
 				failed++
@@ -1069,6 +1081,7 @@ func toProtoProbe(nodeID string, r probe.Result) *pb.ProbeResult {
 		ExitCountry: r.ExitCountry,
 		ExitColo:    r.ExitColo,
 		LatencyMs:   uint32(r.Latency / time.Millisecond),
+		Cut:         r.Cut,
 		ProbedAt:    timestamppb.Now(),
 	}
 	if r.Err != nil {

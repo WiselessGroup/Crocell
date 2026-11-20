@@ -1682,6 +1682,7 @@ class ProbeResult extends $pb.GeneratedMessage {
     $core.int? latencyMs,
     $core.String? error,
     $1.Timestamp? probedAt,
+    $core.bool? cut,
   }) {
     final result = ProbeResult._();
     if (nodeId != null) result.nodeId = nodeId;
@@ -1693,6 +1694,7 @@ class ProbeResult extends $pb.GeneratedMessage {
     if (latencyMs != null) result.latencyMs = latencyMs;
     if (error != null) result.error = error;
     if (probedAt != null) result.probedAt = probedAt;
+    if (cut != null) result.cut = cut;
     return result;
   }
 
@@ -1719,6 +1721,7 @@ class ProbeResult extends $pb.GeneratedMessage {
     ..aOS(8, _omitFieldNames ? '' : 'error')
     ..aOM<$1.Timestamp>(9, _omitFieldNames ? '' : 'probedAt',
         subBuilder: $1.Timestamp.$_createMessage)
+    ..aOB(10, _omitFieldNames ? '' : 'cut')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1819,6 +1822,17 @@ class ProbeResult extends $pb.GeneratedMessage {
   void clearProbedAt() => $_clearField(9);
   @$pb.TagNumber(9)
   $1.Timestamp ensureProbedAt() => $_ensure(8);
+
+  /// With error set: the node answers, but the provider breaks off anything
+  /// bigger than a few kilobytes on the way to it.
+  @$pb.TagNumber(10)
+  $core.bool get cut => $_getBF(9);
+  @$pb.TagNumber(10)
+  set cut($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasCut() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearCut() => $_clearField(10);
 }
 
 class RouteRule extends $pb.GeneratedMessage {

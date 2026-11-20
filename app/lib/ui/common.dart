@@ -87,6 +87,7 @@ class QualityLine extends StatelessWidget {
     final (icon, color) = switch (q) {
       Quality.good => (Icons.check_circle_rounded, t.good),
       Quality.slow => (Icons.schedule_rounded, t.muted),
+      Quality.cut => (Icons.link_off_rounded, t.muted),
       Quality.down => (Icons.cancel_outlined, t.muted),
       Quality.unknown => (Icons.help_outline_rounded, t.muted),
     };
@@ -94,6 +95,7 @@ class QualityLine extends StatelessWidget {
     final r = probe;
     final details = switch (q) {
       Quality.good || Quality.slow => tr('Выход: ${exitPlace(r!)} · ${r.latencyMs} мс', 'Exit: ${exitPlace(r)} · ${r.latencyMs} ms'),
+      Quality.cut => tr('Отвечает, но провайдер обрывает соединение', 'Answers, but the provider cuts the connection'),
       Quality.down => tr('Не отвечает', 'Not responding'),
       Quality.unknown => tr('Не проверено', 'Not checked'),
     };

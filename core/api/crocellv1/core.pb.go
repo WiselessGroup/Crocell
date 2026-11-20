@@ -1474,16 +1474,19 @@ func (x *ProbeNodesRequest) GetNodeIds() []string {
 }
 
 type ProbeResult struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	EntryIps      []string               `protobuf:"bytes,2,rep,name=entry_ips,json=entryIps,proto3" json:"entry_ips,omitempty"`
-	EntryCountry  string                 `protobuf:"bytes,3,opt,name=entry_country,json=entryCountry,proto3" json:"entry_country,omitempty"` // ISO 3166-1 alpha-2, from local GeoIP
-	ExitIp        string                 `protobuf:"bytes,4,opt,name=exit_ip,json=exitIp,proto3" json:"exit_ip,omitempty"`
-	ExitCountry   string                 `protobuf:"bytes,5,opt,name=exit_country,json=exitCountry,proto3" json:"exit_country,omitempty"`
-	ExitColo      string                 `protobuf:"bytes,6,opt,name=exit_colo,json=exitColo,proto3" json:"exit_colo,omitempty"`     // nearest Cloudflare PoP, e.g. FRA
-	LatencyMs     uint32                 `protobuf:"varint,7,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"` // a real HTTPS request through the node
-	Error         string                 `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
-	ProbedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=probed_at,json=probedAt,proto3" json:"probed_at,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	NodeId       string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	EntryIps     []string               `protobuf:"bytes,2,rep,name=entry_ips,json=entryIps,proto3" json:"entry_ips,omitempty"`
+	EntryCountry string                 `protobuf:"bytes,3,opt,name=entry_country,json=entryCountry,proto3" json:"entry_country,omitempty"` // ISO 3166-1 alpha-2, from local GeoIP
+	ExitIp       string                 `protobuf:"bytes,4,opt,name=exit_ip,json=exitIp,proto3" json:"exit_ip,omitempty"`
+	ExitCountry  string                 `protobuf:"bytes,5,opt,name=exit_country,json=exitCountry,proto3" json:"exit_country,omitempty"`
+	ExitColo     string                 `protobuf:"bytes,6,opt,name=exit_colo,json=exitColo,proto3" json:"exit_colo,omitempty"`     // nearest Cloudflare PoP, e.g. FRA
+	LatencyMs    uint32                 `protobuf:"varint,7,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"` // a real HTTPS request through the node
+	Error        string                 `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
+	ProbedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=probed_at,json=probedAt,proto3" json:"probed_at,omitempty"`
+	// With error set: the node answers, but the provider breaks off anything
+	// bigger than a few kilobytes on the way to it.
+	Cut           bool `protobuf:"varint,10,opt,name=cut,proto3" json:"cut,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1579,6 +1582,13 @@ func (x *ProbeResult) GetProbedAt() *timestamppb.Timestamp {
 		return x.ProbedAt
 	}
 	return nil
+}
+
+func (x *ProbeResult) GetCut() bool {
+	if x != nil {
+		return x.Cut
+	}
+	return false
 }
 
 type RouteRule struct {
@@ -2632,7 +2642,7 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\x05error\x18\x03 \x01(\tR\x05error\"W\n" +
 	"\x11ProbeNodesRequest\x12'\n" +
 	"\x0fsubscription_id\x18\x01 \x01(\tR\x0esubscriptionId\x12\x19\n" +
-	"\bnode_ids\x18\x02 \x03(\tR\anodeIds\"\xaf\x02\n" +
+	"\bnode_ids\x18\x02 \x03(\tR\anodeIds\"\xc1\x02\n" +
 	"\vProbeResult\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1b\n" +
 	"\tentry_ips\x18\x02 \x03(\tR\bentryIps\x12#\n" +
@@ -2643,7 +2653,9 @@ const file_crocell_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"latency_ms\x18\a \x01(\rR\tlatencyMs\x12\x14\n" +
 	"\x05error\x18\b \x01(\tR\x05error\x127\n" +
-	"\tprobed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\bprobedAt\"\x92\x01\n" +
+	"\tprobed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\bprobedAt\x12\x10\n" +
+	"\x03cut\x18\n" +
+	" \x01(\bR\x03cut\"\x92\x01\n" +
 	"\tRouteRule\x12(\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x14.crocell.v1.RuleKindR\x04kind\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12/\n" +

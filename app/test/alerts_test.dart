@@ -36,6 +36,13 @@ void main() {
     expect(alertFor(st(on, check: bad), st(on, check: ok))?.title, 'Интернет через VPN снова работает');
   });
 
+  test('a cut says it is the provider, not the node', () {
+    final cut = ProbeResult(exitIp: '1.2.3.4', error: 'probe: cut', cut: true);
+    final a = alertFor(st(on, check: ok), st(on, check: cut), nodeName: 'fiNODE');
+    expect(a?.body, contains('Провайдер обрывает'));
+    expect(a?.body, contains('fiNODE'));
+  });
+
   test('switching to a working node is not a recovery to announce', () {
     expect(alertFor(st(on, check: bad, node: 'n1'), st(on, check: ok, node: 'n2')), isNull);
   });

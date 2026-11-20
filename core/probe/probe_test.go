@@ -2,6 +2,7 @@ package probe
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -29,7 +30,7 @@ func TestViaProxyGoesThroughTheMixedPort(t *testing.T) {
 	_, portStr, _ := net.SplitHostPort(proxy.Listener.Addr().String())
 	port, _ := strconv.Atoi(portStr)
 
-	r := ViaProxy(context.Background(), port)
+	r := ViaProxy(context.Background(), port, false)
 	if r.Err != nil {
 		t.Fatal(r.Err)
 	}
@@ -43,7 +44,7 @@ func TestDeadProxyIsAnError(t *testing.T) {
 	port := l.Addr().(*net.TCPAddr).Port
 	l.Close()
 
-	if r := ViaProxy(context.Background(), port); r.Err == nil {
+	if r := ViaProxy(context.Background(), port, false); r.Err == nil {
 		t.Error("want an error from a closed port")
 	}
 }
@@ -73,7 +74,7 @@ func TestHangingFirstURLLeavesTimeForTheFallback(t *testing.T) {
 	_, portStr, _ := net.SplitHostPort(proxy.Listener.Addr().String())
 	port, _ := strconv.Atoi(portStr)
 
-	r := ViaProxy(context.Background(), port)
+	r := ViaProxy(context.Background(), port, false)
 	if r.Err != nil {
 		t.Fatal(r.Err)
 	}
@@ -96,7 +97,89 @@ func TestTraceWithoutIPIsAnError(t *testing.T) {
 	_, portStr, _ := net.SplitHostPort(proxy.Listener.Addr().String())
 	port, _ := strconv.Atoi(portStr)
 
-	if r := ViaProxy(context.Background(), port); r.Err == nil {
+	if r := ViaProxy(context.Background(), port, false); r.Err == nil {
 		t.Errorf("want an error, got %+v", r)
+	}
+}
+
+// bulkProxy answers the trace and serves the bulk URL through serve.
+func bulkProxy(t *testing.T, serve func(w http.ResponseWriter, r *http.Request)) int {
+	t.Helper()
+	oldTrace, oldBulk, oldTimeout := traceURLs, bulkURL, BulkTimeout
+	traceURLs = []string{"http://trace.invalid/cdn-cgi/trace"}
+	bulkURL = "http://bulk.invalid/__down"
+	BulkTimeout = 300 * time.Millisecond
+	t.Cleanup(func() { traceURLs, bulkURL, BulkTimeout = oldTrace, oldBulk, oldTimeout })
+
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Host == "bulk.invalid" {
+			serve(w, r)
+			return
+		}
+		_, _ = w.Write([]byte("ip=203.0.113.5\nloc=FI\ncolo=HEL\n"))
+	}))
+	t.Cleanup(proxy.Close)
+	_, portStr, _ := net.SplitHostPort(proxy.Listener.Addr().String())
+	port, _ := strconv.Atoi(portStr)
+	return port
+}
+
+func writeBytes(w http.ResponseWriter, n int) {
+	_, _ = w.Write(make([]byte, n))
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func TestWholeBulkPasses(t *testing.T) {
+	port := bulkProxy(t, func(w http.ResponseWriter, r *http.Request) { writeBytes(w, bulkSize) })
+	if r := ViaProxy(context.Background(), port, true); r.Err != nil || r.Cut {
+		t.Errorf("result %+v", r)
+	}
+}
+
+// What the providers do: the first 16 KB get through, then nothing.
+func TestBulkHangingAfter16KBIsACut(t *testing.T) {
+	port := bulkProxy(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", strconv.Itoa(bulkSize))
+		writeBytes(w, 16<<10)
+		<-r.Context().Done()
+	})
+	r := ViaProxy(context.Background(), port, true)
+	if !r.Cut || !errors.Is(r.Err, ErrCut) {
+		t.Fatalf("want a cut, got %+v", r)
+	}
+	if r.ExitIP != "203.0.113.5" {
+		t.Errorf("the exit found by the trace got lost: %+v", r)
+	}
+}
+
+// Some cut with a reset instead of silence.
+func TestBulkBrokenAfter16KBIsACut(t *testing.T) {
+	port := bulkProxy(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", strconv.Itoa(bulkSize))
+		writeBytes(w, 16<<10)
+		if c, _, err := w.(http.Hijacker).Hijack(); err == nil {
+			c.Close()
+		}
+	})
+	if r := ViaProxy(context.Background(), port, true); !r.Cut {
+		t.Errorf("want a cut, got %+v", r)
+	}
+}
+
+// Cloudflare refusing the download says nothing about the node.
+func TestBulkRefusedIsNotACut(t *testing.T) {
+	port := bulkProxy(t, func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusTooManyRequests) })
+	if r := ViaProxy(context.Background(), port, true); r.Err != nil || r.Cut {
+		t.Errorf("result %+v", r)
+	}
+}
+
+func TestShortCheckSkipsBulk(t *testing.T) {
+	asked := false
+	port := bulkProxy(t, func(w http.ResponseWriter, r *http.Request) { asked = true })
+	if r := ViaProxy(context.Background(), port, false); r.Err != nil || asked {
+		t.Errorf("asked %v, result %+v", asked, r)
 	}
 }

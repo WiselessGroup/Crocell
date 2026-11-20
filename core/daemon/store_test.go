@@ -11,7 +11,7 @@ import (
 	"git.wiseless.net/fureunoir/crocell/core/probe"
 )
 
-func quietCheck(context.Context, pb.TunnelMode, int) probe.Result { return probe.Result{} }
+func quietCheck(context.Context, pb.TunnelMode, int, bool) probe.Result { return probe.Result{} }
 
 func TestPlainStateIsMigratedAndEncrypted(t *testing.T) {
 	dir := t.TempDir()
