@@ -8,6 +8,7 @@ package probe
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -34,6 +35,11 @@ var traceURLs = []string{
 
 // Timeout caps one node's probe, entry lookup and both attempts together.
 const Timeout = 10 * time.Second
+
+// attemptTimeout caps one trace URL. An exit that silently drops 1.1.1.1
+// would otherwise spend the whole budget on it, and a node that works
+// would show as down without the hostname ever being tried.
+var attemptTimeout = Timeout / 2
 
 // Result is what one probe found. Exit fields are empty when Err is set.
 type Result struct {
@@ -65,9 +71,12 @@ func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
 
-	var res Result
-	res.EntryIPs = resolveEntry(ctx, server)
+	// The entry lookup goes alongside the trace, not before it: a slow DNS
+	// answer for the node's name must not eat the time the trace needs.
+	entry := make(chan []string, 1)
+	go func() { entry <- resolveEntry(ctx, server) }()
 
+	var res Result
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -82,6 +91,7 @@ func Proxy(ctx context.Context, p C.ProxyAdapter, server string) Result {
 		},
 	}
 	trace(ctx, client, &res)
+	res.EntryIPs = <-entry
 	return res
 }
 
@@ -105,39 +115,49 @@ func ViaProxy(ctx context.Context, port int) Result {
 	return res
 }
 
-// trace asks Cloudflare who we are, IPv4 first, and fills res.
+// trace asks Cloudflare who we are, IPv4 first, and fills res. Each URL
+// gets its own share of the budget, so the fallback still has time when
+// the first one hangs.
 func trace(ctx context.Context, client *http.Client, res *Result) {
-	var resp *http.Response
 	var err error
-	var start time.Time
 	for _, u := range traceURLs {
-		var req *http.Request
-		req, err = http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-		if err != nil {
-			break
-		}
-		start = time.Now()
-		resp, err = client.Do(req)
-		if err == nil || ctx.Err() != nil {
+		if err = traceOnce(ctx, client, u, res); err == nil || ctx.Err() != nil {
 			break // success, or the budget is spent: no point in the fallback
 		}
 	}
 	if err != nil {
 		res.Err = fmt.Errorf("probe: %w", err)
-		return
+	}
+}
+
+func traceOnce(ctx context.Context, client *http.Client, u string, res *Result) error {
+	ctx, cancel := context.WithTimeout(ctx, attemptTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return err
+	}
+	start := time.Now()
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
 	}
 	defer resp.Body.Close()
-	res.Latency = time.Since(start)
+	latency := time.Since(start)
 
 	if resp.StatusCode != http.StatusOK {
-		res.Err = fmt.Errorf("probe: trace returned HTTP %d", resp.StatusCode)
-		return
+		return fmt.Errorf("trace returned HTTP %d", resp.StatusCode)
 	}
-
 	t := parseTrace(io.LimitReader(resp.Body, 4096))
+	if t["ip"] == "" {
+		// A captive or block page answers 200 too; it is not the node.
+		return errors.New("trace answer has no ip")
+	}
+	res.Latency = latency
 	res.ExitIP = t["ip"]
 	res.ExitCountry = t["loc"]
 	res.ExitColo = t["colo"]
+	return nil
 }
 
 func resolveEntry(ctx context.Context, server string) []string {
