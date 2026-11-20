@@ -35,6 +35,7 @@ const (
 	Core_ListSubscriptions_FullMethodName       = "/crocell.v1.Core/ListSubscriptions"
 	Core_AddSubscription_FullMethodName         = "/crocell.v1.Core/AddSubscription"
 	Core_RefreshSubscription_FullMethodName     = "/crocell.v1.Core/RefreshSubscription"
+	Core_UpdateSubscription_FullMethodName      = "/crocell.v1.Core/UpdateSubscription"
 	Core_RemoveSubscription_FullMethodName      = "/crocell.v1.Core/RemoveSubscription"
 	Core_RefreshAllSubscriptions_FullMethodName = "/crocell.v1.Core/RefreshAllSubscriptions"
 	Core_ProbeNodes_FullMethodName              = "/crocell.v1.Core/ProbeNodes"
@@ -63,6 +64,8 @@ type CoreClient interface {
 	ListSubscriptions(ctx context.Context, in *ListSubscriptionsRequest, opts ...grpc.CallOption) (*ListSubscriptionsResponse, error)
 	AddSubscription(ctx context.Context, in *AddSubscriptionRequest, opts ...grpc.CallOption) (*Subscription, error)
 	RefreshSubscription(ctx context.Context, in *RefreshSubscriptionRequest, opts ...grpc.CallOption) (*Subscription, error)
+	// Name, link and User-Agent. A new link or User-Agent is fetched at once.
+	UpdateSubscription(ctx context.Context, in *UpdateSubscriptionRequest, opts ...grpc.CallOption) (*Subscription, error)
 	RemoveSubscription(ctx context.Context, in *RemoveSubscriptionRequest, opts ...grpc.CallOption) (*RemoveSubscriptionResponse, error)
 	// Every subscription with a link. One failing does not stop the rest.
 	RefreshAllSubscriptions(ctx context.Context, in *RefreshAllSubscriptionsRequest, opts ...grpc.CallOption) (*RefreshAllSubscriptionsResponse, error)
@@ -179,6 +182,16 @@ func (c *coreClient) RefreshSubscription(ctx context.Context, in *RefreshSubscri
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Subscription)
 	err := c.cc.Invoke(ctx, Core_RefreshSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreClient) UpdateSubscription(ctx context.Context, in *UpdateSubscriptionRequest, opts ...grpc.CallOption) (*Subscription, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Subscription)
+	err := c.cc.Invoke(ctx, Core_UpdateSubscription_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -319,6 +332,8 @@ type CoreServer interface {
 	ListSubscriptions(context.Context, *ListSubscriptionsRequest) (*ListSubscriptionsResponse, error)
 	AddSubscription(context.Context, *AddSubscriptionRequest) (*Subscription, error)
 	RefreshSubscription(context.Context, *RefreshSubscriptionRequest) (*Subscription, error)
+	// Name, link and User-Agent. A new link or User-Agent is fetched at once.
+	UpdateSubscription(context.Context, *UpdateSubscriptionRequest) (*Subscription, error)
 	RemoveSubscription(context.Context, *RemoveSubscriptionRequest) (*RemoveSubscriptionResponse, error)
 	// Every subscription with a link. One failing does not stop the rest.
 	RefreshAllSubscriptions(context.Context, *RefreshAllSubscriptionsRequest) (*RefreshAllSubscriptionsResponse, error)
@@ -375,6 +390,9 @@ func (UnimplementedCoreServer) AddSubscription(context.Context, *AddSubscription
 }
 func (UnimplementedCoreServer) RefreshSubscription(context.Context, *RefreshSubscriptionRequest) (*Subscription, error) {
 	return nil, status.Error(codes.Unimplemented, "method RefreshSubscription not implemented")
+}
+func (UnimplementedCoreServer) UpdateSubscription(context.Context, *UpdateSubscriptionRequest) (*Subscription, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateSubscription not implemented")
 }
 func (UnimplementedCoreServer) RemoveSubscription(context.Context, *RemoveSubscriptionRequest) (*RemoveSubscriptionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveSubscription not implemented")
@@ -563,6 +581,24 @@ func _Core_RefreshSubscription_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServer).RefreshSubscription(ctx, req.(*RefreshSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Core_UpdateSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServer).UpdateSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Core_UpdateSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServer).UpdateSubscription(ctx, req.(*UpdateSubscriptionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -792,6 +828,10 @@ var Core_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RefreshSubscription",
 			Handler:    _Core_RefreshSubscription_Handler,
+		},
+		{
+			MethodName: "UpdateSubscription",
+			Handler:    _Core_UpdateSubscription_Handler,
 		},
 		{
 			MethodName: "RemoveSubscription",

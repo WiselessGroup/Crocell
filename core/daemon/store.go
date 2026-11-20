@@ -41,6 +41,18 @@ type storedSub struct {
 	Info      subscription.Info   `json:"info"`
 	Nodes     []storedNode        `json:"nodes"`
 	FetchedAt time.Time           `json:"fetched_at"`
+	// What the person set in "Edit". Name wins over the provider's title,
+	// UserAgent replaces the default one for this subscription only.
+	Name      string `json:"name,omitempty"`
+	UserAgent string `json:"user_agent,omitempty"`
+}
+
+// title is what the subscription is called on screen.
+func (s *storedSub) title() string {
+	if s.Name != "" {
+		return s.Name
+	}
+	return s.Info.Title
 }
 
 type nodeUsage struct {

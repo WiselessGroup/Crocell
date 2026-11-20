@@ -27,6 +27,8 @@ service Core {
   rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse);
   rpc AddSubscription(AddSubscriptionRequest) returns (Subscription);
   rpc RefreshSubscription(RefreshSubscriptionRequest) returns (Subscription);
+  // Name, link and User-Agent. A new link or User-Agent is fetched at once.
+  rpc UpdateSubscription(UpdateSubscriptionRequest) returns (Subscription);
   rpc RemoveSubscription(RemoveSubscriptionRequest) returns (RemoveSubscriptionResponse);
   // Every subscription with a link. One failing does not stop the rest.
   rpc RefreshAllSubscriptions(RefreshAllSubscriptionsRequest) returns (RefreshAllSubscriptionsResponse);
@@ -155,6 +157,8 @@ message Subscription {
   // The provider's routing profile, if it sends one. Only an offer: the
   // client asks before adding it to Settings.rules.
   RoutingProfile routing = 15;
+  // Sent instead of the default when fetching this one. Empty: the default.
+  string user_agent = 16;
 }
 
 message Node {
@@ -176,6 +180,15 @@ message AddSubscriptionRequest {
 }
 message RefreshSubscriptionRequest {
   string id = 1;
+}
+message UpdateSubscriptionRequest {
+  string id = 1;
+  // Empty: the provider's title.
+  string title = 2;
+  // Empty keeps the link. The client never has it in full (url_masked),
+  // so a link is only ever replaced whole.
+  string url = 3;
+  string user_agent = 4;
 }
 message RemoveSubscriptionRequest {
   string id = 1;

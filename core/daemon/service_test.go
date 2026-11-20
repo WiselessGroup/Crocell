@@ -88,6 +88,9 @@ type harness struct {
 	checkMu  sync.Mutex
 	checkErr error // what the live check reports next
 
+	webMu  sync.Mutex
+	onlyUA string // the provider serves only this User-Agent when set
+
 	closeService func()
 }
 
@@ -103,16 +106,24 @@ func newHarness(t *testing.T, opts ...func(*Config)) *harness {
 	if err != nil {
 		t.Fatal(err)
 	}
+	h := &harness{}
 	web := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, "/sub/secret-token-123456") {
+		if !strings.HasSuffix(r.URL.Path, "/sub/secret-token-123456") && !strings.HasSuffix(r.URL.Path, "/sub/moved-token-654321") {
 			http.NotFound(w, r)
+			return
+		}
+		h.webMu.Lock()
+		only := h.onlyUA
+		h.webMu.Unlock()
+		if only != "" && r.UserAgent() != only {
+			http.Error(w, "not your client", http.StatusForbidden)
 			return
 		}
 		_, _ = w.Write(links)
 	}))
 	t.Cleanup(web.Close)
 
-	h := &harness{eng: &fakeEngine{}, subURL: web.URL + "/sub/secret-token-123456", dir: t.TempDir()}
+	*h = harness{eng: &fakeEngine{}, subURL: web.URL + "/sub/secret-token-123456", dir: t.TempDir()}
 	cfg := Config{
 		StateDir: h.dir,
 		Engine:   h.eng,
@@ -915,5 +926,93 @@ func TestDyingLeavesTheRulesUp(t *testing.T) {
 	h.closeService()
 	if !fw.isUp() {
 		t.Error("a stopped service took the rules with it, and that is the very case they are for")
+	}
+}
+
+func TestEditNameFollowsOrOverridesTheProvider(t *testing.T) {
+	h := newHarness(t)
+	sub := h.add(t)
+	ctx := context.Background()
+
+	got, err := h.client.UpdateSubscription(ctx, &pb.UpdateSubscriptionRequest{Id: sub.Id, Title: "  Home  "})
+	if err != nil || got.Title != "Home" {
+		t.Fatalf("rename: %v, %v", got.GetTitle(), err)
+	}
+	if again, _ := h.client.RefreshSubscription(ctx, &pb.RefreshSubscriptionRequest{Id: sub.Id}); again.GetTitle() != "Home" {
+		t.Errorf("a refresh brought the provider's title back: %q", again.GetTitle())
+	}
+	if back, _ := h.client.UpdateSubscription(ctx, &pb.UpdateSubscriptionRequest{Id: sub.Id}); back.GetTitle() != "WISELESS" {
+		t.Errorf("an empty name should mean the provider's: %q", back.GetTitle())
+	}
+}
+
+// Some providers serve the subscription only to their own client.
+func TestUserAgentIsKeptPerSubscription(t *testing.T) {
+	h := newHarness(t)
+	sub := h.add(t)
+	ctx := context.Background()
+	h.webMu.Lock()
+	h.onlyUA = "INCY/1.0/android"
+	h.webMu.Unlock()
+
+	if _, err := h.client.RefreshSubscription(ctx, &pb.RefreshSubscriptionRequest{Id: sub.Id}); err == nil {
+		t.Fatal("the default User-Agent should be refused")
+	}
+	got, err := h.client.UpdateSubscription(ctx, &pb.UpdateSubscriptionRequest{Id: sub.Id, Title: sub.Title, UserAgent: "INCY/1.0/android"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.UserAgent != "INCY/1.0/android" || got.Id != sub.Id {
+		t.Errorf("got %+v", got)
+	}
+	if _, err := h.client.RefreshSubscription(ctx, &pb.RefreshSubscriptionRequest{Id: sub.Id}); err != nil {
+		t.Errorf("refresh forgot the User-Agent: %v", err)
+	}
+	all, err := h.client.RefreshAllSubscriptions(ctx, &pb.RefreshAllSubscriptionsRequest{})
+	if err != nil || all.Refreshed != 1 {
+		t.Errorf("refresh all: %+v, %v", all, err)
+	}
+}
+
+func TestEditWithBadUserAgentChangesNothing(t *testing.T) {
+	h := newHarness(t)
+	sub := h.add(t)
+	h.webMu.Lock()
+	h.onlyUA = "Happ/2.0"
+	h.webMu.Unlock()
+
+	if _, err := h.client.UpdateSubscription(context.Background(), &pb.UpdateSubscriptionRequest{Id: sub.Id, Title: sub.Title, UserAgent: "wrong"}); err == nil {
+		t.Fatal("want the provider's refusal")
+	}
+	list, _ := h.client.ListSubscriptions(context.Background(), &pb.ListSubscriptionsRequest{})
+	if got := list.Subscriptions[0]; got.UserAgent != "" || len(got.Nodes) != 4 {
+		t.Errorf("a failed edit changed the subscription: %+v", got)
+	}
+}
+
+// The connection and usage point at the id, so a new link keeps it.
+func TestReplacingTheLinkKeepsTheSubscription(t *testing.T) {
+	h := newHarness(t)
+	sub := h.add(t)
+	ctx := context.Background()
+	moved := strings.Replace(h.subURL, "secret-token-123456", "moved-token-654321", 1)
+
+	got, err := h.client.UpdateSubscription(ctx, &pb.UpdateSubscriptionRequest{Id: sub.Id, Title: sub.Title, Url: moved})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Id != sub.Id || got.UrlMasked == sub.UrlMasked {
+		t.Errorf("got id %s (was %s), masked %s", got.Id, sub.Id, got.UrlMasked)
+	}
+	// Pasting the new link again refreshes the same one, not a second copy.
+	if _, err := h.client.AddSubscription(ctx, &pb.AddSubscriptionRequest{Url: moved}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.client.RefreshSubscription(ctx, &pb.RefreshSubscriptionRequest{Id: sub.Id}); err != nil {
+		t.Fatal(err)
+	}
+	list, _ := h.client.ListSubscriptions(ctx, &pb.ListSubscriptionsRequest{})
+	if len(list.Subscriptions) != 1 {
+		t.Errorf("%d subscriptions, want 1", len(list.Subscriptions))
 	}
 }

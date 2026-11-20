@@ -727,6 +727,7 @@ class Subscription extends $pb.GeneratedMessage {
     $1.Timestamp? fetchedAt,
     $core.Iterable<Node>? nodes,
     RoutingProfile? routing,
+    $core.String? userAgent,
   }) {
     final result = Subscription._();
     if (id != null) result.id = id;
@@ -745,6 +746,7 @@ class Subscription extends $pb.GeneratedMessage {
     if (fetchedAt != null) result.fetchedAt = fetchedAt;
     if (nodes != null) result.nodes.addAll(nodes);
     if (routing != null) result.routing = routing;
+    if (userAgent != null) result.userAgent = userAgent;
     return result;
   }
 
@@ -787,6 +789,7 @@ class Subscription extends $pb.GeneratedMessage {
         subBuilder: Node.$_createMessage)
     ..aOM<RoutingProfile>(15, _omitFieldNames ? '' : 'routing',
         subBuilder: RoutingProfile.$_createMessage)
+    ..aOS(16, _omitFieldNames ? '' : 'userAgent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -949,6 +952,16 @@ class Subscription extends $pb.GeneratedMessage {
   void clearRouting() => $_clearField(15);
   @$pb.TagNumber(15)
   RoutingProfile ensureRouting() => $_ensure(14);
+
+  /// Sent instead of the default when fetching this one. Empty: the default.
+  @$pb.TagNumber(16)
+  $core.String get userAgent => $_getSZ(15);
+  @$pb.TagNumber(16)
+  set userAgent($core.String value) => $_setString(15, value);
+  @$pb.TagNumber(16)
+  $core.bool hasUserAgent() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearUserAgent() => $_clearField(16);
 }
 
 class Node extends $pb.GeneratedMessage {
@@ -1300,6 +1313,106 @@ class RefreshSubscriptionRequest extends $pb.GeneratedMessage {
   $core.bool hasId() => $_has(0);
   @$pb.TagNumber(1)
   void clearId() => $_clearField(1);
+}
+
+class UpdateSubscriptionRequest extends $pb.GeneratedMessage {
+  factory UpdateSubscriptionRequest({
+    $core.String? id,
+    $core.String? title,
+    $core.String? url,
+    $core.String? userAgent,
+  }) {
+    final result = UpdateSubscriptionRequest._();
+    if (id != null) result.id = id;
+    if (title != null) result.title = title;
+    if (url != null) result.url = url;
+    if (userAgent != null) result.userAgent = userAgent;
+    return result;
+  }
+
+  UpdateSubscriptionRequest._();
+
+  factory UpdateSubscriptionRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateSubscriptionRequest()..mergeFromBuffer(data, registry);
+  factory UpdateSubscriptionRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateSubscriptionRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpdateSubscriptionRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'crocell.v1'),
+      createEmptyInstance: UpdateSubscriptionRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'title')
+    ..aOS(3, _omitFieldNames ? '' : 'url')
+    ..aOS(4, _omitFieldNames ? '' : 'userAgent')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateSubscriptionRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateSubscriptionRequest copyWith(
+          void Function(UpdateSubscriptionRequest) updates) =>
+      super.copyWith((message) => updates(message as UpdateSubscriptionRequest))
+          as UpdateSubscriptionRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateSubscriptionRequest() / UpdateSubscriptionRequest.new instead')
+  static UpdateSubscriptionRequest create() => UpdateSubscriptionRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      UpdateSubscriptionRequest._();
+  @$core.override
+  UpdateSubscriptionRequest createEmptyInstance() =>
+      UpdateSubscriptionRequest._();
+  @$core.pragma('dart2js:noInline')
+  static UpdateSubscriptionRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpdateSubscriptionRequest>(
+          UpdateSubscriptionRequest.$_createMessage);
+  static UpdateSubscriptionRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  /// Empty: the provider's title.
+  @$pb.TagNumber(2)
+  $core.String get title => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set title($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTitle() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTitle() => $_clearField(2);
+
+  /// Empty keeps the link. The client never has it in full (url_masked),
+  /// so a link is only ever replaced whole.
+  @$pb.TagNumber(3)
+  $core.String get url => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set url($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasUrl() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearUrl() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get userAgent => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set userAgent($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasUserAgent() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearUserAgent() => $_clearField(4);
 }
 
 class RemoveSubscriptionRequest extends $pb.GeneratedMessage {

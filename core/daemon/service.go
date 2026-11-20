@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -804,24 +805,53 @@ func (s *Service) AddSubscription(ctx context.Context, req *pb.AddSubscriptionRe
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	fetched, err := s.fetcher.Fetch(ctx, url)
+	// Adding a link twice refreshes it, with what the person set for it.
+	s.mu.Lock()
+	var old *storedSub
+	if i := slices.IndexFunc(s.st.Subscriptions, func(x *storedSub) bool {
+		return x.URL == url || x.ID == subscriptionID(url)
+	}); i >= 0 {
+		c := *s.st.Subscriptions[i]
+		old = &c
+	}
+	s.mu.Unlock()
+	return s.fetchAndStore(ctx, url, name, old)
+}
+
+// fetchAndStore fetches url and stores the result: in place of old when
+// there is one, keeping its id, name and User-Agent, or as a new
+// subscription. name is what an incy:// link calls it.
+func (s *Service) fetchAndStore(ctx context.Context, url, name string, old *storedSub) (*pb.Subscription, error) {
+	fetcher := s.fetcher
+	if old != nil {
+		fetcher = fetcher.As(old.UserAgent)
+	}
+	fetched, err := fetcher.Fetch(ctx, url)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, scrub(err.Error(), url))
 	}
 	if fetched.Info.Title == "" {
-		fetched.Info.Title = name // what an incy:// link calls it
+		fetched.Info.Title = name
 	}
 	stored := toStored(url, fetched)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if i := slices.IndexFunc(s.st.Subscriptions, func(x *storedSub) bool { return x.ID == stored.ID }); i >= 0 {
+	i := -1
+	if old != nil {
+		i = slices.IndexFunc(s.st.Subscriptions, func(x *storedSub) bool { return x.ID == old.ID })
+	}
+	if i >= 0 {
+		prev := s.st.Subscriptions[i]
+		// The id stays when the link is replaced: the connection, the
+		// last node and its usage all point at it.
+		stored.ID, stored.Name, stored.UserAgent = prev.ID, old.Name, old.UserAgent
 		// Only the https link is kept, so a refresh has no incy:// name to
 		// fall back on: keep the one it had.
 		if stored.Info.Title == "" {
-			stored.Info.Title = s.st.Subscriptions[i].Info.Title
+			stored.Info.Title = prev.Info.Title
 		}
-		s.st.Subscriptions[i] = stored // adding a link twice refreshes it
+		s.st.Subscriptions[i] = stored
 	} else {
 		s.st.Subscriptions = append(s.st.Subscriptions, stored)
 	}
@@ -836,11 +866,70 @@ func (s *Service) AddSubscription(ctx context.Context, req *pb.AddSubscriptionRe
 func (s *Service) RefreshSubscription(ctx context.Context, req *pb.RefreshSubscriptionRequest) (*pb.Subscription, error) {
 	s.mu.Lock()
 	sub := s.findSubLocked(req.GetId())
+	var old storedSub
+	if sub != nil {
+		old = *sub
+	}
 	s.mu.Unlock()
 	if sub == nil {
 		return nil, status.Error(codes.NotFound, "no such subscription")
 	}
-	return s.AddSubscription(ctx, &pb.AddSubscriptionRequest{Url: sub.URL})
+	return s.fetchAndStore(ctx, old.URL, "", &old)
+}
+
+// UpdateSubscription applies "Edit". A new link or User-Agent is fetched
+// first, and nothing changes when that fails: a typo must not cost the
+// nodes that worked.
+func (s *Service) UpdateSubscription(ctx context.Context, req *pb.UpdateSubscriptionRequest) (*pb.Subscription, error) {
+	s.mu.Lock()
+	sub := s.findSubLocked(req.GetId())
+	var edited storedSub
+	if sub != nil {
+		edited = *sub
+	}
+	s.mu.Unlock()
+	if sub == nil {
+		return nil, status.Error(codes.NotFound, "no such subscription")
+	}
+
+	edited.Name = strings.TrimSpace(req.GetTitle())
+	if edited.Name == edited.Info.Title {
+		edited.Name = "" // left as the provider calls it: follow the provider
+	}
+	edited.UserAgent = strings.TrimSpace(req.GetUserAgent())
+	url, name := edited.URL, ""
+	if strings.TrimSpace(req.GetUrl()) != "" {
+		var err error
+		if url, name, err = subscription.UnwrapNamed(req.GetUrl()); err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		s.mu.Lock()
+		taken := slices.ContainsFunc(s.st.Subscriptions, func(x *storedSub) bool {
+			return x.ID != edited.ID && (x.URL == url || x.ID == subscriptionID(url))
+		})
+		s.mu.Unlock()
+		if taken {
+			return nil, status.Error(codes.AlreadyExists, say(
+				"Эта ссылка уже добавлена отдельной подпиской.",
+				"This link is already added as another subscription."))
+		}
+	}
+
+	if url != edited.URL || edited.UserAgent != sub.UserAgent {
+		return s.fetchAndStore(ctx, url, name, &edited)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cur := s.findSubLocked(edited.ID)
+	if cur == nil {
+		return nil, status.Error(codes.NotFound, "no such subscription")
+	}
+	cur.Name = edited.Name
+	if err := s.store.save(s.st); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	s.notifyLocked()
+	return s.subToProtoLocked(cur), nil
 }
 
 // RefreshAllSubscriptions fetches every subscription that has a link to fetch.
@@ -865,9 +954,9 @@ func (s *Service) RefreshAllSubscriptions(ctx context.Context, _ *pb.RefreshAllS
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			if _, err := s.AddSubscription(ctx, &pb.AddSubscriptionRequest{Url: sub.URL}); err != nil {
-				log.Printf("crocelld: refresh %q: %s", sub.Info.Title, status.Convert(err).Message())
-				failures[i] = &pb.RefreshFailure{SubscriptionId: sub.ID, Title: sub.Info.Title, Error: status.Convert(err).Message()}
+			if _, err := s.fetchAndStore(ctx, sub.URL, "", &sub); err != nil {
+				log.Printf("crocelld: refresh %q: %s", sub.title(), status.Convert(err).Message())
+				failures[i] = &pb.RefreshFailure{SubscriptionId: sub.ID, Title: sub.title(), Error: status.Convert(err).Message()}
 			}
 		}()
 	}
@@ -1037,7 +1126,8 @@ func (s *Service) reconnectSoon() {
 func (s *Service) subToProtoLocked(sub *storedSub) *pb.Subscription {
 	out := &pb.Subscription{
 		Id:                  sub.ID,
-		Title:               sub.Info.Title,
+		Title:               sub.title(),
+		UserAgent:           sub.UserAgent,
 		UrlMasked:           maskURL(sub.URL),
 		Format:              string(sub.Format),
 		UploadBytes:         uint64(sub.Info.Upload),

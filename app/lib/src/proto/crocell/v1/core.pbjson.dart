@@ -316,6 +316,7 @@ const Subscription$json = {
       '6': '.crocell.v1.RoutingProfile',
       '10': 'routing'
     },
+    {'1': 'user_agent', '3': 16, '4': 1, '5': 9, '10': 'userAgent'},
   ],
 };
 
@@ -330,7 +331,8 @@ final $typed_data.Uint8List subscriptionDescriptor = $convert.base64Decode(
     'ASgJUgd3ZWJQYWdlEhgKB3N1cHBvcnQYCyABKAlSB3N1cHBvcnQSGgoIYW5ub3VuY2UYDCABKA'
     'lSCGFubm91bmNlEjkKCmZldGNoZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0'
     'YW1wUglmZXRjaGVkQXQSJgoFbm9kZXMYDiADKAsyEC5jcm9jZWxsLnYxLk5vZGVSBW5vZGVzEj'
-    'QKB3JvdXRpbmcYDyABKAsyGi5jcm9jZWxsLnYxLlJvdXRpbmdQcm9maWxlUgdyb3V0aW5n');
+    'QKB3JvdXRpbmcYDyABKAsyGi5jcm9jZWxsLnYxLlJvdXRpbmdQcm9maWxlUgdyb3V0aW5nEh0K'
+    'CnVzZXJfYWdlbnQYECABKAlSCXVzZXJBZ2VudA==');
 
 @$core.Deprecated('Use nodeDescriptor instead')
 const Node$json = {
@@ -414,6 +416,23 @@ const RefreshSubscriptionRequest$json = {
 final $typed_data.Uint8List refreshSubscriptionRequestDescriptor =
     $convert.base64Decode(
         'ChpSZWZyZXNoU3Vic2NyaXB0aW9uUmVxdWVzdBIOCgJpZBgBIAEoCVICaWQ=');
+
+@$core.Deprecated('Use updateSubscriptionRequestDescriptor instead')
+const UpdateSubscriptionRequest$json = {
+  '1': 'UpdateSubscriptionRequest',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'title', '3': 2, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'url', '3': 3, '4': 1, '5': 9, '10': 'url'},
+    {'1': 'user_agent', '3': 4, '4': 1, '5': 9, '10': 'userAgent'},
+  ],
+};
+
+/// Descriptor for `UpdateSubscriptionRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List updateSubscriptionRequestDescriptor = $convert.base64Decode(
+    'ChlVcGRhdGVTdWJzY3JpcHRpb25SZXF1ZXN0Eg4KAmlkGAEgASgJUgJpZBIUCgV0aXRsZRgCIA'
+    'EoCVIFdGl0bGUSEAoDdXJsGAMgASgJUgN1cmwSHQoKdXNlcl9hZ2VudBgEIAEoCVIJdXNlckFn'
+    'ZW50');
 
 @$core.Deprecated('Use removeSubscriptionRequestDescriptor instead')
 const RemoveSubscriptionRequest$json = {

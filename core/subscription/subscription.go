@@ -95,6 +95,17 @@ func (f *Fetcher) userAgent() string {
 	return DefaultUserAgent
 }
 
+// As returns a fetcher that sends userAgent instead, for the providers that
+// serve a subscription only to their own client. Empty keeps f's.
+func (f *Fetcher) As(userAgent string) *Fetcher {
+	if userAgent == "" {
+		return f
+	}
+	g := *f
+	g.UserAgent = userAgent
+	return &g
+}
+
 // IsLink tells a subscription link from text pasted as is: a share link, a
 // WireGuard config, a vpn:// key.
 func IsLink(input string) bool {

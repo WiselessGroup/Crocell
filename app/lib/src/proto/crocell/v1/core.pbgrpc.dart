@@ -93,6 +93,14 @@ class CoreClient extends $grpc.Client {
     return $createUnaryCall(_$refreshSubscription, request, options: options);
   }
 
+  /// Name, link and User-Agent. A new link or User-Agent is fetched at once.
+  $grpc.ResponseFuture<$0.Subscription> updateSubscription(
+    $0.UpdateSubscriptionRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$updateSubscription, request, options: options);
+  }
+
   $grpc.ResponseFuture<$0.RemoveSubscriptionResponse> removeSubscription(
     $0.RemoveSubscriptionRequest request, {
     $grpc.CallOptions? options,
@@ -226,6 +234,11 @@ class CoreClient extends $grpc.Client {
           '/crocell.v1.Core/RefreshSubscription',
           ($0.RefreshSubscriptionRequest value) => value.writeToBuffer(),
           $0.Subscription.fromBuffer);
+  static final _$updateSubscription =
+      $grpc.ClientMethod<$0.UpdateSubscriptionRequest, $0.Subscription>(
+          '/crocell.v1.Core/UpdateSubscription',
+          ($0.UpdateSubscriptionRequest value) => value.writeToBuffer(),
+          $0.Subscription.fromBuffer);
   static final _$removeSubscription = $grpc.ClientMethod<
           $0.RemoveSubscriptionRequest, $0.RemoveSubscriptionResponse>(
       '/crocell.v1.Core/RemoveSubscription',
@@ -348,6 +361,15 @@ abstract class CoreServiceBase extends $grpc.Service {
             false,
             ($core.List<$core.int> value) =>
                 $0.RefreshSubscriptionRequest.fromBuffer(value),
+            ($0.Subscription value) => value.writeToBuffer()));
+    $addMethod(
+        $grpc.ServiceMethod<$0.UpdateSubscriptionRequest, $0.Subscription>(
+            'UpdateSubscription',
+            updateSubscription_Pre,
+            false,
+            false,
+            ($core.List<$core.int> value) =>
+                $0.UpdateSubscriptionRequest.fromBuffer(value),
             ($0.Subscription value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.RemoveSubscriptionRequest,
             $0.RemoveSubscriptionResponse>(
@@ -501,6 +523,14 @@ abstract class CoreServiceBase extends $grpc.Service {
 
   $async.Future<$0.Subscription> refreshSubscription(
       $grpc.ServiceCall call, $0.RefreshSubscriptionRequest request);
+
+  $async.Future<$0.Subscription> updateSubscription_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.UpdateSubscriptionRequest> $request) async {
+    return updateSubscription($call, await $request);
+  }
+
+  $async.Future<$0.Subscription> updateSubscription(
+      $grpc.ServiceCall call, $0.UpdateSubscriptionRequest request);
 
   $async.Future<$0.RemoveSubscriptionResponse> removeSubscription_Pre(
       $grpc.ServiceCall $call,
